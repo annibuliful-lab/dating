@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id              String            @id @default(uuid()) @db.Uuid
+  email           String?           @unique
+  passwordHash    String?           @db.Text
+  lineId          String?           @unique
+  phone           String?           @unique
+  username        String            @unique
+  fullName        String            @db.Text
+  bio             String?           @db.Text
+  age             Int?
+  gender          String?
+  height          Float?
+  weight          Float?
+  status          UserStatus        @default(ACTIVE)
+  createdAt       DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @db.Timestamptz(6)
+  Chat            Chat[]
+  ChatParticipant ChatParticipant[]
+  Message         Message[]
+  Post            Post[]
+  PostLike        PostLike[]
+  PostSave        PostSave[]
+}
+
+model Chat {
+  id             String            @id @default(uuid()) @db.Uuid
+  isGroup        Boolean           @default(false)
+  name           String?           @db.Text
+  createdBy      User              @relation(fields: [createdById], references: [id])
+  createdById    String            @db.Uuid
+  isAdminVisible Boolean           @default(false)
+  participants   ChatParticipant[]
+  messages       Message[]
+  createdAt      DateTime          @default(now()) @db.Timestamptz(6)
+}
+
+model ChatParticipant {
+  id      String  @id @default(uuid()) @db.Uuid
+  chat    Chat    @relation(fields: [chatId], references: [id])
+  chatId  String  @db.Uuid
+  user    User    @relation(fields: [userId], references: [id])
+  userId  String  @db.Uuid
+  isAdmin Boolean @default(false)
+
+  @@unique([chatId, userId])
+}
+
+model Message {
+  id        String   @id @default(uuid()) @db.Uuid
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    String   @db.Uuid
+  sender    User     @relation(fields: [senderId], references: [id])
+  senderId  String   @db.Uuid
+  text      String?  @db.Text
+  imageUrl  String?  @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model Post {
+  id         String         @id @default(uuid()) @db.Uuid
+  author     User           @relation(fields: [authorId], references: [id])
+  authorId   String         @db.Uuid
+  content    Json?          @db.JsonB
+  imageUrl   String?        @db.Text
+  visibility PostVisibility @default(PUBLIC)
+  likes      PostLike[]
+  saves      PostSave[]
+  createdAt  DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime       @updatedAt @db.Timestamptz(6)
+}
+
+enum PostVisibility {
+  PUBLIC
+  MEMBERS_ONLY
+}
+
+model PostLike {
+  id     String @id @default(uuid()) @db.Uuid
+  post   Post   @relation(fields: [postId], references: [id])
+  postId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @db.Uuid
+
+  @@unique([postId, userId])
+}
+
+model PostSave {
+  id     String @id @default(uuid()) @db.Uuid
+  post   Post   @relation(fields: [postId], references: [id])
+  postId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @db.Uuid
+
+  @@unique([postId, userId])
+}
+
+model Ad {
+  id        String   @id @default(uuid()) @db.Uuid
+  imageUrl  String   @db.Text
+  link      String?  @db.Text
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+}

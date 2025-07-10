@@ -14,11 +14,29 @@ import {
   Container,
   rem,
 } from '@mantine/core';
+import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const handleClickSignIn = async () => {
+    try {
+      await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+      await router.push('/');
+    } catch (err) {
+      console.error('[signin-error]: ', err);
+      throw err;
+    }
+  };
 
   return (
     <Container
@@ -55,6 +73,8 @@ export default function LoginPage() {
         <TextInput
           placeholder="Email"
           radius="md"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           styles={{
             input: {
               backgroundColor: '#131313',
@@ -68,6 +88,8 @@ export default function LoginPage() {
         <PasswordInput
           placeholder="Password"
           radius="md"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           visible={showPassword}
           onVisibilityChange={setShowPassword}
           styles={{
@@ -82,19 +104,8 @@ export default function LoginPage() {
 
         <Button
           fullWidth
-          radius="md"
-          size="md"
-          bg="yellow"
-          c="black"
-          fw={600}
-          styles={{
-            root: {
-              backgroundColor: '#FFD400',
-              '&:hover': {
-                backgroundColor: '#FFCF00',
-              },
-            },
-          }}
+          variant="primary"
+          onClick={handleClickSignIn}
         >
           Log in
         </Button>

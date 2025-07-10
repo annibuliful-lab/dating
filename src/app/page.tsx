@@ -26,9 +26,9 @@ export default function Home() {
     getTest();
   }, []);
 
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
-  console.log('aaaa', session);
+  console.debug('sessions', session);
 
   const handleClickLogin = () => {
     router.push('/signin');
@@ -37,6 +37,12 @@ export default function Home() {
   const handleClickSignup = () => {
     router.push('/signup');
   };
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      // router.push('/dashboard')
+    }
+  }, [router, status]);
 
   return (
     <Box>
@@ -73,6 +79,9 @@ export default function Home() {
             Log in to Amorisloki
           </Button>
           <Text
+            style={{
+              cursor: 'pointer',
+            }}
             c="cloud.4"
             ta="center"
             fw={500}

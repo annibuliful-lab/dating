@@ -130,8 +130,8 @@ export const theme = createTheme({
         if (props.variant === 'primary') {
           return {
             root: {
-              '--button-bg': `linear-gradient(135deg, ${theme.colors.gold[4]} 0%, ${theme.colors.gold[6]} 100%)`,
-              '--button-hover': `linear-gradient(135deg, ${theme.colors.gold[3]} 0%, ${theme.colors.gold[5]} 100%)`,
+              '--button-bg': `#FFD400`,
+              '--button-hover': `#FFCF00`,
               '--button-color': theme.colors.dark[8],
             },
           };

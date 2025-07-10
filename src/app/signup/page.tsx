@@ -19,7 +19,27 @@ import { useState } from 'react';
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
+  const handleSignup = async () => {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: email, password }),
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      // Process response here
+      console.log('Registration Successful', response);
+    } catch (error) {
+      console.error('Registration Failed:', error);
+    }
+  };
   return (
     <Container
       px="md"
@@ -57,6 +77,8 @@ export default function SignupPage() {
         <TextInput
           placeholder="Email"
           radius="md"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           styles={{
             input: {
               backgroundColor: '#131313',
@@ -72,6 +94,8 @@ export default function SignupPage() {
           radius="md"
           visible={showPassword}
           onVisibilityChange={setShowPassword}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           styles={{
             input: {
               backgroundColor: '#131313',
@@ -82,22 +106,7 @@ export default function SignupPage() {
           }}
         />
 
-        <Button
-          fullWidth
-          radius="md"
-          size="md"
-          bg="yellow"
-          c="black"
-          fw={600}
-          styles={{
-            root: {
-              backgroundColor: '#FFD400',
-              '&:hover': {
-                backgroundColor: '#FFCF00',
-              },
-            },
-          }}
-        >
+        <Button fullWidth variant="primary" onClick={handleSignup}>
           Create account
         </Button>
 

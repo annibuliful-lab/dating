@@ -14,10 +14,13 @@ import {
   Container,
   rem,
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,8 +39,20 @@ export default function SignupPage() {
       }
       // Process response here
       console.log('Registration Successful', response);
+
+      await router.push('/signin');
+      notifications.show({
+        title: 'Sign up',
+        message: 'Sign up successfully',
+        autoClose: 2000,
+      });
     } catch (error) {
       console.error('Registration Failed:', error);
+      notifications.show({
+        title: 'Sign up',
+        message: 'Sign up failed please contact administrator',
+        autoClose: 1000,
+      });
     }
   };
   return (

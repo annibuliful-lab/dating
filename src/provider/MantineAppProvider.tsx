@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { MantineProvider } from '@mantine/core';
 import { theme } from '@/styles/theme';
+import { Notifications } from '@mantine/notifications';
 
 export default function MantineAppProvider({
   children,
@@ -15,6 +16,7 @@ export default function MantineAppProvider({
       defaultColorScheme="dark"
       withCssVariables
     >
+      <Notifications />
       {children}
     </MantineProvider>
   );

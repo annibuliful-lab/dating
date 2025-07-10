@@ -1,5 +1,5 @@
 import '@mantine/core/styles.css';
-
+import '@mantine/notifications/styles.css';
 import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core';
 import MantineAppProvider from '@/provider/MantineAppProvider';
 import { Inter } from 'next/font/google';

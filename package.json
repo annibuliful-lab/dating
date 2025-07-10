@@ -18,7 +18,8 @@
     "prisma:db-pull": "prisma db pull",
     "prisma:seed": "ts-node prisma/seed/index.ts",
     "prisma:reset": "prisma migrate reset",
-    "prisma:format": "prisma migrate format"
+    "prisma:format": "prisma migrate format",
+    "supabase:generate:types": "npx supabase gen types typescript --project-id \"spcqdpthmfxjhfmvuqdb\" --schema public > generated/supabase-database.types.ts"
   },
   "dependencies": {
     "@mantine/carousel": "8.1.2",
@@ -40,14 +41,17 @@
     "@tiptap/pm": "2.23.1",
     "@tiptap/react": "2.23.1",
     "@tiptap/starter-kit": "2.23.1",
+    "@types/uuid": "^10.0.0",
     "dayjs": "1.11.13",
     "embla-carousel": "8.5.2",
     "embla-carousel-react": "8.5.2",
     "next": "15.3.3",
+    "next-auth": "5.0.0-beta.29",
     "prisma": "6.11.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "recharts": "2"
+    "recharts": "2",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.1",

@@ -3,12 +3,49 @@ import Google from 'next-auth/providers/google';
 import { supabase } from './client/supabase';
 import { v7 } from 'uuid';
 import LineProvider from 'next-auth/providers/line';
+import CredentialsProvider from 'next-auth/providers/credentials';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  session: {
+    strategy: 'jwt',
+  },
   providers: [
+    CredentialsProvider({
+      credentials: {
+        username: {},
+        password: {},
+      },
+      async authorize(credentials) {
+        if (credentials === null) return null;
+        const { email, password } = credentials as {
+          email: string;
+          password: string;
+        };
+
+        const { data: userInfo, error } = await supabase
+          .from('User')
+          .select('*')
+          .eq('email', email)
+          .single();
+
+        if (error) {
+          return null;
+        }
+
+        if (userInfo && userInfo.passwordHash === password) {
+          return {
+            id: userInfo.id,
+            name: userInfo.fullName,
+            email: userInfo.email,
+          };
+        }
+
+        return null;
+      },
+    }),
     LineProvider({
-      clientId: '2007684310',
-      clientSecret: '24a3156747af3bc7e65fa6b733d8034f',
+      clientId: process.env.AUTH_LINE_ID,
+      clientSecret: process.env.AUTH_LINE_SECRET,
     }),
     Google({
       clientId: process.env.AUTH_GOOGLE_ID as string,
@@ -23,71 +60,65 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async redirect({ url, baseUrl }) {
-      const redirectUrl = url.startsWith('/')
-        ? new URL(url, baseUrl).toString()
-        : url;
-
-      console.debug(
-        `[next-auth] Redirecting to "${redirectUrl}" (resolved from url "${url}" and baseUrl "${baseUrl}")`
-      );
-
-      return redirectUrl;
+    async redirect({ baseUrl }) {
+      return baseUrl;
     },
-    async signIn({ user, account, profile, ...rest }) {
-      console.debug('[next-auth] signin:', {
-        user,
-        account,
-        profile,
-        rest,
-      });
-
+    async signIn({ account, user }) {
       try {
         await upsertUserAccount({
           type: 'oauth',
           provider: account?.provider as string,
           providerAccountId: account?.providerAccountId as string,
+          email: user.email as string,
         });
+
+        return true;
       } catch (err) {
         console.debug('[next-auth] Custom upsert failed:', err);
         return false;
       }
-
-      return true;
     },
-    async session({ token, session, ...rest }) {
-      console.debug('[next-auth] session', { token, session, rest });
+    async session({ token, session }) {
+      console.debug(
+        '[next-auth] session token.providerAccountId:',
+        token.providerAccountId
+      );
 
-      if (!token.accessToken) return session;
+      const userId = await getUserIdByProviderAccountId(
+        token.providerAccountId as string
+      );
+
+      if (userId) {
+        session.user.id = userId;
+      }
 
       return session;
     },
-    async jwt({
-      token,
-      trigger,
-      session,
-      account,
-      profile,
-      ...rest
-    }) {
-      console.debug('[next-auth] jwt', {
-        account,
-        token,
-        trigger,
-        session,
-        profile,
-        rest,
-      });
+    async jwt({ token, trigger, session, account }) {
+      // console.debug('[next-auth] jwt', {
+      //   token,
+      //   session,
+      //   user,
+      // });
 
       if (trigger === 'update' && session?.name) {
-        // Note, that `session` can be any arbitrary object, remember to validate it!
         token.name = session.name;
       }
 
-      if (trigger === 'signIn' && account?.provider === 'google') {
-        token.accessToken = account?.id_token;
-        token.provider = 'google';
-        token.providerID = 'google.com';
+      // Handle all OAuth providers during sign in
+      if (trigger === 'signIn' && account) {
+        token.provider = account.provider;
+        token.providerAccountId = account.providerAccountId;
+
+        // Provider-specific handling
+        if (account.provider === 'google') {
+          token.accessToken = account.id_token;
+          token.providerID = 'google.com';
+        } else if (account.provider === 'line') {
+          token.accessToken = account.access_token;
+          token.providerID = 'line';
+        }
+        // Add other providers as needed
       }
 
       return token;
@@ -99,7 +130,9 @@ type UpsertUserAccountParams = {
   provider: string;
   providerAccountId: string;
   type: string;
+  email: string | null;
 };
+
 async function upsertUserAccount(params: UpsertUserAccountParams) {
   const { data: oAuthAccount, error: oAuthAccountError } =
     await supabase
@@ -114,41 +147,62 @@ async function upsertUserAccount(params: UpsertUserAccountParams) {
     error: oAuthAccountError,
   });
 
-  if (oAuthAccount === null) {
-    const { data: user, error: insertedUserError } = await supabase
-      .from('User')
-      .upsert({
-        id: v7(),
-        fullName: '',
-        updatedAt: new Date().toUTCString(),
-        username: v7(),
-      })
-      .select('id')
+  if (oAuthAccount !== null) {
+    return oAuthAccount.userId;
+  }
+
+  const { data: user, error: insertedUserError } = await supabase
+    .from('User')
+    .upsert({
+      id: v7(),
+      fullName: '',
+      updatedAt: new Date().toUTCString(),
+      username: v7(),
+    })
+    .select('id')
+    .single();
+
+  console.log('insertedUser', {
+    data: user,
+    error: insertedUserError,
+  });
+
+  if (user === null) {
+    return;
+  }
+
+  const {
+    data: insertedOAuthAccount,
+    error: insertedOAuthAccountError,
+  } = await supabase.from('OAuthAccount').insert({
+    id: v7() as string,
+    type: params.type,
+    provider: params.provider,
+    providerAccountId: params.providerAccountId,
+    userId: user.id,
+  });
+
+  console.log('insertedOAuthAccount', {
+    data: insertedOAuthAccount,
+    error: insertedOAuthAccountError,
+  });
+
+  return user.id;
+}
+
+async function getUserIdByProviderAccountId(
+  providerAccountId: string
+) {
+  const { data: oAuthAccount, error: oAuthAccountError } =
+    await supabase
+      .from('OAuthAccount')
+      .select('userId')
+      .eq('providerAccountId', providerAccountId)
       .single();
 
-    console.log('insertedUser', {
-      data: user,
-      error: insertedUserError,
-    });
-
-    if (user === null) {
-      return;
-    }
-
-    const {
-      data: insertedOAuthAccount,
-      error: insertedOAuthAccountError,
-    } = await supabase.from('OAuthAccount').insert({
-      id: v7() as string,
-      type: params.type,
-      provider: params.provider,
-      providerAccountId: params.providerAccountId,
-      userId: user.id,
-    });
-
-    console.log('insertedOAuthAccount', {
-      data: insertedOAuthAccount,
-      error: insertedOAuthAccountError,
-    });
+  if (oAuthAccountError) {
+    return null;
   }
+
+  return oAuthAccount.userId;
 }

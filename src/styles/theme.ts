@@ -95,7 +95,7 @@ export const theme = createTheme({
   components: {
     Button: {
       defaultProps: {
-        variant: 'filled',
+        variant: 'primary',
       },
       styles: {
         root: {
@@ -115,7 +115,19 @@ export const theme = createTheme({
         theme: { colors: { gold: unknown[]; dark: unknown[] } },
         props: { variant: string; color: string }
       ) => {
-        if (props.variant === 'filled' && props.color === 'gold') {
+        if (props.variant === 'secondary') {
+          return {
+            root: {
+              '--button-bg': `#2F2F2F`,
+              '--button-hover': `linear-gradient(135deg, ${theme.colors.dark[3]} 0%, ${theme.colors.dark[5]} 100%)`,
+              '--button-color': theme.colors.dark[8],
+              color: 'white',
+              border: '2px solid #3D3D3D',
+            },
+          };
+        }
+
+        if (props.variant === 'primary') {
           return {
             root: {
               '--button-bg': `linear-gradient(135deg, ${theme.colors.gold[4]} 0%, ${theme.colors.gold[6]} 100%)`,

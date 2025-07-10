@@ -3,6 +3,7 @@ import '@mantine/core/styles.css';
 import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core';
 import MantineAppProvider from '@/provider/MantineAppProvider';
 import { Inter } from 'next/font/google';
+import { SessionProvider } from 'next-auth/react';
 const inter = Inter({
   weight: ['400', '500', '600', '700'],
 });
@@ -17,7 +18,9 @@ export default function RootLayout({
         <ColorSchemeScript />
       </head>
       <body>
-        <MantineAppProvider>{children}</MantineAppProvider>
+        <SessionProvider>
+          <MantineAppProvider>{children}</MantineAppProvider>
+        </SessionProvider>
       </body>
     </html>
   );

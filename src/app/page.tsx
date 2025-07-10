@@ -11,8 +11,11 @@ import {
   Text,
   Stack,
 } from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter();
   useEffect(() => {
     const getTest = async () => {
       const result = await supabase
@@ -22,6 +25,18 @@ export default function Home() {
     };
     getTest();
   }, []);
+
+  const { data: session } = useSession();
+
+  console.log('aaaa', session);
+
+  const handleClickLogin = () => {
+    router.push('/signin');
+  };
+
+  const handleClickSignup = () => {
+    router.push('/signup');
+  };
 
   return (
     <Box>
@@ -54,8 +69,15 @@ export default function Home() {
         </Box>
 
         <Stack gap="xs" pb="xl">
-          <Button fullWidth>Log in to Amorisloki</Button>
-          <Text c="cloud.4" ta="center" fw={500}>
+          <Button fullWidth onClick={handleClickLogin}>
+            Log in to Amorisloki
+          </Button>
+          <Text
+            c="cloud.4"
+            ta="center"
+            fw={500}
+            onClick={handleClickSignup}
+          >
             Sign up
           </Text>
         </Stack>

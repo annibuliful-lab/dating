@@ -43,6 +43,34 @@ model User {
   Post            Post[]
   PostLike        PostLike[]
   PostSave        PostSave[]
+  OAuthAccount    OAuthAccount[]
+  Session         Session[]
+}
+
+model OAuthAccount {
+  id                String  @id @default(cuid())
+  userId            String  @db.Uuid
+  type              String // 'oauth'
+  provider          String // 'google', 'github', etc.
+  providerAccountId String // unique id from provider (e.g. sub)
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Chat {

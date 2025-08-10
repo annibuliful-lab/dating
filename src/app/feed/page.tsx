@@ -22,7 +22,6 @@ import {
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 type FeedStatus = "verified" | "pending";
 
@@ -74,11 +73,11 @@ function FeedPage() {
   const router = useRouter();
   const { status } = useSession();
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-    }
-  }, [router, status]);
+  // useEffect(() => {
+  //   if (status === "unauthenticated") {
+  //     router.push("/");
+  //   }
+  // }, [router, status]);
 
   const renderStatus = (postStatus: FeedStatus) => {
     if (postStatus === "verified") {
@@ -98,7 +97,7 @@ function FeedPage() {
   return (
     <Box>
       <TopNavbar title="Feed and Contents" />
-      <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <Stack gap="lg" pb={rem(BOTTOM_NAVBAR_HEIGHT_PX)}>
           {MOCK_FEED.map((item, index) => (
             <Box key={item.id}>

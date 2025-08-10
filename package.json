@@ -36,6 +36,7 @@
     "@mantine/spotlight": "8.1.2",
     "@mantine/tiptap": "8.1.2",
     "@prisma/client": "6.11.1",
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "2.50.0",
     "@tiptap/extension-link": "2.23.1",
     "@tiptap/pm": "2.23.1",

@@ -1,5 +1,6 @@
 'use client';
 
+import { supabase } from '@/client/supabase';
 import { Button, Container, Text } from '@mantine/core';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +15,12 @@ function FeedPage() {
       router.push('/');
     }
   }, [router, status]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then((data) => {
+      console.log('data', data);
+    });
+  }, []);
 
   return (
     <Container>

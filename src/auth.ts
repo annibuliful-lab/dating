@@ -64,12 +64,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return baseUrl;
     },
     async signIn({ account, user }) {
+      console.log('aaaaa', account, user);
       try {
         await upsertUserAccount({
           type: 'oauth',
           provider: account?.provider as string,
           providerAccountId: account?.providerAccountId as string,
           email: user.email as string,
+          idToken: account?.access_token as string,
         });
 
         return true;
@@ -131,6 +133,7 @@ type UpsertUserAccountParams = {
   providerAccountId: string;
   type: string;
   email: string | null;
+  idToken: string;
 };
 
 async function upsertUserAccount(params: UpsertUserAccountParams) {

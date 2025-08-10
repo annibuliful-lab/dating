@@ -1,5 +1,6 @@
 'use client';
 
+import { supabase } from '@/client/supabase';
 import { GoogleSignIn } from '@/components/social-button/GoogleSignIn';
 import { LineSignIn } from '@/components/social-button/LineSignIn';
 import {
@@ -17,7 +18,7 @@ import {
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,6 +38,12 @@ export default function LoginPage() {
       throw err;
     }
   };
+
+  useEffect(() => {
+    supabase.auth.getSession().then((data) => {
+      console.log('data', data);
+    });
+  }, []);
 
   return (
     <Container

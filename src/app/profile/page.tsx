@@ -1,12 +1,13 @@
-"use client";
+'use client';
 
-import { BottomNavbar } from "@/components/element/BottomNavbar";
+import { BottomNavbar } from '@/components/element/BottomNavbar';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { CheckCircle } from "@/components/icons/CheckCircle";
-import { SendIcon } from "@/components/icons/SendIcon";
+} from '@/components/element/TopNavbar';
+import { CheckCircle } from '@/components/icons/CheckCircle';
+import { SendIcon } from '@/components/icons/SendIcon';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   Badge,
   Box,
@@ -19,28 +20,43 @@ import {
   Stack,
   Text,
   ThemeIcon,
-} from "@mantine/core";
-import { useRouter } from "next/navigation";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 function ProfilePage() {
   const router = useRouter();
+  const { data, status } = useSession();
+  const userId = data?.user.id;
+
+  const { userProfile, loading } = useUserProfile(userId as string);
+
+  if ((loading && status === 'loading') || !userProfile) {
+    return null;
+  }
+
   return (
     <Box>
       <TopNavbar title="Profile" />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
         <Stack align="center" gap="xs" pb="lg">
           {/* Avatar */}
           <Box
             style={{
               width: rem(150),
               height: rem(150),
-              borderRadius: "50%",
-              overflow: "hidden",
-              border: "1px solid var(--mantine-color-dark-4)",
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '1px solid var(--mantine-color-dark-4)',
             }}
           >
             <Image
-              src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop"
+              src={userProfile.avatarUrl}
               alt="Toxic_cat profile"
               w="100%"
               h="100%"
@@ -50,18 +66,24 @@ function ProfilePage() {
           <Flex direction="column" align="center">
             <Group gap={6} align="center">
               <Text fw={800} fz={20}>
-                Toxic_cat
+                {userProfile.username}
               </Text>
-              <ThemeIcon size={22} radius="xl" color="teal" variant="light">
+              <ThemeIcon
+                size={22}
+                radius="xl"
+                color="teal"
+                variant="light"
+              >
                 <CheckCircle />
               </ThemeIcon>
             </Group>
-            <Text c="#979797">Luca meowmeow</Text>
+            <Text c="#979797">
+              {userProfile.fullName} {userProfile.lastname}
+            </Text>
           </Flex>
 
           <Text ta="center" px="lg" style={{ lineHeight: 1.5 }}>
-            Looking for someone who won’t judge my obsession with wet bathroom
-            floors.
+            {userProfile.bio}
           </Text>
 
           <Button
@@ -69,21 +91,21 @@ function ProfilePage() {
             color="dark.4"
             radius="md"
             mt="xs"
-            onClick={() => router.push("/profile/edit")}
+            onClick={() => router.push('/profile/edit')}
           >
             Edit profile
           </Button>
         </Stack>
 
-        <Stack gap="xs" pb={rem(80)}>
+        {/* <Stack gap="xs" pb={rem(80)}>
           <Group align="center" gap="sm">
             <Box
               style={{
                 width: rem(24),
                 height: rem(24),
-                borderRadius: "50%",
-                overflow: "hidden",
-                border: "1px solid var(--mantine-color-dark-4)",
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '1px solid var(--mantine-color-dark-4)',
               }}
             >
               <Image
@@ -99,8 +121,8 @@ function ProfilePage() {
           </Group>
 
           <Text fz="lg" style={{ lineHeight: 1.6 }}>
-            Full heart, full class, but still have room for one more person who
-            gets it.
+            Full heart, full class, but still have room for one more
+            person who gets it.
           </Text>
 
           <Group justify="space-between" mt="xs">
@@ -109,7 +131,7 @@ function ProfilePage() {
               Verified
             </Badge>
           </Group>
-        </Stack>
+        </Stack> */}
       </Container>
 
       <BottomNavbar />

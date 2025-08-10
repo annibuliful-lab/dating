@@ -67,7 +67,7 @@ export default function Home() {
         >
           <Image
             alt="logo"
-            src="https://wcjxna7kg9rqnf7r.public.blob.vercel-storage.com/logo-2x-6vUw1zeoJsGT5rwcsDrOx81nk6NtHm.png"
+            src="https://wcjxna7kg9rqnf7r.public.blob.vercel-storage.com/IMG_9165.PNG"
             fit="contain"
             w={rem(250)}
             style={{ display: 'block', margin: 'auto' }}

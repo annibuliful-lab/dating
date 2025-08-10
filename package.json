@@ -43,6 +43,7 @@
     "@tiptap/react": "2.23.1",
     "@tiptap/starter-kit": "2.23.1",
     "@types/uuid": "^10.0.0",
+    "date-fns": "^4.1.0",
     "dayjs": "1.11.13",
     "embla-carousel": "8.5.2",
     "embla-carousel-react": "8.5.2",

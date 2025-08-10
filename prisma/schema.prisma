@@ -22,33 +22,34 @@ enum UserStatus {
 }
 
 model User {
-  id              String            @id @default(uuid()) @db.Uuid
-  profileImageKey String?
-  email           String?           @unique
-  passwordHash    String?           @db.Text
-  lineId          String?           @unique
-  phone           String?           @unique
-  username        String            @unique
-  name            String?           @db.Text
-  lastname        String?           @db.Text
-  fullName        String            @db.Text
-  bio             String?           @db.Text
-  birthday        DateTime?         @db.Date
-  age             Int?
-  gender          String?
-  height          Float?
-  weight          Float?
-  status          UserStatus        @default(ACTIVE)
-  createdAt       DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime          @updatedAt @db.Timestamptz(6)
-  Chat            Chat[]
-  ChatParticipant ChatParticipant[]
-  Message         Message[]
-  Post            Post[]
-  PostLike        PostLike[]
-  PostSave        PostSave[]
-  OAuthAccount    OAuthAccount[]
-  Session         Session[]
+  id                 String            @id @default(uuid()) @db.Uuid
+  profileImageKey    String?
+  email              String?           @unique
+  passwordHash       String?           @db.Text
+  lineId             String?           @unique
+  phone              String?           @unique
+  username           String            @unique
+  name               String?           @db.Text
+  lastname           String?           @db.Text
+  fullName           String            @db.Text
+  bio                String?           @db.Text
+  birthday           DateTime?         @db.Date
+  relationShipStatus String?           @db.Text
+  age                Int?
+  gender             String?
+  height             Float?
+  weight             Float?
+  status             UserStatus        @default(ACTIVE)
+  createdAt          DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @db.Timestamptz(6)
+  Chat               Chat[]
+  ChatParticipant    ChatParticipant[]
+  Message            Message[]
+  Post               Post[]
+  PostLike           PostLike[]
+  PostSave           PostSave[]
+  OAuthAccount       OAuthAccount[]
+  Session            Session[]
 }
 
 model OAuthAccount {

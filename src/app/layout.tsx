@@ -1,6 +1,7 @@
 import MantineAppProvider from "@/provider/MantineAppProvider";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import "@mantine/core/styles.css";
+import "@mantine/dates/styles.css";
 import "@mantine/notifications/styles.css";
 import { SessionProvider } from "next-auth/react";
 import { Inter } from "next/font/google";

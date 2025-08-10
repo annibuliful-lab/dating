@@ -1,21 +1,18 @@
 "use client";
 
-import {
-  BOTTOM_NAVBAR_HEIGHT_PX,
-  BottomNavbar,
-} from "@/components/element/BottomNavbar";
+import { BottomNavbar } from "@/components/element/BottomNavbar";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
-import { AgeIcon } from "@/components/icons/AgeIcon";
 import { CheckCircle } from "@/components/icons/CheckCircle";
-import { GenderIcon } from "@/components/icons/GenderIcon";
-import { RulerIcon } from "@/components/icons/RulerIcon";
-import { SingleIcon } from "@/components/icons/SingleIcon";
+import { SendIcon } from "@/components/icons/SendIcon";
 import {
+  Badge,
   Box,
+  Button,
   Container,
+  Flex,
   Group,
   Image,
   rem,
@@ -23,92 +20,96 @@ import {
   Text,
   ThemeIcon,
 } from "@mantine/core";
+import { useRouter } from "next/navigation";
 
 function ProfilePage() {
+  const router = useRouter();
   return (
     <Box>
       <TopNavbar title="Profile" />
-      <Container
-        size="xs"
-        px={0}
-        mx="auto"
-        h={`calc(100dvh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(
-          BOTTOM_NAVBAR_HEIGHT_PX
-        )} - env(safe-area-inset-bottom) - env(safe-area-inset-top))`}
-        style={{
-          marginTop: `calc(${rem(
-            TOP_NAVBAR_HEIGHT_PX
-          )} + env(safe-area-inset-top))`,
-        }}
-      >
-        <Box h="100%" style={{ position: "relative" }}>
-          <Image
-            src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1974&auto=format&fit=crop"
-            alt="profile"
-            radius={0}
-            h="100%"
-            w="100%"
-            fit="cover"
-          />
-
+      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Stack align="center" gap="xs" pb="lg">
+          {/* Avatar */}
           <Box
             style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 80%, rgba(0,0,0,0.95) 100%)",
+              width: rem(150),
+              height: rem(150),
+              borderRadius: "50%",
+              overflow: "hidden",
+              border: "1px solid var(--mantine-color-dark-4)",
             }}
-          />
-
-          <Stack
-            gap={4}
-            style={{ position: "absolute", left: rem(16), bottom: rem(96) }}
           >
+            <Image
+              src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop"
+              alt="Toxic_cat profile"
+              w="100%"
+              h="100%"
+              fit="cover"
+            />
+          </Box>
+          <Flex direction="column" align="center">
             <Group gap={6} align="center">
-              <Text fw={700} fz={24}>
+              <Text fw={800} fz={20}>
                 Toxic_cat
               </Text>
-              <ThemeIcon size={20} radius="xl" color="teal" variant="light">
+              <ThemeIcon size={22} radius="xl" color="teal" variant="light">
                 <CheckCircle />
               </ThemeIcon>
             </Group>
-            <Text c="dimmed" fz="sm">
-              Luca meowmeow
-            </Text>
-            <Text fz="sm" style={{ maxWidth: rem(320), lineHeight: 1.5 }}>
-              Looking for someone who won’t judge my obsession with wet bathroom
-              floors.
-            </Text>
-          </Stack>
+            <Text c="#979797">Luca meowmeow</Text>
+          </Flex>
 
-          <Group
-            justify="center"
-            gap={36}
-            style={{
-              position: "absolute",
-              bottom: rem(30),
-              left: rem(16),
-              right: rem(16),
-            }}
+          <Text ta="center" px="lg" style={{ lineHeight: 1.5 }}>
+            Looking for someone who won’t judge my obsession with wet bathroom
+            floors.
+          </Text>
+
+          <Button
+            variant="secondary"
+            color="dark.4"
+            radius="md"
+            mt="xs"
+            onClick={() => router.push("/profile/edit")}
           >
-            <Stack gap={2} align="center">
-              <SingleIcon />
-              <Text fz="sm">Single</Text>
-            </Stack>
-            <Stack gap={2} align="center">
-              <GenderIcon />
-              <Text fz="sm">Female</Text>
-            </Stack>
-            <Stack gap={2} align="center">
-              <AgeIcon />
-              <Text fz="sm">32</Text>
-            </Stack>
-            <Stack gap={2} align="center">
-              <RulerIcon />
-              <Text fz="sm">190/82</Text>
-            </Stack>
+            Edit profile
+          </Button>
+        </Stack>
+
+        <Stack gap="xs" pb={rem(80)}>
+          <Group align="center" gap="sm">
+            <Box
+              style={{
+                width: rem(24),
+                height: rem(24),
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: "1px solid var(--mantine-color-dark-4)",
+              }}
+            >
+              <Image
+                src="https://images.unsplash.com/photo-1531590878845-12627191e687?q=80&w=400&auto=format&fit=crop"
+                alt="Chaya Aom avatar"
+                w="100%"
+                h="100%"
+                fit="cover"
+              />
+            </Box>
+            <Text fw={600}>Chaya Aom</Text>
+            <Text c="dimmed">Aug 3</Text>
           </Group>
-        </Box>
+
+          <Text fz="lg" style={{ lineHeight: 1.6 }}>
+            Full heart, full class, but still have room for one more person who
+            gets it.
+          </Text>
+
+          <Group justify="space-between" mt="xs">
+            <SendIcon />
+            <Badge color="teal" radius="xl" variant="light">
+              Verified
+            </Badge>
+          </Group>
+        </Stack>
       </Container>
 
       <BottomNavbar />

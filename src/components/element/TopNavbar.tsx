@@ -1,14 +1,34 @@
 "use client";
 
-import { Box, Center, Text, rem } from "@mantine/core";
+import { BackIcon } from "@/components/icons/BackIcon";
+import { Box, Group, Text, rem } from "@mantine/core";
+import { useRouter } from "next/navigation";
+import { ReactNode } from "react";
 
 export const TOP_NAVBAR_HEIGHT_PX = 52;
 
 type TopNavbarProps = {
   title: string;
+  showBack?: boolean;
+  backLabel?: string;
+  onBack?: () => void;
+  rightSlot?: ReactNode;
 };
 
-export function TopNavbar({ title }: TopNavbarProps) {
+export function TopNavbar({
+  title,
+  showBack,
+  backLabel = "Back",
+  onBack,
+  rightSlot,
+}: TopNavbarProps) {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (onBack) return onBack();
+    router.back();
+  };
+
   return (
     <Box
       pos="fixed"
@@ -23,11 +43,33 @@ export function TopNavbar({ title }: TopNavbarProps) {
         zIndex: 100,
       }}
     >
-      <Center h={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Group
+        h={rem(TOP_NAVBAR_HEIGHT_PX)}
+        px="md"
+        justify="space-between"
+        wrap="nowrap"
+      >
+        <Box
+          w={84}
+          onClick={showBack ? handleBack : undefined}
+          style={{ cursor: showBack ? "pointer" : "default" }}
+        >
+          {showBack && (
+            <Group gap={6} wrap="nowrap">
+              <BackIcon />
+              <Text fw={600}>{backLabel}</Text>
+            </Group>
+          )}
+        </Box>
+
         <Text fz="lg" fw={600} c="white">
           {title}
         </Text>
-      </Center>
+
+        <Box w={84} style={{ display: "flex", justifyContent: "flex-end" }}>
+          {rightSlot}
+        </Box>
+      </Group>
     </Box>
   );
 }

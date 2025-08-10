@@ -6,10 +6,8 @@ import {
   TopNavbar,
 } from '@/components/element/TopNavbar';
 import { CheckCircle } from '@/components/icons/CheckCircle';
-import { SendIcon } from '@/components/icons/SendIcon';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
-  Badge,
   Box,
   Button,
   Container,

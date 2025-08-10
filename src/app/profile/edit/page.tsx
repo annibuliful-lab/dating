@@ -89,12 +89,13 @@ function EditProfilePage() {
           profile.weight != null ? String(profile.weight) : ''
         );
         setAvatarUrl(profile.avatarUrl ?? null);
-      } catch (err: any) {
+      } catch (err) {
         console.error(err);
         notifications.show({
           color: 'red',
           title: 'Load failed',
-          message: err.message ?? 'Could not load your profile.',
+          message:
+            (err as Error).message ?? 'Could not load your profile.',
         });
       }
     })();
@@ -142,9 +143,9 @@ function EditProfilePage() {
 
       setAvatarUrl(pub.publicUrl);
       setAvatarKey(key);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      alert(err.message ?? 'Upload failed');
+      alert((err as Error).message ?? 'Upload failed');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

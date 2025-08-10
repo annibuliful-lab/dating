@@ -28,8 +28,11 @@ model User {
   lineId          String?           @unique
   phone           String?           @unique
   username        String            @unique
+  name            String?           @db.Text
+  lastname        String?           @db.Text
   fullName        String            @db.Text
   bio             String?           @db.Text
+  birthday        DateTime?         @db.Date
   age             Int?
   gender          String?
   height          Float?

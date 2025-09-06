@@ -24,7 +24,7 @@ import {
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type ChatPreview = {
   id: string;
@@ -51,18 +51,7 @@ function InboxPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-      return;
-    }
-
-    if (status === "authenticated" && session?.user?.id) {
-      fetchUserChats();
-    }
-  }, [status, session, router]);
-
-  const fetchUserChats = async () => {
+  const fetchUserChats = useCallback(async () => {
     if (!session?.user?.id) return;
 
     try {
@@ -73,6 +62,7 @@ function InboxPage() {
 
       // Transform the data to match our ChatPreview type
       const transformedChats: ChatPreview[] = userChats.map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (participant: any) => {
           const chat = participant.Chat;
           const latestMessage = chat.latestMessage;
@@ -80,6 +70,7 @@ function InboxPage() {
           // Get other participants (excluding current user)
           const otherParticipants =
             chat.ChatParticipant?.filter(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (p: any) => p.userId !== session.user.id
             ) || [];
 
@@ -89,6 +80,7 @@ function InboxPage() {
             chatName = chat.name;
           } else if (otherParticipants.length > 0) {
             chatName = otherParticipants
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               .map((p: any) => p.User?.fullName || "Unknown")
               .join(", ");
           } else {
@@ -115,11 +107,13 @@ function InboxPage() {
             preview,
             dateLabel,
             unread,
-            participants: otherParticipants.map((p: any) => ({
-              id: p.userId,
-              fullName: p.User?.fullName || "Unknown",
-              profileImageKey: p.User?.profileImageKey || null,
-            })),
+            participants: otherParticipants
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .map((p: any) => ({
+                id: p.userId,
+                fullName: p.User?.fullName || "Unknown",
+                profileImageKey: p.User?.profileImageKey || null,
+              })),
             latestMessage: latestMessage
               ? {
                   text: latestMessage.text,
@@ -138,7 +132,18 @@ function InboxPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/");
+      return;
+    }
+
+    if (status === "authenticated" && session?.user?.id) {
+      fetchUserChats();
+    }
+  }, [status, session, router, fetchUserChats]);
 
   const formatRelativeDate = (date: Date): string => {
     const now = new Date();

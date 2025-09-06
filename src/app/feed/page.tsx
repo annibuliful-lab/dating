@@ -30,7 +30,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type Post = {
   id: string;
-  content: any;
+  content: {
+    text?: string;
+    [key: string]: unknown;
+  } | null;
   createdAt: string;
   User: {
     id: string;
@@ -67,7 +70,7 @@ function FeedPage() {
         setLoading(true);
       }
       const data = await postService.getPublicPosts();
-      setPosts(data || []);
+      setPosts((data || []) as Post[]);
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to fetch posts"));
     } finally {

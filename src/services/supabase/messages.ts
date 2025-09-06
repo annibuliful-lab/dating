@@ -1,11 +1,8 @@
 import { supabase } from "@/client/supabase";
 import { Database } from "../../../generated/supabase-database.types";
 
-type Message = Database["public"]["Tables"]["Message"]["Row"];
 type MessageInsert = Database["public"]["Tables"]["Message"]["Insert"];
-type Chat = Database["public"]["Tables"]["Chat"]["Row"];
 type ChatInsert = Database["public"]["Tables"]["Chat"]["Insert"];
-type ChatParticipant = Database["public"]["Tables"]["ChatParticipant"]["Row"];
 
 export const messageService = {
   // Fetch messages for a specific chat
@@ -231,7 +228,22 @@ export const messageService = {
   },
 
   // Real-time message subscription
-  subscribeToMessages(chatId: string, callback: (message: any) => void) {
+  subscribeToMessages(
+    chatId: string,
+    callback: (message: {
+      id: string;
+      text: string | null;
+      imageUrl: string | null;
+      senderId: string;
+      createdAt: string;
+      User?: {
+        id: string;
+        fullName: string;
+        username: string;
+        profileImageKey: string | null;
+      };
+    }) => void
+  ) {
     const channel = supabase
       .channel(`messages:${chatId}`)
       .on(

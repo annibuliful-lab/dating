@@ -1,8 +1,6 @@
 import { supabase } from "@/client/supabase";
 import { Database } from "../../../generated/supabase-database.types";
 
-type User = Database["public"]["Tables"]["User"]["Row"];
-type UserInsert = Database["public"]["Tables"]["User"]["Insert"];
 type UserUpdate = Database["public"]["Tables"]["User"]["Update"];
 
 export const userService = {

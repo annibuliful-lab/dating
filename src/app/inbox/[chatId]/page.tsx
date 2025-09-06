@@ -21,6 +21,7 @@ import {
   rem,
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -31,7 +32,7 @@ type ChatMessage = {
   author: "me" | "other";
   senderId: string;
   senderName: string;
-  senderAvatar: string | null;
+  senderAvatar: string | null | undefined;
   createdAtLabel: string;
   createdAt: string;
 };
@@ -45,7 +46,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const subscriptionRef = useRef<any>(null);
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!params.chatId) return;
@@ -59,7 +60,17 @@ export default function ChatPage() {
       console.log("Fetched messages:", chatMessages);
 
       const transformedMessages: ChatMessage[] = chatMessages.map(
-        (msg: any) => ({
+        (msg: {
+          id: string;
+          text: string | null;
+          imageUrl: string | null;
+          senderId: string;
+          createdAt: string;
+          User?: {
+            fullName: string;
+            profileImageKey: string | null;
+          };
+        }) => ({
           id: msg.id,
           text: msg.text,
           imageUrl: msg.imageUrl,
@@ -94,7 +105,17 @@ export default function ChatPage() {
     console.log("Setting up realtime subscription for chat:", params.chatId);
     const subscription = messageService.subscribeToMessages(
       params.chatId,
-      (newMessage: any) => {
+      (newMessage: {
+        id: string;
+        text: string | null;
+        imageUrl: string | null;
+        senderId: string;
+        createdAt: string;
+        User?: {
+          fullName: string;
+          profileImageKey: string | null;
+        };
+      }) => {
         console.log("New message received:", newMessage);
         const transformedMessage: ChatMessage = {
           id: newMessage.id,
@@ -304,10 +325,16 @@ export default function ChatPage() {
                       >
                         {m.text && <Text>{m.text}</Text>}
                         {m.imageUrl && (
-                          <img
+                          <Image
                             src={m.imageUrl}
                             alt="Message attachment"
-                            style={{ maxWidth: "100%", borderRadius: 8 }}
+                            width={300}
+                            height={200}
+                            style={{
+                              maxWidth: "100%",
+                              borderRadius: 8,
+                              objectFit: "cover",
+                            }}
                           />
                         )}
                       </Box>
@@ -329,10 +356,16 @@ export default function ChatPage() {
                     >
                       {m.text && <Text>{m.text}</Text>}
                       {m.imageUrl && (
-                        <img
+                        <Image
                           src={m.imageUrl}
                           alt="Message attachment"
-                          style={{ maxWidth: "100%", borderRadius: 8 }}
+                          width={300}
+                          height={200}
+                          style={{
+                            maxWidth: "100%",
+                            borderRadius: 8,
+                            objectFit: "cover",
+                          }}
                         />
                       )}
                     </Box>

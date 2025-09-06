@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { BottomNavbar } from '@/components/element/BottomNavbar';
+import { BottomNavbar } from "@/components/element/BottomNavbar";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from '@/components/element/TopNavbar';
-import { CheckCircle } from '@/components/icons/CheckCircle';
-import { useUserProfile } from '@/hooks/useUserProfile';
+} from "@/components/element/TopNavbar";
+import { CheckCircle } from "@/components/icons/CheckCircle";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   Box,
   Button,
@@ -18,9 +18,9 @@ import {
   Stack,
   Text,
   ThemeIcon,
-} from '@mantine/core';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+} from "@mantine/core";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 function ProfilePage() {
   const router = useRouter();
@@ -29,28 +29,23 @@ function ProfilePage() {
 
   const { userProfile, loading } = useUserProfile(userId as string);
 
-  if ((loading && status === 'loading') || !userProfile) {
+  if ((loading && status === "loading") || !userProfile) {
     return null;
   }
 
   return (
     <Box>
       <TopNavbar title="Profile" />
-      <Container
-        size="xs"
-        pt="md"
-        px="md"
-        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-      >
+      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <Stack align="center" gap="xs" pb="lg">
           {/* Avatar */}
           <Box
             style={{
               width: rem(150),
               height: rem(150),
-              borderRadius: '50%',
-              overflow: 'hidden',
-              border: '1px solid var(--mantine-color-dark-4)',
+              borderRadius: "50%",
+              overflow: "hidden",
+              border: "1px solid var(--mantine-color-dark-4)",
             }}
           >
             <Image
@@ -66,12 +61,7 @@ function ProfilePage() {
               <Text fw={800} fz={20}>
                 {userProfile.username}
               </Text>
-              <ThemeIcon
-                size={22}
-                radius="xl"
-                color="teal"
-                variant="light"
-              >
+              <ThemeIcon size={22} radius="xl" color="teal" variant="light">
                 <CheckCircle />
               </ThemeIcon>
             </Group>
@@ -89,7 +79,7 @@ function ProfilePage() {
             color="dark.4"
             radius="md"
             mt="xs"
-            onClick={() => router.push('/profile/edit')}
+            onClick={() => router.push("/profile/edit")}
           >
             Edit profile
           </Button>

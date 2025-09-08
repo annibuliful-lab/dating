@@ -63,14 +63,6 @@ export const messageService = {
             id,
             fullName,
             profileImageKey
-          ),
-          ChatParticipant!ChatParticipant_chatId_fkey (
-            *,
-            User!ChatParticipant_userId_fkey (
-              id,
-              fullName,
-              profileImageKey
-            )
           )
         )
       `
@@ -298,5 +290,128 @@ export const messageService = {
       });
 
     return channel;
+  },
+
+  // Typing indicators
+  subscribeToTyping(
+    chatId: string,
+    onTypingUpdate: (
+      typingUsers: { userId: string; userName: string; isTyping: boolean }[]
+    ) => void
+  ) {
+    const channel = supabase
+      .channel(`typing:${chatId}`)
+      .on("presence", { event: "sync" }, () => {
+        const typingUsers = Object.values(channel.presenceState())
+          .flat()
+          .filter((presence: any) => presence.typing)
+          .map((presence: any) => ({
+            userId: presence.user_id,
+            userName: presence.user_name,
+            isTyping: presence.typing,
+          }));
+        onTypingUpdate(typingUsers);
+      })
+      .on("presence", { event: "join" }, ({ key, newPresences }) => {
+        console.log("User joined:", key, newPresences);
+      })
+      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+        console.log("User left:", key, leftPresences);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          console.log(
+            "Successfully subscribed to typing indicators for chat:",
+            chatId
+          );
+        }
+      });
+
+    return channel;
+  },
+
+  // Send typing indicator
+  async sendTypingIndicator(
+    chatId: string,
+    userId: string,
+    userName: string,
+    isTyping: boolean
+  ) {
+    const channel = supabase.channel(`typing:${chatId}`);
+    await channel.track({
+      user_id: userId,
+      user_name: userName,
+      typing: isTyping,
+      online_at: new Date().toISOString(),
+    });
+  },
+
+  // Mark messages as read
+  async markMessagesAsRead(
+    chatId: string,
+    userId: string,
+    lastReadMessageId?: string
+  ) {
+    // This would require a MessageRead table in your database
+    // For now, we'll just log it
+    console.log(
+      `Marking messages as read for user ${userId} in chat ${chatId}`
+    );
+  },
+
+  // Edit a message
+  async editMessage(messageId: string, newText: string) {
+    const { data, error } = await supabase
+      .from("Message")
+      .update({ text: newText })
+      .eq("id", messageId)
+      .select(
+        `
+        *,
+        User!Message_senderId_fkey (
+          id,
+          fullName,
+          username,
+          profileImageKey
+        )
+      `
+      )
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  // Delete a message
+  async deleteMessage(messageId: string) {
+    const { error } = await supabase
+      .from("Message")
+      .delete()
+      .eq("id", messageId);
+
+    if (error) throw new Error(error.message);
+    return true;
+  },
+
+  // Get message by ID
+  async getMessage(messageId: string) {
+    const { data, error } = await supabase
+      .from("Message")
+      .select(
+        `
+        *,
+        User!Message_senderId_fkey (
+          id,
+          fullName,
+          username,
+          profileImageKey
+        )
+      `
+      )
+      .eq("id", messageId)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
   },
 };

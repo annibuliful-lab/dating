@@ -9,8 +9,10 @@ import {
   TopNavbar,
 } from "@/components/element/TopNavbar";
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
+// Using a simple refresh icon from Mantine
 import { messageService } from "@/services/supabase/messages";
 import {
+  ActionIcon,
   Avatar,
   Box,
   Center,
@@ -50,6 +52,7 @@ function InboxPage() {
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
 
   const fetchUserChats = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -126,6 +129,7 @@ function InboxPage() {
       );
 
       setChats(transformedChats);
+      setLastUpdateTime(new Date());
     } catch (err) {
       console.error("Error fetching chats:", err);
       setError(err instanceof Error ? err.message : "Failed to load chats");
@@ -133,6 +137,17 @@ function InboxPage() {
       setLoading(false);
     }
   }, [session?.user?.id]);
+
+  // Auto-refresh chat list every 30 seconds
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const interval = setInterval(() => {
+      fetchUserChats();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [session?.user?.id, fetchUserChats]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -165,6 +180,10 @@ function InboxPage() {
 
   const handleChatClick = (chatId: string) => {
     router.push(`/inbox/${chatId}`);
+  };
+
+  const handleRefresh = () => {
+    fetchUserChats();
   };
 
   if (status === "loading" || loading) {
@@ -208,7 +227,22 @@ function InboxPage() {
 
   return (
     <Box>
-      <TopNavbar title="Inbox" rightSlot={<UserPlusIcon />} />
+      <TopNavbar
+        title="Inbox"
+        rightSlot={
+          <Group gap="xs">
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={handleRefresh}
+              loading={loading}
+            >
+              <Text size="lg">↻</Text>
+            </ActionIcon>
+            <UserPlusIcon />
+          </Group>
+        }
+      />
       <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <Stack gap="lg" pb={rem(BOTTOM_NAVBAR_HEIGHT_PX)}>
           {chats.length === 0 ? (

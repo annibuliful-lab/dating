@@ -1,12 +1,22 @@
+import {
+  ChatInsert,
+  ChatWithLatestMessage,
+  MessageSubscriptionCallback,
+  MessageWithUser,
+  SendMessageData,
+  SupabasePresenceState,
+  TypingSubscriptionCallback,
+  TypingUser,
+} from "@/@types/message";
 import { supabase } from "@/client/supabase";
-import { Database } from "../../../generated/supabase-database.types";
-
-type MessageInsert = Database["public"]["Tables"]["Message"]["Insert"];
-type ChatInsert = Database["public"]["Tables"]["Chat"]["Insert"];
 
 export const messageService = {
   // Fetch messages for a specific chat
-  async getChatMessages(chatId: string, limit = 50, offset = 0) {
+  async getChatMessages(
+    chatId: string,
+    limit = 50,
+    offset = 0
+  ): Promise<MessageWithUser[]> {
     const { data, error } = await supabase
       .from("Message")
       .select(
@@ -25,11 +35,11 @@ export const messageService = {
       .range(offset, offset + limit - 1);
 
     if (error) throw new Error(error.message);
-    return data;
+    return data || [];
   },
 
   // Send a new message
-  async sendMessage(messageData: MessageInsert) {
+  async sendMessage(messageData: SendMessageData): Promise<MessageWithUser> {
     const { data, error } = await supabase
       .from("Message")
       .insert(messageData)
@@ -47,11 +57,12 @@ export const messageService = {
       .single();
 
     if (error) throw new Error(error.message);
+    if (!data) throw new Error("Failed to send message");
     return data;
   },
 
   // Get user's chats with latest message
-  async getUserChats(userId: string) {
+  async getUserChats(userId: string): Promise<ChatWithLatestMessage[]> {
     const { data, error } = await supabase
       .from("ChatParticipant")
       .select(
@@ -71,6 +82,7 @@ export const messageService = {
       .order("id", { ascending: false });
 
     if (error) throw new Error(error.message);
+    if (!data) return [];
 
     // Get latest message for each chat
     const chatsWithMessages = await Promise.all(
@@ -83,6 +95,7 @@ export const messageService = {
             User!Message_senderId_fkey (
               id,
               fullName,
+              username,
               profileImageKey
             )
           `
@@ -96,7 +109,7 @@ export const messageService = {
           ...participant,
           Chat: {
             ...participant.Chat,
-            latestMessage,
+            latestMessage: latestMessage || undefined,
           },
         };
       })
@@ -114,6 +127,7 @@ export const messageService = {
       .single();
 
     if (error) throw new Error(error.message);
+    if (!data) throw new Error("Failed to create chat");
     return data;
   },
 
@@ -131,6 +145,7 @@ export const messageService = {
       .single();
 
     if (error) throw new Error(error.message);
+    if (!data) throw new Error("Failed to add chat participant");
     return data;
   },
 
@@ -153,11 +168,11 @@ export const messageService = {
       .eq("chatId", chatId);
 
     if (error) throw new Error(error.message);
-    return data;
+    return data || [];
   },
 
   // Check if user is participant in chat
-  async isUserInChat(userId: string, chatId: string) {
+  async isUserInChat(userId: string, chatId: string): Promise<boolean> {
     const { data, error } = await supabase
       .from("ChatParticipant")
       .select("id")
@@ -220,24 +235,16 @@ export const messageService = {
   },
 
   // Real-time message subscription
-  subscribeToMessages(
-    chatId: string,
-    callback: (message: {
-      id: string;
-      text: string | null;
-      imageUrl: string | null;
-      senderId: string;
-      createdAt: string;
-      User?: {
-        id: string;
-        fullName: string;
-        username: string;
-        profileImageKey: string | null;
-      };
-    }) => void
-  ) {
+  subscribeToMessages(chatId: string, callback: MessageSubscriptionCallback) {
+    console.log("Creating subscription for chat:", chatId);
+
     const channel = supabase
-      .channel(`messages:${chatId}`)
+      .channel(`messages:${chatId}`, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: "" },
+        },
+      })
       .on(
         "postgres_changes",
         {
@@ -280,12 +287,19 @@ export const messageService = {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log("Subscription status:", status);
+        if (err) {
+          console.error("Subscription error:", err);
+        }
         if (status === "SUBSCRIBED") {
           console.log("Successfully subscribed to messages for chat:", chatId);
         } else if (status === "CHANNEL_ERROR") {
           console.error("Error subscribing to messages for chat:", chatId);
+        } else if (status === "TIMED_OUT") {
+          console.error("Subscription timed out for chat:", chatId);
+        } else if (status === "CLOSED") {
+          console.log("Subscription closed for chat:", chatId);
         }
       });
 
@@ -295,21 +309,30 @@ export const messageService = {
   // Typing indicators
   subscribeToTyping(
     chatId: string,
-    onTypingUpdate: (
-      typingUsers: { userId: string; userName: string; isTyping: boolean }[]
-    ) => void
+    onTypingUpdate: TypingSubscriptionCallback
   ) {
     const channel = supabase
       .channel(`typing:${chatId}`)
       .on("presence", { event: "sync" }, () => {
-        const typingUsers = Object.values(channel.presenceState())
-          .flat()
-          .filter((presence: any) => presence.typing)
-          .map((presence: any) => ({
-            userId: presence.user_id,
-            userName: presence.user_name,
-            isTyping: presence.typing,
-          }));
+        const presenceState = channel.presenceState();
+        const typingUsers: TypingUser[] = [];
+
+        Object.values(presenceState).forEach((presences) => {
+          presences.forEach((presence: SupabasePresenceState) => {
+            if (
+              presence.typing &&
+              typeof presence.user_id === "string" &&
+              typeof presence.user_name === "string"
+            ) {
+              typingUsers.push({
+                userId: presence.user_id,
+                userName: presence.user_name,
+                isTyping: Boolean(presence.typing),
+              });
+            }
+          });
+        });
+
         onTypingUpdate(typingUsers);
       })
       .on("presence", { event: "join" }, ({ key, newPresences }) => {
@@ -360,7 +383,10 @@ export const messageService = {
   },
 
   // Edit a message
-  async editMessage(messageId: string, newText: string) {
+  async editMessage(
+    messageId: string,
+    newText: string
+  ): Promise<MessageWithUser> {
     const { data, error } = await supabase
       .from("Message")
       .update({ text: newText })
@@ -379,11 +405,12 @@ export const messageService = {
       .single();
 
     if (error) throw new Error(error.message);
+    if (!data) throw new Error("Failed to edit message");
     return data;
   },
 
   // Delete a message
-  async deleteMessage(messageId: string) {
+  async deleteMessage(messageId: string): Promise<boolean> {
     const { error } = await supabase
       .from("Message")
       .delete()
@@ -394,7 +421,7 @@ export const messageService = {
   },
 
   // Get message by ID
-  async getMessage(messageId: string) {
+  async getMessage(messageId: string): Promise<MessageWithUser> {
     const { data, error } = await supabase
       .from("Message")
       .select(
@@ -412,6 +439,7 @@ export const messageService = {
       .single();
 
     if (error) throw new Error(error.message);
+    if (!data) throw new Error("Message not found");
     return data;
   },
 };

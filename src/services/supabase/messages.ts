@@ -58,6 +58,15 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error("Failed to send message");
+
+    // Broadcast the message to all subscribers for better real-time performance
+    const channel = supabase.channel(`messages:${messageData.chatId}`);
+    await channel.send({
+      type: "broadcast",
+      event: "new_message",
+      payload: data,
+    });
+
     return data;
   },
 
@@ -245,6 +254,12 @@ export const messageService = {
           presence: { key: "" },
         },
       })
+      // Listen for broadcast messages (faster, no database query needed)
+      .on("broadcast", { event: "new_message" }, (payload) => {
+        console.log("Broadcast message received:", payload);
+        callback(payload.payload);
+      })
+      // Fallback to postgres_changes for reliability
       .on(
         "postgres_changes",
         {
@@ -254,7 +269,7 @@ export const messageService = {
           filter: `chatId=eq.${chatId}`,
         },
         async (payload) => {
-          console.log("Realtime payload received:", payload);
+          console.log("Postgres changes payload received:", payload);
           try {
             // Fetch the complete message with user data
             const { data, error } = await supabase

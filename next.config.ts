@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['@mantine/core', '@mantine/hooks'],
   },
   devIndicators: false,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;

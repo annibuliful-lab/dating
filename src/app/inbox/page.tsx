@@ -1,26 +1,32 @@
-"use client";
+'use client';
 
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
-} from "@/components/element/BottomNavbar";
+} from '@/components/element/BottomNavbar';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
+} from '@/components/element/TopNavbar';
+import { UserPlusIcon } from '@/components/icons/UserPlusIcon';
+// Using a simple refresh icon from Mantine
+import { messageService } from '@/services/supabase/messages';
 import {
+  ActionIcon,
   Avatar,
   Box,
+  Center,
   Container,
   Divider,
   Group,
+  Loader,
   Stack,
   Text,
   rem,
-} from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 type ChatPreview = {
   id: string;
@@ -28,93 +34,307 @@ type ChatPreview = {
   preview: string;
   dateLabel: string;
   unread: boolean;
+  participants: Array<{
+    id: string;
+    fullName: string;
+    profileImageKey: string | null;
+  }>;
+  latestMessage?: {
+    text: string | null;
+    createdAt: string;
+    senderId: string;
+  };
 };
-
-const MOCK_CHATS: ChatPreview[] = [
-  {
-    id: "1",
-    name: "Saiparn Brave, Aommy",
-    preview: "Lorem Ipsum is simply dummy text of the printing and types...",
-    dateLabel: "Apr 3",
-    unread: true,
-  },
-  {
-    id: "2",
-    name: "Saiparn Brave",
-    preview: "Lorem Ipsum is simply dummy text of the printing and types...",
-    dateLabel: "Apr 3",
-    unread: true,
-  },
-  {
-    id: "3",
-    name: "Saiparn Brave",
-    preview: "Lorem Ipsum is simply dummy text of the printing and types...",
-    dateLabel: "Apr 3",
-    unread: false,
-  },
-  {
-    id: "4",
-    name: "Saiparn Brave",
-    preview: "Lorem Ipsum is simply dummy text of the printing and types...",
-    dateLabel: "Apr 3",
-    unread: false,
-  },
-];
 
 function InboxPage() {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
+  const [chats, setChats] = useState<ChatPreview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
 
-  //   useEffect(() => {
-  //     if (status === "unauthenticated") {
-  //       router.push("/");
-  //     }
-  //   }, [router, status]);
+  const fetchUserChats = useCallback(async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const userChats = await messageService.getUserChats(
+        session.user.id
+      );
+
+      // Transform the data to match our ChatPreview type
+      const transformedChats: ChatPreview[] = userChats.map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (participant: any) => {
+          const chat = participant.Chat;
+          const latestMessage = chat.latestMessage;
+
+          // Get other participants (excluding current user)
+          const otherParticipants =
+            chat.ChatParticipant?.filter(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (p: any) => p.userId !== session.user.id
+            ) || [];
+
+          // Generate chat name based on participants
+          let chatName = 'Unknown';
+          if (chat.isGroup && chat.name) {
+            chatName = chat.name;
+          } else if (otherParticipants.length > 0) {
+            chatName = otherParticipants
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .map((p: any) => p.User?.fullName || 'Unknown')
+              .join(', ');
+          } else {
+            chatName = `Chat ${chat.id.slice(0, 8)}`;
+          }
+
+          // Generate preview text
+          let preview = 'No messages yet';
+          if (latestMessage) {
+            preview = latestMessage.text || 'Media message';
+          }
+
+          // Format date
+          const dateLabel = latestMessage
+            ? formatRelativeDate(new Date(latestMessage.createdAt))
+            : 'New';
+
+          // Determine if unread (you can implement this logic based on your needs)
+          const unread = false; // TODO: Implement unread logic
+
+          return {
+            id: chat.id,
+            name: chatName,
+            preview,
+            dateLabel,
+            unread,
+            participants: otherParticipants
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .map((p: any) => ({
+                id: p.userId,
+                fullName: p.User?.fullName || 'Unknown',
+                profileImageKey: p.User?.profileImageKey || null,
+              })),
+            latestMessage: latestMessage
+              ? {
+                  text: latestMessage.text,
+                  createdAt: latestMessage.createdAt,
+                  senderId: latestMessage.senderId,
+                }
+              : undefined,
+          };
+        }
+      );
+
+      setChats(transformedChats);
+      // setLastUpdateTime(new Date());
+    } catch (err) {
+      console.error('Error fetching chats:', err);
+      setError(
+        err instanceof Error ? err.message : 'Failed to load chats'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.user?.id]);
+
+  // Auto-refresh chat list every 30 seconds
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const interval = setInterval(() => {
+      fetchUserChats();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [session?.user?.id, fetchUserChats]);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/');
+      return;
+    }
+
+    if (status === 'authenticated' && session?.user?.id) {
+      fetchUserChats();
+    }
+  }, [status, session, router, fetchUserChats]);
+
+  const formatRelativeDate = (date: Date): string => {
+    const now = new Date();
+    const diffInHours =
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else if (diffInHours < 48) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+  };
+
+  const handleChatClick = (chatId: string) => {
+    router.push(`/inbox/${chatId}`);
+  };
+
+  const handleRefresh = () => {
+    fetchUserChats();
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <Box>
+        <TopNavbar title="Inbox" rightSlot={<UserPlusIcon />} />
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
+          <Center py="xl">
+            <Loader size="lg" />
+          </Center>
+        </Container>
+        <BottomNavbar />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box>
+        <TopNavbar title="Inbox" rightSlot={<UserPlusIcon />} />
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
+          <Center py="xl">
+            <Stack align="center" gap="md">
+              <Text c="red" ta="center">
+                {error}
+              </Text>
+              <Text
+                c="blue"
+                style={{ cursor: 'pointer' }}
+                onClick={fetchUserChats}
+              >
+                Try again
+              </Text>
+            </Stack>
+          </Center>
+        </Container>
+        <BottomNavbar />
+      </Box>
+    );
+  }
 
   return (
     <Box>
-      <TopNavbar title="Inbox" rightSlot={<UserPlusIcon />} />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
-        <Stack gap="lg" pb={rem(BOTTOM_NAVBAR_HEIGHT_PX)}>
-          {MOCK_CHATS.map((chat, index) => (
-            <Box
-              key={chat.id}
-              onClick={() => router.push(`/inbox/${chat.id}`)}
-              style={{ cursor: "pointer" }}
+      <TopNavbar
+        title="Inbox"
+        rightSlot={
+          <Group gap="xs">
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={handleRefresh}
+              loading={loading}
             >
-              <Group align="flex-start" wrap="nowrap" justify="space-between">
-                <Group wrap="nowrap" align="flex-start" gap="md">
-                  {/* Unread dot */}
-                  <Box
-                    mt={rem(10)}
-                    w={8}
-                    h={8}
-                    style={{
-                      borderRadius: 9999,
-                      background: chat.unread ? "#3B82F6" : "transparent",
-                    }}
-                  />
-                  <Avatar radius="xl" color="gray" size={62} />
-                  <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
-                    <Group justify="space-between" wrap="nowrap">
-                      <Text fw={700} style={{ whiteSpace: "nowrap" }}>
-                        {chat.name}
+              <Text size="lg">↻</Text>
+            </ActionIcon>
+            <UserPlusIcon />
+          </Group>
+        }
+      />
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
+        <Stack gap="lg" pb={rem(BOTTOM_NAVBAR_HEIGHT_PX)}>
+          {chats.length === 0 ? (
+            <Center py="xl">
+              <Stack align="center" gap="md">
+                <Text c="dimmed" ta="center">
+                  No conversations yet
+                </Text>
+                <Text size="sm" c="dimmed" ta="center">
+                  Start chatting with other users to see conversations
+                  here
+                </Text>
+              </Stack>
+            </Center>
+          ) : (
+            chats.map((chat, index) => (
+              <Box
+                key={chat.id}
+                onClick={() => handleChatClick(chat.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <Group
+                  align="flex-start"
+                  wrap="nowrap"
+                  justify="space-between"
+                >
+                  <Group wrap="nowrap" align="flex-start" gap="md">
+                    {/* Unread dot */}
+                    <Box
+                      mt={rem(10)}
+                      w={8}
+                      h={8}
+                      style={{
+                        borderRadius: 9999,
+                        background: chat.unread
+                          ? '#3B82F6'
+                          : 'transparent',
+                      }}
+                    />
+
+                    {/* Avatar - show first participant's avatar or default */}
+                    <Avatar
+                      radius="xl"
+                      color="gray"
+                      size={62}
+                      src={chat.participants[0]?.profileImageKey}
+                    />
+
+                    <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
+                      <Group justify="space-between" wrap="nowrap">
+                        <Text
+                          fw={700}
+                          style={{ whiteSpace: 'nowrap' }}
+                        >
+                          {chat.name}
+                        </Text>
+                        <Text c="dimmed" size="sm">
+                          {chat.dateLabel}
+                        </Text>
+                      </Group>
+                      <Text c="dimmed" size="sm" lineClamp={2}>
+                        {chat.preview}
                       </Text>
-                      <Text c="dimmed" size="sm">
-                        {chat.dateLabel}
-                      </Text>
-                    </Group>
-                    <Text c="dimmed" size="sm" lineClamp={2}>
-                      {chat.preview}
-                    </Text>
-                  </Stack>
+                    </Stack>
+                  </Group>
                 </Group>
-              </Group>
-              {index < MOCK_CHATS.length - 1 && (
-                <Divider mt="lg" color="dark.4" />
-              )}
-            </Box>
-          ))}
+                {index < chats.length - 1 && (
+                  <Divider mt="lg" color="dark.4" />
+                )}
+              </Box>
+            ))
+          )}
         </Stack>
       </Container>
 

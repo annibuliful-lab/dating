@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
-} from "@/components/element/BottomNavbar";
+} from '@/components/element/BottomNavbar';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
+} from '@/components/element/TopNavbar';
+import { UserPlusIcon } from '@/components/icons/UserPlusIcon';
 // Using a simple refresh icon from Mantine
-import { messageService } from "@/services/supabase/messages";
+import { messageService } from '@/services/supabase/messages';
 import {
   ActionIcon,
   Avatar,
@@ -23,10 +23,10 @@ import {
   Stack,
   Text,
   rem,
-} from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 type ChatPreview = {
   id: string;
@@ -52,7 +52,7 @@ function InboxPage() {
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
+  // const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
 
   const fetchUserChats = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -61,7 +61,9 @@ function InboxPage() {
       setLoading(true);
       setError(null);
 
-      const userChats = await messageService.getUserChats(session.user.id);
+      const userChats = await messageService.getUserChats(
+        session.user.id
+      );
 
       // Transform the data to match our ChatPreview type
       const transformedChats: ChatPreview[] = userChats.map(
@@ -78,28 +80,28 @@ function InboxPage() {
             ) || [];
 
           // Generate chat name based on participants
-          let chatName = "Unknown";
+          let chatName = 'Unknown';
           if (chat.isGroup && chat.name) {
             chatName = chat.name;
           } else if (otherParticipants.length > 0) {
             chatName = otherParticipants
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .map((p: any) => p.User?.fullName || "Unknown")
-              .join(", ");
+              .map((p: any) => p.User?.fullName || 'Unknown')
+              .join(', ');
           } else {
             chatName = `Chat ${chat.id.slice(0, 8)}`;
           }
 
           // Generate preview text
-          let preview = "No messages yet";
+          let preview = 'No messages yet';
           if (latestMessage) {
-            preview = latestMessage.text || "Media message";
+            preview = latestMessage.text || 'Media message';
           }
 
           // Format date
           const dateLabel = latestMessage
             ? formatRelativeDate(new Date(latestMessage.createdAt))
-            : "New";
+            : 'New';
 
           // Determine if unread (you can implement this logic based on your needs)
           const unread = false; // TODO: Implement unread logic
@@ -114,7 +116,7 @@ function InboxPage() {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               .map((p: any) => ({
                 id: p.userId,
-                fullName: p.User?.fullName || "Unknown",
+                fullName: p.User?.fullName || 'Unknown',
                 profileImageKey: p.User?.profileImageKey || null,
               })),
             latestMessage: latestMessage
@@ -129,10 +131,12 @@ function InboxPage() {
       );
 
       setChats(transformedChats);
-      setLastUpdateTime(new Date());
+      // setLastUpdateTime(new Date());
     } catch (err) {
-      console.error("Error fetching chats:", err);
-      setError(err instanceof Error ? err.message : "Failed to load chats");
+      console.error('Error fetching chats:', err);
+      setError(
+        err instanceof Error ? err.message : 'Failed to load chats'
+      );
     } finally {
       setLoading(false);
     }
@@ -150,30 +154,31 @@ function InboxPage() {
   }, [session?.user?.id, fetchUserChats]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
       return;
     }
 
-    if (status === "authenticated" && session?.user?.id) {
+    if (status === 'authenticated' && session?.user?.id) {
       fetchUserChats();
     }
   }, [status, session, router, fetchUserChats]);
 
   const formatRelativeDate = (date: Date): string => {
     const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInHours =
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 1) {
-      return "Just now";
+      return 'Just now';
     } else if (diffInHours < 24) {
       return `${Math.floor(diffInHours)}h ago`;
     } else if (diffInHours < 48) {
-      return "Yesterday";
+      return 'Yesterday';
     } else {
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
       });
     }
   };
@@ -186,11 +191,16 @@ function InboxPage() {
     fetchUserChats();
   };
 
-  if (status === "loading" || loading) {
+  if (status === 'loading' || loading) {
     return (
       <Box>
         <TopNavbar title="Inbox" rightSlot={<UserPlusIcon />} />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
           <Center py="xl">
             <Loader size="lg" />
           </Center>
@@ -204,7 +214,12 @@ function InboxPage() {
     return (
       <Box>
         <TopNavbar title="Inbox" rightSlot={<UserPlusIcon />} />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
           <Center py="xl">
             <Stack align="center" gap="md">
               <Text c="red" ta="center">
@@ -212,7 +227,7 @@ function InboxPage() {
               </Text>
               <Text
                 c="blue"
-                style={{ cursor: "pointer" }}
+                style={{ cursor: 'pointer' }}
                 onClick={fetchUserChats}
               >
                 Try again
@@ -243,7 +258,12 @@ function InboxPage() {
           </Group>
         }
       />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
         <Stack gap="lg" pb={rem(BOTTOM_NAVBAR_HEIGHT_PX)}>
           {chats.length === 0 ? (
             <Center py="xl">
@@ -252,7 +272,8 @@ function InboxPage() {
                   No conversations yet
                 </Text>
                 <Text size="sm" c="dimmed" ta="center">
-                  Start chatting with other users to see conversations here
+                  Start chatting with other users to see conversations
+                  here
                 </Text>
               </Stack>
             </Center>
@@ -261,9 +282,13 @@ function InboxPage() {
               <Box
                 key={chat.id}
                 onClick={() => handleChatClick(chat.id)}
-                style={{ cursor: "pointer" }}
+                style={{ cursor: 'pointer' }}
               >
-                <Group align="flex-start" wrap="nowrap" justify="space-between">
+                <Group
+                  align="flex-start"
+                  wrap="nowrap"
+                  justify="space-between"
+                >
                   <Group wrap="nowrap" align="flex-start" gap="md">
                     {/* Unread dot */}
                     <Box
@@ -272,7 +297,9 @@ function InboxPage() {
                       h={8}
                       style={{
                         borderRadius: 9999,
-                        background: chat.unread ? "#3B82F6" : "transparent",
+                        background: chat.unread
+                          ? '#3B82F6'
+                          : 'transparent',
                       }}
                     />
 
@@ -286,7 +313,10 @@ function InboxPage() {
 
                     <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
                       <Group justify="space-between" wrap="nowrap">
-                        <Text fw={700} style={{ whiteSpace: "nowrap" }}>
+                        <Text
+                          fw={700}
+                          style={{ whiteSpace: 'nowrap' }}
+                        >
                           {chat.name}
                         </Text>
                         <Text c="dimmed" size="sm">
@@ -299,7 +329,9 @@ function InboxPage() {
                     </Stack>
                   </Group>
                 </Group>
-                {index < chats.length - 1 && <Divider mt="lg" color="dark.4" />}
+                {index < chats.length - 1 && (
+                  <Divider mt="lg" color="dark.4" />
+                )}
               </Box>
             ))
           )}

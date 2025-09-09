@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { ChatMessage } from "@/components/chat/ChatMessage";
-import { EditMessageModal } from "@/components/chat/EditMessageModal";
-import { MessageInput } from "@/components/chat/MessageInput";
-import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { ChatMessage } from '@/components/chat/ChatMessage';
+import { EditMessageModal } from '@/components/chat/EditMessageModal';
+import { MessageInput } from '@/components/chat/MessageInput';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
-import { useChatMessages } from "@/hooks/useChatMessages";
+} from '@/components/element/TopNavbar';
+import { UserPlusIcon } from '@/components/icons/UserPlusIcon';
+import { useChatMessages } from '@/hooks/useChatMessages';
 import {
   ActionIcon,
   Box,
@@ -20,15 +20,15 @@ import {
   Stack,
   Text,
   rem,
-} from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams<{ chatId: string }>();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const {
     message,
@@ -38,7 +38,6 @@ export default function ChatPage() {
     sending,
     error,
     typingUsers,
-    editingMessage,
     editText,
     setEditText,
     showEditModal,
@@ -53,19 +52,23 @@ export default function ChatPage() {
     closeEditModal,
     fetchMessages,
     formatMessageTime,
-  } = useChatMessages({ chatId: params.chatId || "" });
+  } = useChatMessages({ chatId: params.chatId || '' });
 
   // Handle authentication redirect
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
     }
   }, [status, router]);
 
-  if (status === "loading" || loading) {
+  if (status === 'loading' || loading) {
     return (
       <Box>
-        <TopNavbar title="Chat" showBack rightSlot={<UserPlusIcon />} />
+        <TopNavbar
+          title="Chat"
+          showBack
+          rightSlot={<UserPlusIcon />}
+        />
         <Container
           size="xs"
           px="md"
@@ -83,7 +86,11 @@ export default function ChatPage() {
   if (error) {
     return (
       <Box>
-        <TopNavbar title="Chat" showBack rightSlot={<UserPlusIcon />} />
+        <TopNavbar
+          title="Chat"
+          showBack
+          rightSlot={<UserPlusIcon />}
+        />
         <Container
           size="xs"
           px="md"
@@ -97,7 +104,7 @@ export default function ChatPage() {
               </Text>
               <Text
                 c="blue"
-                style={{ cursor: "pointer" }}
+                style={{ cursor: 'pointer' }}
                 onClick={fetchMessages}
               >
                 Try again
@@ -120,16 +127,21 @@ export default function ChatPage() {
               variant="subtle"
               size="lg"
               onClick={() => setSoundEnabled(!soundEnabled)}
-              color={soundEnabled ? "blue" : "gray"}
+              color={soundEnabled ? 'blue' : 'gray'}
             >
-              <Text size="lg">{soundEnabled ? "🔊" : "🔇"}</Text>
+              <Text size="lg">{soundEnabled ? '🔊' : '🔇'}</Text>
             </ActionIcon>
             <UserPlusIcon />
           </Group>
         }
       />
 
-      <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)} pb={rem(90)}>
+      <Container
+        size="xs"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        pb={rem(90)}
+      >
         <Stack gap="lg">
           {messages.length === 0 ? (
             <Center py="xl">
@@ -139,9 +151,10 @@ export default function ChatPage() {
             </Center>
           ) : (
             messages.map((m, index) => {
-              const prevMessage = index > 0 ? messages[index - 1] : null;
+              const prevMessage =
+                index > 0 ? messages[index - 1] : null;
               const showAvatar =
-                m.author === "other" &&
+                m.author === 'other' &&
                 (!prevMessage || prevMessage.senderId !== m.senderId);
               const showTimestamp =
                 !prevMessage ||
@@ -155,7 +168,7 @@ export default function ChatPage() {
                   message={m}
                   showAvatar={showAvatar}
                   showTimestamp={showTimestamp}
-                  isOwnMessage={m.author === "me"}
+                  isOwnMessage={m.author === 'me'}
                   onEdit={handleEditMessage}
                   onDelete={handleDeleteMessage}
                   formatMessageTime={formatMessageTime}

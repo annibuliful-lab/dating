@@ -105,7 +105,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           id: msg.id,
           text: msg.text,
           imageUrl: msg.imageUrl,
-          videoUrl: (msg as any).videoUrl || null,
+          videoUrl:
+            (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
           author: msg.senderId === session?.user?.id ? "me" : "other",
           senderId: msg.senderId,
           senderName: msg.User?.fullName || "Unknown",
@@ -156,7 +157,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           id: newMessage.id,
           text: newMessage.text,
           imageUrl: newMessage.imageUrl,
-          videoUrl: (newMessage as any).videoUrl || null,
+          videoUrl:
+            (newMessage as MessageWithUser & { videoUrl?: string }).videoUrl ||
+            null,
           author: newMessage.senderId === session?.user?.id ? "me" : "other",
           senderId: newMessage.senderId,
           senderName: newMessage.User?.fullName || "Unknown",
@@ -281,6 +284,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   }, [
     message,
     session?.user?.id,
+    session?.user?.name,
+    session?.user?.image,
     chatId,
     sending,
     isTyping,
@@ -440,6 +445,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   }, [
     selectedMedia,
     session?.user?.id,
+    session?.user?.name,
+    session?.user?.image,
     chatId,
     uploadingMedia,
     formatMessageTime,

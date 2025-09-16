@@ -52,7 +52,7 @@ function InboxPage() {
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
+  const [, setLastUpdateTime] = useState<Date>(new Date());
 
   const fetchUserChats = useCallback(async () => {
     if (!session?.user?.id) return;

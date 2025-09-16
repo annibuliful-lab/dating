@@ -385,11 +385,7 @@ export const messageService = {
   },
 
   // Mark messages as read
-  async markMessagesAsRead(
-    chatId: string,
-    userId: string,
-    lastReadMessageId?: string
-  ) {
+  async markMessagesAsRead(chatId: string, userId: string) {
     // This would require a MessageRead table in your database
     // For now, we'll just log it
     console.log(

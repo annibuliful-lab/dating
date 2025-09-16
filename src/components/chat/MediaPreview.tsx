@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionIcon, Box, Group, Stack, Text } from "@mantine/core";
+import Image from "next/image";
 import { useState } from "react";
 
 interface MediaPreviewProps {
@@ -72,9 +73,11 @@ export function MediaPreview({
             }}
           >
             {isImage && (
-              <img
+              <Image
                 src={previewUrl}
                 alt="Preview"
+                width={400}
+                height={200}
                 style={{
                   width: "100%",
                   height: "auto",

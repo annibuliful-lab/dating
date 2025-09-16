@@ -29,7 +29,7 @@ import { useEffect } from "react";
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams<{ chatId: string }>();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const {
     message,
@@ -39,7 +39,6 @@ export default function ChatPage() {
     sending,
     error,
     typingUsers,
-    editingMessage,
     editText,
     setEditText,
     showEditModal,

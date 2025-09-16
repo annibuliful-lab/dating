@@ -23,6 +23,7 @@ export interface ChatMessage {
   id: string;
   text: string | null;
   imageUrl: string | null;
+  videoUrl: string | null;
   author: "me" | "other";
   senderId: string;
   senderName: string;
@@ -55,6 +56,7 @@ export interface SendMessageData {
   senderId: string;
   text: string;
   imageUrl?: string | null;
+  videoUrl?: string | null;
 }
 
 export interface ChatWithLatestMessage {

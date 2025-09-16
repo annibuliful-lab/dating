@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatMessage, MessageWithUser, TypingUser } from "@/@types/message";
+import { mediaService } from "@/services/supabase/media";
 import { messageService } from "@/services/supabase/messages";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,6 +25,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const [editText, setEditText] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const typingSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(
@@ -102,6 +105,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           id: msg.id,
           text: msg.text,
           imageUrl: msg.imageUrl,
+          videoUrl: (msg as any).videoUrl || null,
           author: msg.senderId === session?.user?.id ? "me" : "other",
           senderId: msg.senderId,
           senderName: msg.User?.fullName || "Unknown",
@@ -152,6 +156,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           id: newMessage.id,
           text: newMessage.text,
           imageUrl: newMessage.imageUrl,
+          videoUrl: (newMessage as any).videoUrl || null,
           author: newMessage.senderId === session?.user?.id ? "me" : "other",
           senderId: newMessage.senderId,
           senderName: newMessage.User?.fullName || "Unknown",
@@ -244,6 +249,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         id: messageId,
         text: messageText,
         imageUrl: null,
+        videoUrl: null,
         author: "me",
         senderId: session.user.id,
         senderName: session.user.name || "You",
@@ -370,6 +376,82 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     setEditText("");
   }, []);
 
+  const handleMediaSelect = useCallback((file: File) => {
+    const validation = mediaService.validateFile(file);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
+    setSelectedMedia(file);
+  }, []);
+
+  const handleSendMedia = useCallback(async () => {
+    if (!selectedMedia || !session?.user?.id || !chatId || uploadingMedia)
+      return;
+
+    const messageId = crypto.randomUUID();
+    const currentTime = new Date().toISOString();
+    const isVideo = selectedMedia.type.startsWith("video/");
+    const isImage = selectedMedia.type.startsWith("image/");
+
+    try {
+      setUploadingMedia(true);
+
+      // Upload media file
+      const uploadResult = await mediaService.uploadMedia(selectedMedia);
+
+      // Create optimistic message
+      const optimisticMessage: ChatMessage = {
+        id: messageId,
+        text: null,
+        imageUrl: isImage ? uploadResult.publicUrl : null,
+        videoUrl: isVideo ? uploadResult.publicUrl : null,
+        author: "me",
+        senderId: session.user.id,
+        senderName: session.user.name || "You",
+        senderAvatar: session.user.image,
+        createdAtLabel: formatMessageTime(new Date(currentTime)),
+        createdAt: currentTime,
+      };
+
+      setMessages((prev) => [...prev, optimisticMessage]);
+      setSelectedMedia(null);
+
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+
+      // Send message with media
+      await messageService.sendMessage({
+        id: messageId,
+        chatId: chatId,
+        senderId: session.user.id,
+        text: "",
+        imageUrl: isImage ? uploadResult.publicUrl : null,
+        videoUrl: isVideo ? uploadResult.publicUrl : null,
+      });
+    } catch (err) {
+      console.error("Error sending media message:", err);
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+      alert("Failed to send media. Please try again.");
+    } finally {
+      setUploadingMedia(false);
+    }
+  }, [
+    selectedMedia,
+    session?.user?.id,
+    chatId,
+    uploadingMedia,
+    formatMessageTime,
+  ]);
+
+  const handleRemoveMedia = useCallback(() => {
+    if (selectedMedia) {
+      mediaService.revokePreviewUrl(URL.createObjectURL(selectedMedia));
+      setSelectedMedia(null);
+    }
+  }, [selectedMedia]);
+
   useEffect(() => {
     if (chatId && session?.user?.id) {
       fetchMessages();
@@ -413,6 +495,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     soundEnabled,
     setSoundEnabled,
     messagesEndRef,
+    selectedMedia,
+    uploadingMedia,
 
     // Actions
     handleSend,
@@ -423,5 +507,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     closeEditModal,
     fetchMessages,
     formatMessageTime,
+    handleMediaSelect,
+    handleSendMedia,
+    handleRemoveMedia,
   };
 }

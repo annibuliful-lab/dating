@@ -2,6 +2,7 @@
 
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { EditMessageModal } from "@/components/chat/EditMessageModal";
+import { MediaPreview } from "@/components/chat/MediaPreview";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import {
@@ -45,6 +46,8 @@ export default function ChatPage() {
     soundEnabled,
     setSoundEnabled,
     messagesEndRef,
+    selectedMedia,
+    uploadingMedia,
     handleSend,
     handleTyping,
     handleEditMessage,
@@ -53,6 +56,9 @@ export default function ChatPage() {
     closeEditModal,
     fetchMessages,
     formatMessageTime,
+    handleMediaSelect,
+    handleSendMedia,
+    handleRemoveMedia,
   } = useChatMessages({ chatId: params.chatId || "" });
 
   // Handle authentication redirect
@@ -175,7 +181,17 @@ export default function ChatPage() {
         onSend={handleSend}
         onTyping={handleTyping}
         sending={sending}
+        onMediaSelect={handleMediaSelect}
       />
+
+      {selectedMedia && (
+        <MediaPreview
+          file={selectedMedia}
+          onRemove={handleRemoveMedia}
+          onSend={handleSendMedia}
+          sending={uploadingMedia}
+        />
+      )}
 
       <EditMessageModal
         opened={showEditModal}

@@ -77,6 +77,20 @@ export function ChatMessage({
                     }}
                   />
                 )}
+                {message.videoUrl && (
+                  <video
+                    src={message.videoUrl}
+                    controls
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "300px",
+                      borderRadius: 8,
+                      marginTop: message.text ? 8 : 0,
+                    }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                )}
               </Box>
             </Menu.Target>
             <Menu.Dropdown>
@@ -139,6 +153,20 @@ export function ChatMessage({
                         marginTop: message.text ? 8 : 0,
                       }}
                     />
+                  )}
+                  {message.videoUrl && (
+                    <video
+                      src={message.videoUrl}
+                      controls
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "300px",
+                        borderRadius: 8,
+                        marginTop: message.text ? 8 : 0,
+                      }}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
                   )}
                 </Box>
               </Menu.Target>

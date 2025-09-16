@@ -49,6 +49,25 @@ export const mediaService = {
     }
   },
 
+  // Upload multiple files to Supabase Storage
+  async uploadMultipleMedia(
+    files: File[],
+    bucket: string = "dating",
+    folder: string = "messages"
+  ): Promise<MediaUploadResult[]> {
+    try {
+      const uploadPromises = files.map((file) =>
+        this.uploadMedia(file, bucket, folder)
+      );
+      return await Promise.all(uploadPromises);
+    } catch (error) {
+      console.error("Batch media upload error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Batch upload failed"
+      );
+    }
+  },
+
   // Delete a media file from Supabase Storage
   async deleteMedia(
     filePath: string,

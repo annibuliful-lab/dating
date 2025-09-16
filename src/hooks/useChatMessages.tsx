@@ -25,7 +25,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const [editText, setEditText] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<File[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -256,7 +256,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         author: "me",
         senderId: session.user.id,
         senderName: session.user.name || "You",
-        senderAvatar: session.user.image,
+        senderAvatar: session.user.image || "",
         createdAtLabel: formatMessageTime(new Date(currentTime)),
         createdAt: currentTime,
       };
@@ -271,7 +271,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       await messageService.sendMessage({
         id: messageId,
         chatId: chatId,
-        senderId: session.user.id,
+        senderId: session.user.id!,
         text: messageText,
       });
     } catch (err) {
@@ -381,63 +381,100 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     setEditText("");
   }, []);
 
-  const handleMediaSelect = useCallback((file: File) => {
-    const validation = mediaService.validateFile(file);
-    if (!validation.valid) {
-      alert(validation.error);
-      return;
+  const handleMediaSelect = useCallback((files: File[]) => {
+    // Validate all files
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    files.forEach((file, index) => {
+      const validation = mediaService.validateFile(file);
+      if (!validation.valid) {
+        errors.push(`File ${index + 1}: ${validation.error}`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errors.length > 0) {
+      alert(errors.join("\n"));
     }
-    setSelectedMedia(file);
+
+    if (validFiles.length > 0) {
+      setSelectedMedia((prev) => [...prev, ...validFiles]);
+    }
   }, []);
 
   const handleSendMedia = useCallback(async () => {
-    if (!selectedMedia || !session?.user?.id || !chatId || uploadingMedia)
+    if (
+      !selectedMedia ||
+      selectedMedia.length === 0 ||
+      !session?.user?.id ||
+      !chatId ||
+      uploadingMedia
+    )
       return;
 
-    const messageId = crypto.randomUUID();
     const currentTime = new Date().toISOString();
-    const isVideo = selectedMedia.type.startsWith("video/");
-    const isImage = selectedMedia.type.startsWith("image/");
+    const messageIds: string[] = [];
 
     try {
       setUploadingMedia(true);
 
-      // Upload media file
-      const uploadResult = await mediaService.uploadMedia(selectedMedia);
+      // Upload all media files first
+      const uploadResults = await mediaService.uploadMultipleMedia(
+        selectedMedia
+      );
 
-      // Create optimistic message
-      const optimisticMessage: ChatMessage = {
-        id: messageId,
-        text: null,
-        imageUrl: isImage ? uploadResult.publicUrl : null,
-        videoUrl: isVideo ? uploadResult.publicUrl : null,
-        author: "me",
-        senderId: session.user.id,
-        senderName: session.user.name || "You",
-        senderAvatar: session.user.image,
-        createdAtLabel: formatMessageTime(new Date(currentTime)),
-        createdAt: currentTime,
-      };
+      // Create messages for each uploaded file
+      const messagePromises = selectedMedia.map(async (file, index) => {
+        const messageId = crypto.randomUUID();
+        messageIds.push(messageId);
 
-      setMessages((prev) => [...prev, optimisticMessage]);
-      setSelectedMedia(null);
+        const isVideo = file.type.startsWith("video/");
+        const isImage = file.type.startsWith("image/");
+        const uploadResult = uploadResults[index];
+
+        // Create optimistic message
+        const optimisticMessage: ChatMessage = {
+          id: messageId,
+          text: null,
+          imageUrl: isImage ? uploadResult.publicUrl : null,
+          videoUrl: isVideo ? uploadResult.publicUrl : null,
+          author: "me",
+          senderId: session.user.id!,
+          senderName: session.user.name || "You",
+          senderAvatar: session.user.image || "",
+          createdAtLabel: formatMessageTime(new Date(currentTime)),
+          createdAt: currentTime,
+        };
+
+        // Send message with media
+        await messageService.sendMessage({
+          id: messageId,
+          chatId: chatId,
+          senderId: session.user.id!,
+          text: "",
+          imageUrl: isImage ? uploadResult.publicUrl : null,
+          videoUrl: isVideo ? uploadResult.publicUrl : null,
+        });
+
+        return optimisticMessage;
+      });
+
+      // Wait for all messages to be sent
+      const optimisticMessages = await Promise.all(messagePromises);
+
+      // Add all messages to the chat
+      setMessages((prev) => [...prev, ...optimisticMessages]);
+      setSelectedMedia([]);
 
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
-
-      // Send message with media
-      await messageService.sendMessage({
-        id: messageId,
-        chatId: chatId,
-        senderId: session.user.id,
-        text: "",
-        imageUrl: isImage ? uploadResult.publicUrl : null,
-        videoUrl: isVideo ? uploadResult.publicUrl : null,
-      });
     } catch (err) {
-      console.error("Error sending media message:", err);
-      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+      console.error("Error sending media messages:", err);
+      // Remove failed messages
+      setMessages((prev) => prev.filter((msg) => !messageIds.includes(msg.id)));
       alert("Failed to send media. Please try again.");
     } finally {
       setUploadingMedia(false);
@@ -452,12 +489,19 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     formatMessageTime,
   ]);
 
-  const handleRemoveMedia = useCallback(() => {
-    if (selectedMedia) {
-      mediaService.revokePreviewUrl(URL.createObjectURL(selectedMedia));
-      setSelectedMedia(null);
-    }
-  }, [selectedMedia]);
+  const handleRemoveMedia = useCallback(
+    (index: number) => {
+      if (selectedMedia && selectedMedia[index]) {
+        // Revoke the preview URL for the specific file
+        mediaService.revokePreviewUrl(
+          URL.createObjectURL(selectedMedia[index])
+        );
+        // Remove the file from the array
+        setSelectedMedia((prev) => prev.filter((_, i) => i !== index));
+      }
+    },
+    [selectedMedia]
+  );
 
   useEffect(() => {
     if (chatId && session?.user?.id) {

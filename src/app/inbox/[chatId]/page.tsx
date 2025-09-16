@@ -2,7 +2,6 @@
 
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { EditMessageModal } from "@/components/chat/EditMessageModal";
-import { MediaPreview } from "@/components/chat/MediaPreview";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import {
@@ -181,16 +180,11 @@ export default function ChatPage() {
         onTyping={handleTyping}
         sending={sending}
         onMediaSelect={handleMediaSelect}
+        selectedMedia={selectedMedia}
+        onRemoveMedia={handleRemoveMedia}
+        onSendMedia={handleSendMedia}
+        uploadingMedia={uploadingMedia}
       />
-
-      {selectedMedia && (
-        <MediaPreview
-          file={selectedMedia}
-          onRemove={handleRemoveMedia}
-          onSend={handleSendMedia}
-          sending={uploadingMedia}
-        />
-      )}
 
       <EditMessageModal
         opened={showEditModal}

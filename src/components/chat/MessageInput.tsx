@@ -1,5 +1,6 @@
 "use client";
 
+import { MediaPreview } from "@/components/chat/MediaPreview";
 import { CameraIcon } from "@/components/icons/CameraIcon";
 import { SendIcon } from "@/components/icons/SendIcon";
 import { ActionIcon, Box, Container, Group, TextInput } from "@mantine/core";
@@ -11,7 +12,11 @@ interface MessageInputProps {
   onSend: () => void;
   onTyping: (text: string) => void;
   sending: boolean;
-  onMediaSelect?: (file: File) => void;
+  onMediaSelect?: (files: File[]) => void;
+  selectedMedia?: File[];
+  onRemoveMedia?: (index: number) => void;
+  onSendMedia?: () => void;
+  uploadingMedia?: boolean;
 }
 
 export function MessageInput({
@@ -21,11 +26,25 @@ export function MessageInput({
   onTyping,
   sending,
   onMediaSelect,
+  selectedMedia,
+  onRemoveMedia,
+  onSendMedia,
+  uploadingMedia,
 }: MessageInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleSend = () => {
+    if (selectedMedia && selectedMedia.length > 0 && onSendMedia) {
+      // If there's media selected, send media first
+      onSendMedia();
+    } else {
+      // If no media, send regular message
       onSend();
     }
   };
@@ -41,9 +60,9 @@ export function MessageInput({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && onMediaSelect) {
-      // Validate file type
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0 && onMediaSelect) {
+      // Validate each file
       const validTypes = [
         "image/jpeg",
         "image/png",
@@ -53,20 +72,29 @@ export function MessageInput({
         "video/webm",
         "video/quicktime",
       ];
-      if (validTypes.includes(file.type)) {
-        // Validate file size (10MB limit)
-        if (file.size <= 10 * 1024 * 1024) {
-          onMediaSelect(file);
+
+      const validFiles: File[] = [];
+      const errors: string[] = [];
+
+      files.forEach((file, index) => {
+        if (!validTypes.includes(file.type)) {
+          errors.push(`File ${index + 1}: Invalid file type`);
+        } else if (file.size > 10 * 1024 * 1024) {
+          errors.push(`File ${index + 1}: File size must be less than 10MB`);
         } else {
-          alert("File size must be less than 10MB");
+          validFiles.push(file);
         }
-      } else {
-        alert(
-          "Please select an image (JPEG, PNG, GIF, WebP) or video (MP4, WebM, QuickTime) file"
-        );
+      });
+
+      if (errors.length > 0) {
+        alert(errors.join("\n"));
+      }
+
+      if (validFiles.length > 0) {
+        onMediaSelect(validFiles);
       }
     }
-    // Reset input value to allow selecting the same file again
+    // Reset input value to allow selecting the same files again
     if (e.target) {
       e.target.value = "";
     }
@@ -84,12 +112,21 @@ export function MessageInput({
         borderTop: "1px solid var(--mantine-color-dark-4)",
       }}
     >
+      {selectedMedia && selectedMedia.length > 0 && onRemoveMedia && (
+        <MediaPreview
+          files={selectedMedia}
+          onRemove={onRemoveMedia}
+          sending={uploadingMedia || false}
+        />
+      )}
+
       <Container size="xs" px="md" py="sm">
         <Group align="center" gap="sm">
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*,video/*"
+            multiple
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
@@ -117,9 +154,14 @@ export function MessageInput({
             size={40}
             radius="xl"
             variant="subtle"
-            onClick={onSend}
-            disabled={!message.trim() || sending}
-            loading={sending}
+            onClick={handleSend}
+            disabled={
+              (!message.trim() &&
+                (!selectedMedia || selectedMedia.length === 0)) ||
+              sending ||
+              uploadingMedia
+            }
+            loading={sending || uploadingMedia}
           >
             <SendIcon />
           </ActionIcon>

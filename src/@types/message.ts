@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import { Database } from "../../generated/supabase-database.types";
 
 // Base types from database

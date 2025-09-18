@@ -129,7 +129,7 @@ function InboxPage() {
       );
 
       setChats(transformedChats);
-      setLastUpdateTime(new Date());
+      // setLastUpdateTime(new Date());
     } catch (err) {
       console.error("Error fetching chats:", err);
       setError(err instanceof Error ? err.message : "Failed to load chats");

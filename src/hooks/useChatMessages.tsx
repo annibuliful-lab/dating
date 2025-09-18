@@ -29,9 +29,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
-  const typingSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(
-    null
-  );
+  const typingSubscriptionRef = useRef<{
+    unsubscribe: () => void;
+  } | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -64,8 +64,11 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     try {
       const AudioContextClass =
         window.AudioContext ||
-        (window as typeof window & { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
+        (
+          window as typeof window & {
+            webkitAudioContext: typeof AudioContext;
+          }
+        ).webkitAudioContext;
       const audioContext = new AudioContextClass();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -100,27 +103,27 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       const chatMessages = await messageService.getChatMessages(chatId);
       console.log("Fetched messages:", chatMessages);
 
-      const transformedMessages: ChatMessage[] = chatMessages.map(
-        (msg: MessageWithUser) => ({
-          id: msg.id,
-          text: msg.text,
-          imageUrl: msg.imageUrl,
-          videoUrl:
-            (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
-          author: msg.senderId === session?.user?.id ? "me" : "other",
-          senderId: msg.senderId,
-          senderName: msg.User?.fullName || "Unknown",
-          senderAvatar: msg.User?.profileImageKey,
-          createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
-          createdAt: msg.createdAt,
-        })
-      );
+      const transformedMessages: ChatMessage[] = chatMessages.map((msg) => ({
+        id: msg.id,
+        text: msg.text,
+        imageUrl: msg.imageUrl,
+        videoUrl:
+          (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
+        author: msg.senderId === session?.user?.id ? "me" : "other",
+        senderId: msg.senderId,
+        senderName: msg.User?.fullName || "Unknown",
+        senderAvatar: msg.User?.profileImageKey,
+        createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
+        createdAt: msg.createdAt,
+      }));
 
       setMessages(transformedMessages);
       console.log("Messages set, loading should be false now");
 
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+        });
       }, 100);
     } catch (err) {
       console.error("Error fetching messages:", err);
@@ -188,7 +191,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           }
 
           setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            messagesEndRef.current?.scrollIntoView({
+              behavior: "smooth",
+            });
           }, 100);
 
           return newMessages;
@@ -265,7 +270,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setMessage("");
 
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+        });
       }, 100);
 
       await messageService.sendMessage({

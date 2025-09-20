@@ -23,12 +23,13 @@ import {
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams<{ chatId: string }>();
   const { status } = useSession();
+  const messageInputRef = useRef<HTMLInputElement>(null);
 
   const {
     message,
@@ -174,6 +175,7 @@ export default function ChatPage() {
       <TypingIndicator typingUsers={typingUsers} />
 
       <MessageInput
+        ref={messageInputRef}
         message={message}
         setMessage={setMessage}
         onSend={handleSend}

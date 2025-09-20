@@ -11,7 +11,6 @@ import {
 import { supabase } from "@/client/supabase";
 
 export const messageService = {
-  // Fetch messages for a specific chat
   async getChatMessages(
     chatId: string,
     limit = 50,
@@ -31,14 +30,13 @@ export const messageService = {
       `
       )
       .eq("chatId", chatId)
-      .order("createdAt", { ascending: true })
+      .order("createdAt", { ascending: false }) // Latest messages first like Facebook
       .range(offset, offset + limit - 1);
 
     if (error) throw new Error(error.message);
     return data || [];
   },
 
-  // Send a new message
   async sendMessage(messageData: SendMessageData): Promise<MessageWithUser> {
     const { data, error } = await supabase
       .from("Message")
@@ -59,7 +57,6 @@ export const messageService = {
     if (error) throw new Error(error.message);
     if (!data) throw new Error("Failed to send message");
 
-    // Broadcast the message to all subscribers for better real-time performance
     const channel = supabase.channel(`messages:${messageData.chatId}`);
     await channel.send({
       type: "broadcast",
@@ -70,7 +67,6 @@ export const messageService = {
     return data;
   },
 
-  // Get user's chats with latest message
   async getUserChats(userId: string): Promise<ChatWithLatestMessage[]> {
     const { data, error } = await supabase
       .from("ChatParticipant")
@@ -101,7 +97,6 @@ export const messageService = {
     if (error) throw new Error(error.message);
     if (!data) return [];
 
-    // Get latest message for each chat
     const chatsWithMessages = await Promise.all(
       data.map(async (participant) => {
         const { data: latestMessage } = await supabase
@@ -227,7 +222,7 @@ export const messageService = {
       (chat) =>
         !chat.Chat.isGroup &&
         chat.Chat.ChatParticipant.length === 2 &&
-        chat.Chat.ChatParticipant.some((p) => p.userId === user2Id)
+        chat.Chat.ChatParticipant.some((p: any) => p.userId === user2Id)
     );
 
     if (directChat) {

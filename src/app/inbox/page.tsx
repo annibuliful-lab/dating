@@ -138,13 +138,13 @@ function InboxPage() {
     }
   }, [session?.user?.id]);
 
-  // Auto-refresh chat list every 30 seconds
+  // Auto-refresh chat list every 2 minutes (Facebook-style)
   useEffect(() => {
     if (!session?.user?.id) return;
 
     const interval = setInterval(() => {
       fetchUserChats();
-    }, 30000); // Refresh every 30 seconds
+    }, 120000); // Refresh every 2 minutes to prevent rate limiting
 
     return () => clearInterval(interval);
   }, [session?.user?.id, fetchUserChats]);

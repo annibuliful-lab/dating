@@ -103,19 +103,21 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       const chatMessages = await messageService.getChatMessages(chatId);
       console.log("Fetched messages:", chatMessages);
 
-      const transformedMessages: ChatMessage[] = chatMessages.map((msg) => ({
-        id: msg.id,
-        text: msg.text,
-        imageUrl: msg.imageUrl,
-        videoUrl:
-          (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
-        author: msg.senderId === session?.user?.id ? "me" : "other",
-        senderId: msg.senderId,
-        senderName: msg.User?.fullName || "Unknown",
-        senderAvatar: msg.User?.profileImageKey,
-        createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
-        createdAt: msg.createdAt,
-      }));
+      const transformedMessages: ChatMessage[] = chatMessages
+        .reverse() // Reverse to show oldest first in chat (Facebook-style)
+        .map((msg: any) => ({
+          id: msg.id,
+          text: msg.text,
+          imageUrl: msg.imageUrl,
+          videoUrl:
+            (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
+          author: msg.senderId === session?.user?.id ? "me" : "other",
+          senderId: msg.senderId,
+          senderName: msg.User?.fullName || "Unknown",
+          senderAvatar: msg.User?.profileImageKey,
+          createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
+          createdAt: msg.createdAt,
+        }));
 
       setMessages(transformedMessages);
       console.log("Messages set, loading should be false now");
@@ -157,18 +159,19 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       (newMessage: MessageWithUser) => {
         console.log("New message received:", newMessage);
         const transformedMessage: ChatMessage = {
-          id: newMessage.id,
-          text: newMessage.text,
-          imageUrl: newMessage.imageUrl,
-          videoUrl:
-            (newMessage as MessageWithUser & { videoUrl?: string }).videoUrl ||
-            null,
-          author: newMessage.senderId === session?.user?.id ? "me" : "other",
-          senderId: newMessage.senderId,
-          senderName: newMessage.User?.fullName || "Unknown",
-          senderAvatar: newMessage.User?.profileImageKey,
-          createdAtLabel: formatMessageTime(new Date(newMessage.createdAt)),
-          createdAt: newMessage.createdAt,
+          id: (newMessage as any).id,
+          text: (newMessage as any).text,
+          imageUrl: (newMessage as any).imageUrl,
+          videoUrl: (newMessage as any).videoUrl || null,
+          author:
+            (newMessage as any).senderId === session?.user?.id ? "me" : "other",
+          senderId: (newMessage as any).senderId,
+          senderName: (newMessage as any).User?.fullName || "Unknown",
+          senderAvatar: (newMessage as any).User?.profileImageKey,
+          createdAtLabel: formatMessageTime(
+            new Date((newMessage as any).createdAt)
+          ),
+          createdAt: (newMessage as any).createdAt,
         };
 
         setMessages((prev) => {

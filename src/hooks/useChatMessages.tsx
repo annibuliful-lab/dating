@@ -27,6 +27,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<File[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(true);
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const typingSubscriptionRef = useRef<{
@@ -34,6 +36,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   } | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<number>(0);
 
   const formatMessageTime = useCallback((date: Date): string => {
     const now = new Date();
@@ -120,6 +124,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         }));
 
       setMessages(transformedMessages);
+      setHasOlderMessages(chatMessages.length >= 50); // Assume more if we got a full page
       console.log("Messages set, loading should be false now");
 
       setTimeout(() => {
@@ -135,6 +140,76 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setLoading(false);
     }
   }, [chatId, session?.user?.id, formatMessageTime]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (
+      !chatId ||
+      loadingOlderMessages ||
+      !hasOlderMessages ||
+      messages.length === 0
+    )
+      return;
+
+    try {
+      setLoadingOlderMessages(true);
+      const oldestMessage = messages[0]; // First message in the array (oldest)
+
+      console.log("Loading older messages before:", oldestMessage.id);
+      const { messages: olderMessages, hasMore } =
+        await messageService.getOlderMessages(chatId, oldestMessage.id, 20);
+
+      if (olderMessages.length === 0) {
+        setHasOlderMessages(false);
+        return;
+      }
+
+      const transformedOlderMessages: ChatMessage[] = olderMessages.map(
+        (msg: any) => ({
+          id: msg.id,
+          text: msg.text,
+          imageUrl: msg.imageUrl,
+          videoUrl:
+            (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
+          author: msg.senderId === session?.user?.id ? "me" : "other",
+          senderId: msg.senderId,
+          senderName: msg.User?.fullName || "Unknown",
+          senderAvatar: msg.User?.profileImageKey,
+          createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
+          createdAt: msg.createdAt,
+        })
+      );
+
+      // Store current scroll position
+      const container = messagesContainerRef.current;
+      if (container) {
+        scrollPositionRef.current =
+          container.scrollHeight - container.scrollTop;
+      }
+
+      // Add older messages to the beginning of the array
+      setMessages((prev) => [...transformedOlderMessages, ...prev]);
+      setHasOlderMessages(hasMore);
+
+      // Restore scroll position after new messages are added
+      setTimeout(() => {
+        if (container) {
+          container.scrollTop =
+            container.scrollHeight - scrollPositionRef.current;
+        }
+      }, 100);
+    } catch (err) {
+      console.error("Error loading older messages:", err);
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [
+    chatId,
+    messages,
+    loadingOlderMessages,
+    hasOlderMessages,
+    session?.user?.id,
+    formatMessageTime,
+  ]);
 
   const setupRealtimeSubscription = useCallback(() => {
     if (!chatId) {
@@ -513,6 +588,19 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     [selectedMedia]
   );
 
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const container = e.currentTarget;
+      const scrollTop = container.scrollTop;
+
+      // If scrolled to the top and there are more messages to load
+      if (scrollTop < 100 && hasOlderMessages && !loadingOlderMessages) {
+        loadOlderMessages();
+      }
+    },
+    [hasOlderMessages, loadingOlderMessages, loadOlderMessages]
+  );
+
   useEffect(() => {
     if (chatId && session?.user?.id) {
       fetchMessages();
@@ -556,8 +644,11 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     soundEnabled,
     setSoundEnabled,
     messagesEndRef,
+    messagesContainerRef,
     selectedMedia,
     uploadingMedia,
+    loadingOlderMessages,
+    hasOlderMessages,
 
     // Actions
     handleSend,
@@ -567,6 +658,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     handleDeleteMessage,
     closeEditModal,
     fetchMessages,
+    loadOlderMessages,
+    handleScroll,
     formatMessageTime,
     handleMediaSelect,
     handleSendMedia,

@@ -17,6 +17,7 @@ import {
   Container,
   Group,
   Loader,
+  ScrollArea,
   Stack,
   Text,
   rem,
@@ -45,8 +46,11 @@ export default function ChatPage() {
     soundEnabled,
     setSoundEnabled,
     messagesEndRef,
+    messagesContainerRef,
     selectedMedia,
     uploadingMedia,
+    loadingOlderMessages,
+    hasOlderMessages,
     handleSend,
     handleTyping,
     handleEditMessage,
@@ -54,6 +58,8 @@ export default function ChatPage() {
     handleDeleteMessage,
     closeEditModal,
     fetchMessages,
+    loadOlderMessages,
+    handleScroll,
     formatMessageTime,
     handleMediaSelect,
     handleSendMedia,
@@ -135,41 +141,58 @@ export default function ChatPage() {
       />
 
       <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)} pb={rem(90)}>
-        <Stack gap="lg">
-          {messages.length === 0 ? (
-            <Center py="xl">
-              <Text c="dimmed" ta="center">
-                No messages yet. Start the conversation!
-              </Text>
-            </Center>
-          ) : (
-            messages.map((m, index) => {
-              const prevMessage = index > 0 ? messages[index - 1] : null;
-              const showAvatar =
-                m.author === "other" &&
-                (!prevMessage || prevMessage.senderId !== m.senderId);
-              const showTimestamp =
-                !prevMessage ||
-                new Date(m.createdAt).getTime() -
-                  new Date(prevMessage.createdAt).getTime() >
-                  5 * 60 * 1000; // 5 minutes
+        <ScrollArea
+          ref={messagesContainerRef}
+          h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(90)})`}
+          onScrollPositionChange={(position) => {
+            if (position.y < 100 && hasOlderMessages && !loadingOlderMessages) {
+              loadOlderMessages();
+            }
+          }}
+        >
+          <Stack gap="lg">
+            {/* Loading indicator for older messages */}
+            {loadingOlderMessages && (
+              <Center py="md">
+                <Loader size="sm" />
+              </Center>
+            )}
 
-              return (
-                <ChatMessage
-                  key={m.id}
-                  message={m}
-                  showAvatar={showAvatar}
-                  showTimestamp={showTimestamp}
-                  isOwnMessage={m.author === "me"}
-                  onEdit={handleEditMessage}
-                  onDelete={handleDeleteMessage}
-                  formatMessageTime={formatMessageTime}
-                />
-              );
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </Stack>
+            {messages.length === 0 ? (
+              <Center py="xl">
+                <Text c="dimmed" ta="center">
+                  No messages yet. Start the conversation!
+                </Text>
+              </Center>
+            ) : (
+              messages.map((m, index) => {
+                const prevMessage = index > 0 ? messages[index - 1] : null;
+                const showAvatar =
+                  m.author === "other" &&
+                  (!prevMessage || prevMessage.senderId !== m.senderId);
+                const showTimestamp =
+                  !prevMessage ||
+                  new Date(m.createdAt).getTime() -
+                    new Date(prevMessage.createdAt).getTime() >
+                    5 * 60 * 1000; // 5 minutes
+
+                return (
+                  <ChatMessage
+                    key={m.id}
+                    message={m}
+                    showAvatar={showAvatar}
+                    showTimestamp={showTimestamp}
+                    isOwnMessage={m.author === "me"}
+                    onEdit={handleEditMessage}
+                    onDelete={handleDeleteMessage}
+                    formatMessageTime={formatMessageTime}
+                  />
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </Stack>
+        </ScrollArea>
       </Container>
 
       <TypingIndicator typingUsers={typingUsers} />

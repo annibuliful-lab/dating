@@ -37,6 +37,54 @@ export const messageService = {
     return data || [];
   },
 
+  // Fetch older messages for infinite scroll (Facebook-style pagination)
+  async getOlderMessages(
+    chatId: string,
+    beforeMessageId: string,
+    limit = 20
+  ): Promise<{ messages: MessageWithUser[]; hasMore: boolean }> {
+    // First get the timestamp of the message we're loading before
+    const { data: beforeMessage } = await supabase
+      .from("Message")
+      .select("createdAt")
+      .eq("id", beforeMessageId)
+      .single();
+
+    if (!beforeMessage) {
+      return { messages: [], hasMore: false };
+    }
+
+    // Fetch messages older than the beforeMessage
+    const { data, error } = await supabase
+      .from("Message")
+      .select(
+        `
+        *,
+        User!Message_senderId_fkey (
+          id,
+          fullName,
+          username,
+          profileImageKey
+        )
+      `
+      )
+      .eq("chatId", chatId)
+      .lt("createdAt", beforeMessage.createdAt) // Get messages before this timestamp
+      .order("createdAt", { ascending: false })
+      .limit(limit + 1); // Fetch one extra to check if there are more
+
+    if (error) throw new Error(error.message);
+    if (!data) return { messages: [], hasMore: false };
+
+    const hasMore = data.length > limit;
+    const messages = hasMore ? data.slice(0, limit) : data;
+
+    return {
+      messages: messages.reverse(), // Reverse to show oldest first
+      hasMore,
+    };
+  },
+
   async sendMessage(messageData: SendMessageData): Promise<MessageWithUser> {
     const { data, error } = await supabase
       .from("Message")

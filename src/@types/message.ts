@@ -1,21 +1,33 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
-import { Database } from '../../generated/supabase-database.types';
+import { Chat } from "../../generated/prisma";
 
 // Base types from database
-export type Message = Database['public']['Tables']['Message']['Row'];
-export type MessageInsert =
-  Database['public']['Tables']['Message']['Insert'];
-export type MessageUpdate =
-  Database['public']['Tables']['Message']['Update'];
+export type MessageInsert = {
+  id?: string;
+  chatId: string;
+  senderId: string;
+  text?: string | null;
+  imageUrl?: string | null;
+};
 
-export type User = Database['public']['Tables']['User']['Row'];
-export type Chat = Database['public']['Tables']['Chat']['Row'];
-export type ChatInsert =
-  Database['public']['Tables']['Chat']['Insert'];
+export type ChatInsert = {
+  id?: string;
+  isGroup?: boolean;
+  name?: string | null;
+  createdById: string;
+  isAdminVisible?: boolean;
+};
 
 // Extended types for UI
-export interface MessageWithUser extends Message {
+export interface MessageWithUser {
+  id: string;
+  chatId: string;
+  senderId: string;
+  text: string | null;
+  imageUrl: string | null;
+  videoUrl?: string | null;
+  createdAt: string;
   User?: {
     id: string;
     fullName: string;
@@ -28,7 +40,8 @@ export interface ChatMessage {
   id: string;
   text: string | null;
   imageUrl: string | null;
-  author: 'me' | 'other';
+  videoUrl: string | null;
+  author: "me" | "other";
   senderId: string;
   senderName: string;
   senderAvatar: string | null | undefined;
@@ -50,12 +63,8 @@ export interface PresenceState {
 }
 
 // Subscription callback types
-export type MessageSubscriptionCallback = (
-  message: MessageWithUser
-) => void;
-export type TypingSubscriptionCallback = (
-  typingUsers: TypingUser[]
-) => void;
+export type MessageSubscriptionCallback = (message: MessageWithUser) => void;
+export type TypingSubscriptionCallback = (typingUsers: TypingUser[]) => void;
 
 // Service method types
 export interface SendMessageData {
@@ -64,6 +73,7 @@ export interface SendMessageData {
   senderId: string;
   text: string;
   imageUrl?: string | null;
+  videoUrl?: string | null;
 }
 
 export interface ChatWithLatestMessage {

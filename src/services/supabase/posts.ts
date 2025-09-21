@@ -1,7 +1,14 @@
 import { supabase } from "@/client/supabase";
-import { Database } from "../../../generated/supabase-database.types";
 
-type PostInsert = Database["public"]["Tables"]["Post"]["Insert"];
+type PostInsert = {
+  id?: string;
+  authorId: string;
+  content: { text: string };
+  visibility: "PUBLIC" | "PRIVATE";
+  imageUrl?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 export const postService = {
   // Fetch all public posts with author information

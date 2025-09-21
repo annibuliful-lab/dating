@@ -1,13 +1,10 @@
-'use client';
+"use client";
 
-import {
-  ChatMessage,
-  MessageWithUser,
-  TypingUser,
-} from '@/@types/message';
-import { messageService } from '@/services/supabase/messages';
-import { useSession } from 'next-auth/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChatMessage, MessageWithUser, TypingUser } from "@/@types/message";
+import { mediaService } from "@/services/supabase/media";
+import { messageService } from "@/services/supabase/messages";
+import { useSession } from "next-auth/react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseChatMessagesProps {
   chatId: string;
@@ -15,48 +12,52 @@ interface UseChatMessagesProps {
 
 export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const { data: session } = useSession();
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [editingMessage, setEditingMessage] =
-    useState<ChatMessage | null>(null);
-  const [editText, setEditText] = useState('');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-
-  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(
     null
   );
+  const [editText, setEditText] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [selectedMedia, setSelectedMedia] = useState<File[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(true);
+
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const typingSubscriptionRef = useRef<{
     unsubscribe: () => void;
   } | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<number>(0);
 
   const formatMessageTime = useCallback((date: Date): string => {
     const now = new Date();
-    const diffInHours =
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
+      return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
       });
     } else if (diffInHours < 48) {
-      return `Yesterday ${date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
+      return `Yesterday ${date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
       })}`;
     } else {
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        hour: 'numeric',
-        minute: '2-digit',
+      return date.toLocaleDateString("en-US", {
+        weekday: "long",
+        hour: "numeric",
+        minute: "2-digit",
       });
     }
   }, []);
@@ -79,14 +80,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
 
-      oscillator.frequency.setValueAtTime(
-        800,
-        audioContext.currentTime
-      );
-      oscillator.frequency.setValueAtTime(
-        600,
-        audioContext.currentTime + 0.1
-      );
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
 
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(
@@ -97,7 +92,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
     } catch (err) {
-      console.log('Could not play notification sound:', err);
+      console.log("Could not play notification sound:", err);
     }
   }, [soundEnabled]);
 
@@ -108,81 +103,146 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setLoading(true);
       setError(null);
 
-      console.log('Fetching messages for chat:', chatId);
-      const chatMessages = await messageService.getChatMessages(
-        chatId
-      );
-      console.log('Fetched messages:', chatMessages);
+      console.log("Fetching messages for chat:", chatId);
+      const chatMessages = await messageService.getChatMessages(chatId);
+      console.log("Fetched messages:", chatMessages);
 
-      const transformedMessages: ChatMessage[] = chatMessages.map(
-        (msg) => ({
+      const transformedMessages: ChatMessage[] = chatMessages
+        .reverse() // Reverse to show oldest first in chat (Facebook-style)
+        .map((msg: MessageWithUser) => ({
           id: msg.id,
           text: msg.text,
           imageUrl: msg.imageUrl,
-          author: msg.senderId === session?.user?.id ? 'me' : 'other',
+          videoUrl:
+            (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
+          author: msg.senderId === session?.user?.id ? "me" : "other",
           senderId: msg.senderId,
-          senderName: msg.User?.fullName || 'Unknown',
+          senderName: msg.User?.fullName || "Unknown",
+          senderAvatar: msg.User?.profileImageKey,
+          createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
+          createdAt: msg.createdAt,
+        }));
+
+      setMessages(transformedMessages);
+      setHasOlderMessages(chatMessages.length >= 50); // Assume more if we got a full page
+      console.log("Messages set, loading should be false now");
+
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+        });
+      }, 100);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+      setError(err instanceof Error ? err.message : "Failed to load messages");
+    } finally {
+      console.log("Setting loading to false");
+      setLoading(false);
+    }
+  }, [chatId, session?.user?.id, formatMessageTime]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (
+      !chatId ||
+      loadingOlderMessages ||
+      !hasOlderMessages ||
+      messages.length === 0
+    )
+      return;
+
+    try {
+      setLoadingOlderMessages(true);
+      const oldestMessage = messages[0]; // First message in the array (oldest)
+
+      console.log("Loading older messages before:", oldestMessage.id);
+      const { messages: olderMessages, hasMore } =
+        await messageService.getOlderMessages(chatId, oldestMessage.id, 20);
+
+      if (olderMessages.length === 0) {
+        setHasOlderMessages(false);
+        return;
+      }
+
+      const transformedOlderMessages: ChatMessage[] = olderMessages.map(
+        (msg: MessageWithUser) => ({
+          id: msg.id,
+          text: msg.text,
+          imageUrl: msg.imageUrl,
+          videoUrl:
+            (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
+          author: msg.senderId === session?.user?.id ? "me" : "other",
+          senderId: msg.senderId,
+          senderName: msg.User?.fullName || "Unknown",
           senderAvatar: msg.User?.profileImageKey,
           createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
           createdAt: msg.createdAt,
         })
       );
 
-      setMessages(transformedMessages);
-      console.log('Messages set, loading should be false now');
+      // Store current scroll position
+      const container = messagesContainerRef.current;
+      if (container) {
+        scrollPositionRef.current =
+          container.scrollHeight - container.scrollTop;
+      }
 
+      // Add older messages to the beginning of the array
+      setMessages((prev) => [...transformedOlderMessages, ...prev]);
+      setHasOlderMessages(hasMore);
+
+      // Restore scroll position after new messages are added
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({
-          behavior: 'smooth',
-        });
+        if (container) {
+          container.scrollTop =
+            container.scrollHeight - scrollPositionRef.current;
+        }
       }, 100);
     } catch (err) {
-      console.error('Error fetching messages:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to load messages'
-      );
+      console.error("Error loading older messages:", err);
     } finally {
-      console.log('Setting loading to false');
-      setLoading(false);
+      setLoadingOlderMessages(false);
     }
-  }, [chatId, session?.user?.id, formatMessageTime]);
+  }, [
+    chatId,
+    messages,
+    loadingOlderMessages,
+    hasOlderMessages,
+    session?.user?.id,
+    formatMessageTime,
+  ]);
 
   const setupRealtimeSubscription = useCallback(() => {
     if (!chatId) {
-      console.log('No chatId provided, skipping subscription setup');
+      console.log("No chatId provided, skipping subscription setup");
       return;
     }
 
-    console.log('Setting up realtime subscription for chat:', chatId);
-    console.log('Current session user ID:', session?.user?.id);
+    console.log("Setting up realtime subscription for chat:", chatId);
+    console.log("Current session user ID:", session?.user?.id);
 
     if (subscriptionRef.current) {
-      console.log('Cleaning up existing message subscription');
+      console.log("Cleaning up existing message subscription");
       subscriptionRef.current.unsubscribe();
     }
     if (typingSubscriptionRef.current) {
-      console.log('Cleaning up existing typing subscription');
+      console.log("Cleaning up existing typing subscription");
       typingSubscriptionRef.current.unsubscribe();
     }
 
     const subscription = messageService.subscribeToMessages(
       chatId,
       (newMessage: MessageWithUser) => {
-        console.log('New message received:', newMessage);
+        console.log("New message received:", newMessage);
         const transformedMessage: ChatMessage = {
           id: newMessage.id,
           text: newMessage.text,
           imageUrl: newMessage.imageUrl,
-          author:
-            newMessage.senderId === session?.user?.id
-              ? 'me'
-              : 'other',
+          videoUrl: newMessage.videoUrl || null,
+          author: newMessage.senderId === session?.user?.id ? "me" : "other",
           senderId: newMessage.senderId,
-          senderName: newMessage.User?.fullName || 'Unknown',
+          senderName: newMessage.User?.fullName || "Unknown",
           senderAvatar: newMessage.User?.profileImageKey,
-          createdAtLabel: formatMessageTime(
-            new Date(newMessage.createdAt)
-          ),
+          createdAtLabel: formatMessageTime(new Date(newMessage.createdAt)),
           createdAt: newMessage.createdAt,
         };
 
@@ -192,22 +252,22 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           );
 
           if (existingIndex !== -1) {
-            console.log('Updating existing message with real data');
+            console.log("Updating existing message with real data");
             const updatedMessages = [...prev];
             updatedMessages[existingIndex] = transformedMessage;
             return updatedMessages;
           }
 
-          console.log('Adding new message to chat');
+          console.log("Adding new message to chat");
           const newMessages = [...prev, transformedMessage];
 
-          if (transformedMessage.author === 'other') {
+          if (transformedMessage.author === "other") {
             playNotificationSound();
           }
 
           setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({
-              behavior: 'smooth',
+              behavior: "smooth",
             });
           }, 100);
 
@@ -231,26 +291,20 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
     return () => {
       if (subscriptionRef.current) {
-        console.log('Cleaning up realtime subscription');
+        console.log("Cleaning up realtime subscription");
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
       }
       if (typingSubscriptionRef.current) {
-        console.log('Cleaning up typing subscription');
+        console.log("Cleaning up typing subscription");
         typingSubscriptionRef.current.unsubscribe();
         typingSubscriptionRef.current = null;
       }
     };
-  }, [
-    chatId,
-    session?.user?.id,
-    playNotificationSound,
-    formatMessageTime,
-  ]);
+  }, [chatId, session?.user?.id, playNotificationSound, formatMessageTime]);
 
   const handleSend = useCallback(async () => {
-    if (!message.trim() || !session?.user?.id || !chatId || sending)
-      return;
+    if (!message.trim() || !session?.user?.id || !chatId || sending) return;
 
     const messageText = message.trim();
     const messageId = crypto.randomUUID();
@@ -264,7 +318,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         await messageService.sendTypingIndicator(
           chatId,
           session.user.id,
-          session.user.name || 'User',
+          session.user.name || "User",
           false
         );
       }
@@ -278,34 +332,33 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         id: messageId,
         text: messageText,
         imageUrl: null,
-        author: 'me',
+        videoUrl: null,
+        author: "me",
         senderId: session.user.id,
-        senderName: session.user.name || 'You',
-        senderAvatar: session.user.image,
+        senderName: session.user.name || "You",
+        senderAvatar: session.user.image || "",
         createdAtLabel: formatMessageTime(new Date(currentTime)),
         createdAt: currentTime,
       };
 
       setMessages((prev) => [...prev, optimisticMessage]);
-      setMessage('');
+      setMessage("");
 
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({
-          behavior: 'smooth',
+          behavior: "smooth",
         });
       }, 100);
 
       await messageService.sendMessage({
         id: messageId,
         chatId: chatId,
-        senderId: session.user.id,
+        senderId: session.user.id!,
         text: messageText,
       });
     } catch (err) {
-      console.error('Error sending message:', err);
-      setMessages((prev) =>
-        prev.filter((msg) => msg.id !== messageId)
-      );
+      console.error("Error sending message:", err);
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
       setMessage(messageText);
     } finally {
       setSending(false);
@@ -313,6 +366,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   }, [
     message,
     session?.user?.id,
+    session?.user?.name,
+    session?.user?.image,
     chatId,
     sending,
     isTyping,
@@ -335,7 +390,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         await messageService.sendTypingIndicator(
           chatId,
           session.user.id,
-          session.user.name || 'User',
+          session.user.name || "User",
           true
         );
       } else if (!shouldBeTyping && wasTyping) {
@@ -343,7 +398,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         await messageService.sendTypingIndicator(
           chatId,
           session.user.id,
-          session.user.name || 'User',
+          session.user.name || "User",
           false
         );
       }
@@ -355,7 +410,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             await messageService.sendTypingIndicator(
               chatId,
               session.user.id,
-              session.user.name || 'User',
+              session.user.name || "User",
               false
             );
           }
@@ -367,7 +422,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   const handleEditMessage = useCallback((message: ChatMessage) => {
     setEditingMessage(message);
-    setEditText(message.text || '');
+    setEditText(message.text || "");
     setShowEditModal(true);
   }, []);
 
@@ -375,49 +430,173 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     if (!editingMessage || !editText.trim()) return;
 
     try {
-      await messageService.editMessage(
-        editingMessage.id,
-        editText.trim()
-      );
+      await messageService.editMessage(editingMessage.id, editText.trim());
 
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === editingMessage.id
-            ? { ...msg, text: editText.trim() }
-            : msg
+          msg.id === editingMessage.id ? { ...msg, text: editText.trim() } : msg
         )
       );
 
       setShowEditModal(false);
       setEditingMessage(null);
-      setEditText('');
+      setEditText("");
     } catch (err) {
-      console.error('Error editing message:', err);
+      console.error("Error editing message:", err);
     }
   }, [editingMessage, editText]);
 
-  const handleDeleteMessage = useCallback(
-    async (messageId: string) => {
-      if (!confirm('Are you sure you want to delete this message?'))
-        return;
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    if (!confirm("Are you sure you want to delete this message?")) return;
 
-      try {
-        await messageService.deleteMessage(messageId);
-        setMessages((prev) =>
-          prev.filter((msg) => msg.id !== messageId)
-        );
-      } catch (err) {
-        console.error('Error deleting message:', err);
-      }
-    },
-    []
-  );
+    try {
+      await messageService.deleteMessage(messageId);
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    } catch (err) {
+      console.error("Error deleting message:", err);
+    }
+  }, []);
 
   const closeEditModal = useCallback(() => {
     setShowEditModal(false);
     setEditingMessage(null);
-    setEditText('');
+    setEditText("");
   }, []);
+
+  const handleMediaSelect = useCallback((files: File[]) => {
+    // Validate all files
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    files.forEach((file, index) => {
+      const validation = mediaService.validateFile(file);
+      if (!validation.valid) {
+        errors.push(`File ${index + 1}: ${validation.error}`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errors.length > 0) {
+      alert(errors.join("\n"));
+    }
+
+    if (validFiles.length > 0) {
+      setSelectedMedia((prev) => [...prev, ...validFiles]);
+    }
+  }, []);
+
+  const handleSendMedia = useCallback(async () => {
+    if (
+      !selectedMedia ||
+      selectedMedia.length === 0 ||
+      !session?.user?.id ||
+      !chatId ||
+      uploadingMedia
+    )
+      return;
+
+    const currentTime = new Date().toISOString();
+    const messageIds: string[] = [];
+
+    try {
+      setUploadingMedia(true);
+
+      // Upload all media files first
+      const uploadResults = await mediaService.uploadMultipleMedia(
+        selectedMedia
+      );
+
+      // Create messages for each uploaded file
+      const messagePromises = selectedMedia.map(async (file, index) => {
+        const messageId = crypto.randomUUID();
+        messageIds.push(messageId);
+
+        const isVideo = file.type.startsWith("video/");
+        const isImage = file.type.startsWith("image/");
+        const uploadResult = uploadResults[index];
+
+        // Create optimistic message
+        const optimisticMessage: ChatMessage = {
+          id: messageId,
+          text: null,
+          imageUrl: isImage ? uploadResult.publicUrl : null,
+          videoUrl: isVideo ? uploadResult.publicUrl : null,
+          author: "me",
+          senderId: session.user.id!,
+          senderName: session.user.name || "You",
+          senderAvatar: session.user.image || "",
+          createdAtLabel: formatMessageTime(new Date(currentTime)),
+          createdAt: currentTime,
+        };
+
+        // Send message with media
+        await messageService.sendMessage({
+          id: messageId,
+          chatId: chatId,
+          senderId: session.user.id!,
+          text: "",
+          imageUrl: isImage ? uploadResult.publicUrl : null,
+          videoUrl: isVideo ? uploadResult.publicUrl : null,
+        });
+
+        return optimisticMessage;
+      });
+
+      // Wait for all messages to be sent
+      const optimisticMessages = await Promise.all(messagePromises);
+
+      // Add all messages to the chat
+      setMessages((prev) => [...prev, ...optimisticMessages]);
+      setSelectedMedia([]);
+
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } catch (err) {
+      console.error("Error sending media messages:", err);
+      // Remove failed messages
+      setMessages((prev) => prev.filter((msg) => !messageIds.includes(msg.id)));
+      alert("Failed to send media. Please try again.");
+    } finally {
+      setUploadingMedia(false);
+    }
+  }, [
+    selectedMedia,
+    session?.user?.id,
+    session?.user?.name,
+    session?.user?.image,
+    chatId,
+    uploadingMedia,
+    formatMessageTime,
+  ]);
+
+  const handleRemoveMedia = useCallback(
+    (index: number) => {
+      if (selectedMedia && selectedMedia[index]) {
+        // Revoke the preview URL for the specific file
+        mediaService.revokePreviewUrl(
+          URL.createObjectURL(selectedMedia[index])
+        );
+        // Remove the file from the array
+        setSelectedMedia((prev) => prev.filter((_, i) => i !== index));
+      }
+    },
+    [selectedMedia]
+  );
+
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const container = e.currentTarget;
+      const scrollTop = container.scrollTop;
+
+      // If scrolled to the top and there are more messages to load
+      if (scrollTop < 100 && hasOlderMessages && !loadingOlderMessages) {
+        loadOlderMessages();
+      }
+    },
+    [hasOlderMessages, loadingOlderMessages, loadOlderMessages]
+  );
 
   useEffect(() => {
     if (chatId && session?.user?.id) {
@@ -425,24 +604,17 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       const cleanup = setupRealtimeSubscription();
       return cleanup;
     }
-  }, [
-    chatId,
-    session?.user?.id,
-    fetchMessages,
-    setupRealtimeSubscription,
-  ]);
+  }, [chatId, session?.user?.id, fetchMessages, setupRealtimeSubscription]);
 
   useEffect(() => {
     return () => {
       if (subscriptionRef.current) {
-        console.log('Component unmounting, cleaning up subscription');
+        console.log("Component unmounting, cleaning up subscription");
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
       }
       if (typingSubscriptionRef.current) {
-        console.log(
-          'Component unmounting, cleaning up typing subscription'
-        );
+        console.log("Component unmounting, cleaning up typing subscription");
         typingSubscriptionRef.current.unsubscribe();
         typingSubscriptionRef.current = null;
       }
@@ -469,6 +641,11 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     soundEnabled,
     setSoundEnabled,
     messagesEndRef,
+    messagesContainerRef,
+    selectedMedia,
+    uploadingMedia,
+    loadingOlderMessages,
+    hasOlderMessages,
 
     // Actions
     handleSend,
@@ -478,6 +655,11 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     handleDeleteMessage,
     closeEditModal,
     fetchMessages,
+    loadOlderMessages,
+    handleScroll,
     formatMessageTime,
+    handleMediaSelect,
+    handleSendMedia,
+    handleRemoveMedia,
   };
 }

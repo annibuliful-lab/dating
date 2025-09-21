@@ -1,7 +1,16 @@
 import { supabase } from "@/client/supabase";
-import { Database } from "../../../generated/supabase-database.types";
 
-type UserUpdate = Database["public"]["Tables"]["User"]["Update"];
+type UserUpdate = {
+  fullName?: string;
+  username?: string;
+  bio?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  height?: number | null;
+  profileImageKey?: string | null;
+  status?: string | null;
+  updatedAt?: string;
+};
 
 export const userService = {
   // Fetch all active users

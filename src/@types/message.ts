@@ -26,6 +26,7 @@ export interface MessageWithUser {
   senderId: string;
   text: string | null;
   imageUrl: string | null;
+  videoUrl?: string | null;
   createdAt: string;
   User?: {
     id: string;

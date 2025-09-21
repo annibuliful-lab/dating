@@ -19,7 +19,10 @@ interface MessageInputProps {
   uploadingMedia?: boolean;
 }
 
-export const MessageInput = forwardRef<HTMLInputElement, MessageInputProps>(
+export const MessageInput = forwardRef<
+  { focus: () => void },
+  MessageInputProps
+>(
   (
     {
       message,

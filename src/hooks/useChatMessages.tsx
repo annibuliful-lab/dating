@@ -109,7 +109,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       const transformedMessages: ChatMessage[] = chatMessages
         .reverse() // Reverse to show oldest first in chat (Facebook-style)
-        .map((msg: any) => ({
+        .map((msg: MessageWithUser) => ({
           id: msg.id,
           text: msg.text,
           imageUrl: msg.imageUrl,
@@ -164,7 +164,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       }
 
       const transformedOlderMessages: ChatMessage[] = olderMessages.map(
-        (msg: any) => ({
+        (msg: MessageWithUser) => ({
           id: msg.id,
           text: msg.text,
           imageUrl: msg.imageUrl,
@@ -234,19 +234,16 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       (newMessage: MessageWithUser) => {
         console.log("New message received:", newMessage);
         const transformedMessage: ChatMessage = {
-          id: (newMessage as any).id,
-          text: (newMessage as any).text,
-          imageUrl: (newMessage as any).imageUrl,
-          videoUrl: (newMessage as any).videoUrl || null,
-          author:
-            (newMessage as any).senderId === session?.user?.id ? "me" : "other",
-          senderId: (newMessage as any).senderId,
-          senderName: (newMessage as any).User?.fullName || "Unknown",
-          senderAvatar: (newMessage as any).User?.profileImageKey,
-          createdAtLabel: formatMessageTime(
-            new Date((newMessage as any).createdAt)
-          ),
-          createdAt: (newMessage as any).createdAt,
+          id: newMessage.id,
+          text: newMessage.text,
+          imageUrl: newMessage.imageUrl,
+          videoUrl: newMessage.videoUrl || null,
+          author: newMessage.senderId === session?.user?.id ? "me" : "other",
+          senderId: newMessage.senderId,
+          senderName: newMessage.User?.fullName || "Unknown",
+          senderAvatar: newMessage.User?.profileImageKey,
+          createdAtLabel: formatMessageTime(new Date(newMessage.createdAt)),
+          createdAt: newMessage.createdAt,
         };
 
         setMessages((prev) => {

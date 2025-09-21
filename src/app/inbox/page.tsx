@@ -52,7 +52,6 @@ function InboxPage() {
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [, setLastUpdateTime] = useState<Date>(new Date());
 
   const fetchUserChats = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -129,7 +128,6 @@ function InboxPage() {
       );
 
       setChats(transformedChats);
-      // setLastUpdateTime(new Date());
     } catch (err) {
       console.error("Error fetching chats:", err);
       setError(err instanceof Error ? err.message : "Failed to load chats");

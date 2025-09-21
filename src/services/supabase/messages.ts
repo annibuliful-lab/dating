@@ -270,7 +270,9 @@ export const messageService = {
       (chat) =>
         !chat.Chat.isGroup &&
         chat.Chat.ChatParticipant.length === 2 &&
-        chat.Chat.ChatParticipant.some((p: any) => p.userId === user2Id)
+        chat.Chat.ChatParticipant.some(
+          (p: { userId: string }) => p.userId === user2Id
+        )
     );
 
     if (directChat) {

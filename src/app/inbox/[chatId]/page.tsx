@@ -59,7 +59,6 @@ export default function ChatPage() {
     closeEditModal,
     fetchMessages,
     loadOlderMessages,
-    handleScroll,
     formatMessageTime,
     handleMediaSelect,
     handleSendMedia,

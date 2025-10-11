@@ -19,6 +19,7 @@ import {
   Center,
   Container,
   Divider,
+  Flex,
   Group,
   Loader,
   Modal,
@@ -375,17 +376,6 @@ function InboxPage() {
               >
                 <Group align="flex-start" wrap="nowrap" justify="space-between">
                   <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
-                    {/* Unread dot */}
-                    <Box
-                      mt={rem(10)}
-                      w={8}
-                      h={8}
-                      style={{
-                        borderRadius: 9999,
-                        background: chat.unread ? "#3B82F6" : "transparent",
-                      }}
-                    />
-
                     {/* Avatar - show first participant's avatar or default */}
                     <Avatar
                       radius="xl"
@@ -414,16 +404,28 @@ function InboxPage() {
                         >
                           {chat.name}
                         </Text>
-                        <Text
-                          c="dimmed"
-                          size="sm"
-                          style={{
-                            flexShrink: 0,
-                            marginLeft: "8px",
-                          }}
-                        >
-                          {chat.dateLabel}
-                        </Text>
+                        <Flex justify="end" direction="column" align="end">
+                          <Text
+                            c="dimmed"
+                            size="sm"
+                            style={{
+                              flexShrink: 0,
+                              marginLeft: "8px",
+                            }}
+                          >
+                            {chat.dateLabel}
+                          </Text>
+                          {/* Unread dot */}
+                          <Box
+                            mt={rem(10)}
+                            w={8}
+                            h={8}
+                            style={{
+                              borderRadius: 9999,
+                              background: chat.unread ? "#3B82F6" : "#3B82F6",
+                            }}
+                          />
+                        </Flex>
                       </Group>
                       <Text c="dimmed" size="sm" lineClamp={2}>
                         {chat.preview}

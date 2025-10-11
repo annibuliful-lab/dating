@@ -242,7 +242,7 @@ function FeedPage() {
                             opacity: chatLoading === post.User.id ? 0.6 : 1,
                           }}
                         >
-                          <Text c="yellow">ทักแชทได้ป่ะ</Text>
+                          <Text c="yellow">ทักแชท</Text>
                         </Box>
                         <Badge color="teal" radius="xl" variant="light">
                           Verified

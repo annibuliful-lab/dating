@@ -374,7 +374,7 @@ function InboxPage() {
                 style={{ cursor: "pointer" }}
               >
                 <Group align="flex-start" wrap="nowrap" justify="space-between">
-                  <Group wrap="nowrap" align="flex-start" gap="md">
+                  <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
                     {/* Unread dot */}
                     <Box
                       mt={rem(10)}
@@ -395,11 +395,33 @@ function InboxPage() {
                     />
 
                     <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
-                      <Group justify="space-between" wrap="nowrap">
-                        <Text fw={700} style={{ whiteSpace: "nowrap" }}>
+                      <Group
+                        justify="space-between"
+                        wrap="nowrap"
+                        align="flex-start"
+                      >
+                        <Text
+                          fw={700}
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={chat.name}
+                          w={200}
+                        >
                           {chat.name}
                         </Text>
-                        <Text c="dimmed" size="sm">
+                        <Text
+                          c="dimmed"
+                          size="sm"
+                          style={{
+                            flexShrink: 0,
+                            marginLeft: "8px",
+                          }}
+                        >
                           {chat.dateLabel}
                         </Text>
                       </Group>

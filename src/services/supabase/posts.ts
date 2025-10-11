@@ -1,10 +1,10 @@
-import { supabase } from "@/client/supabase";
+import { supabase } from '@/client/supabase';
 
 type PostInsert = {
   id?: string;
   authorId: string;
   content: { text: string };
-  visibility: "PUBLIC" | "PRIVATE";
+  visibility: 'PUBLIC' | 'PRIVATE';
   imageUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -14,7 +14,7 @@ export const postService = {
   // Fetch all public posts with author information
   async getPublicPosts(limit = 20, offset = 0) {
     const { data, error } = await supabase
-      .from("Post")
+      .from('Post')
       .select(
         `
         *,
@@ -28,8 +28,8 @@ export const postService = {
         PostSave!PostSave_postId_fkey (count)
       `
       )
-      .eq("visibility", "PUBLIC")
-      .order("createdAt", { ascending: false })
+      .eq('visibility', 'PUBLIC')
+      .order('createdAt', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) throw new Error(error.message);
@@ -39,7 +39,7 @@ export const postService = {
   // Fetch posts by specific user
   async getPostsByUser(userId: string, limit = 20) {
     const { data, error } = await supabase
-      .from("Post")
+      .from('Post')
       .select(
         `
         *,
@@ -53,8 +53,8 @@ export const postService = {
         PostSave!PostSave_postId_fkey (count)
       `
       )
-      .eq("authorId", userId)
-      .order("createdAt", { ascending: false })
+      .eq('authorId', userId)
+      .order('createdAt', { ascending: false })
       .limit(limit);
 
     if (error) throw new Error(error.message);
@@ -64,7 +64,7 @@ export const postService = {
   // Fetch single post with details
   async getPostById(postId: string) {
     const { data, error } = await supabase
-      .from("Post")
+      .from('Post')
       .select(
         `
         *,
@@ -87,7 +87,7 @@ export const postService = {
         PostSave!PostSave_postId_fkey (count)
       `
       )
-      .eq("id", postId)
+      .eq('id', postId)
       .single();
 
     if (error) throw new Error(error.message);
@@ -97,7 +97,7 @@ export const postService = {
   // Fetch user's saved posts
   async getSavedPosts(userId: string) {
     const { data, error } = await supabase
-      .from("PostSave")
+      .from('PostSave')
       .select(
         `
         Post (
@@ -111,8 +111,8 @@ export const postService = {
         )
       `
       )
-      .eq("userId", userId)
-      .order("id", { ascending: false });
+      .eq('userId', userId)
+      .order('id', { ascending: false });
 
     if (error) throw new Error(error.message);
     return data;
@@ -121,13 +121,13 @@ export const postService = {
   // Check if user liked a post
   async getUserPostLike(userId: string, postId: string) {
     const { data, error } = await supabase
-      .from("PostLike")
-      .select("id")
-      .eq("userId", userId)
-      .eq("postId", postId)
+      .from('PostLike')
+      .select('id')
+      .eq('userId', userId)
+      .eq('postId', postId)
       .single();
 
-    if (error && error.code !== "PGRST116") {
+    if (error && error.code !== 'PGRST116') {
       // PGRST116 = no rows returned
       throw new Error(error.message);
     }
@@ -137,13 +137,13 @@ export const postService = {
   // Check if user saved a post
   async getUserPostSave(userId: string, postId: string) {
     const { data, error } = await supabase
-      .from("PostSave")
-      .select("id")
-      .eq("userId", userId)
-      .eq("postId", postId)
+      .from('PostSave')
+      .select('id')
+      .eq('userId', userId)
+      .eq('postId', postId)
       .single();
 
-    if (error && error.code !== "PGRST116") {
+    if (error && error.code !== 'PGRST116') {
       throw new Error(error.message);
     }
     return data;
@@ -152,8 +152,8 @@ export const postService = {
   // Create a new post
   async createPost(postData: PostInsert) {
     const { data, error } = await supabase
-      .from("Post")
-      .insert(postData)
+      .from('Post')
+      .insert(postData as never)
       .select()
       .single();
 
@@ -164,7 +164,7 @@ export const postService = {
   // Like a post
   async likePost(userId: string, postId: string) {
     const { data, error } = await supabase
-      .from("PostLike")
+      .from('PostLike')
       .insert({
         id: crypto.randomUUID(),
         userId,
@@ -180,10 +180,10 @@ export const postService = {
   // Unlike a post
   async unlikePost(userId: string, postId: string) {
     const { error } = await supabase
-      .from("PostLike")
+      .from('PostLike')
       .delete()
-      .eq("userId", userId)
-      .eq("postId", postId);
+      .eq('userId', userId)
+      .eq('postId', postId);
 
     if (error) throw new Error(error.message);
   },
@@ -191,7 +191,7 @@ export const postService = {
   // Save a post
   async savePost(userId: string, postId: string) {
     const { data, error } = await supabase
-      .from("PostSave")
+      .from('PostSave')
       .insert({
         id: crypto.randomUUID(),
         userId,
@@ -207,10 +207,10 @@ export const postService = {
   // Unsave a post
   async unsavePost(userId: string, postId: string) {
     const { error } = await supabase
-      .from("PostSave")
+      .from('PostSave')
       .delete()
-      .eq("userId", userId)
-      .eq("postId", postId);
+      .eq('userId', userId)
+      .eq('postId', postId);
 
     if (error) throw new Error(error.message);
   },

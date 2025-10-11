@@ -422,7 +422,9 @@ function InboxPage() {
                             h={8}
                             style={{
                               borderRadius: 9999,
-                              background: chat.unread ? "#3B82F6" : "#3B82F6",
+                              background: chat.unread
+                                ? "#3B82F6"
+                                : "transparent",
                             }}
                           />
                         </Flex>

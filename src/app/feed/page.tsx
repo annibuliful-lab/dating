@@ -17,6 +17,7 @@ import {
   Container,
   Divider,
   Group,
+  Image,
   rem,
   ScrollArea,
   Stack,
@@ -33,6 +34,7 @@ type Post = {
     text?: string;
     [key: string]: unknown;
   } | null;
+  imageUrl?: string | null;
   createdAt: string;
   User: {
     id: string;
@@ -227,9 +229,21 @@ function FeedPage() {
                         <Text c="dimmed">{formatDate(post.createdAt)}</Text>
                       </Group>
 
-                      <Text fz="lg" style={{ lineHeight: 1.6 }}>
-                        {post.content?.text || "No content"}
-                      </Text>
+                      {post.content?.text && (
+                        <Text fz="lg" style={{ lineHeight: 1.6 }}>
+                          {post.content.text}
+                        </Text>
+                      )}
+
+                      {post.imageUrl && (
+                        <Image
+                          src={post.imageUrl}
+                          alt="Post image"
+                          radius="md"
+                          fit="contain"
+                          mah={500}
+                        />
+                      )}
 
                       <Group justify="space-between" mt="xs">
                         <Box

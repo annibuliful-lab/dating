@@ -8,13 +8,18 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { CameraIcon } from "@/components/icons/CameraIcon";
+import { mediaService } from "@/services/supabase/media";
 import { postService } from "@/services/supabase/posts";
 import {
+  ActionIcon,
   Avatar,
   Box,
   Button,
+  CloseButton,
   Container,
   Group,
+  Image,
   rem,
   Stack,
   Text,
@@ -23,19 +28,54 @@ import {
 import { notifications } from "@mantine/notifications";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 function CreatePostPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    const validation = mediaService.validateFile(file);
+    if (!validation.valid) {
+      notifications.show({
+        title: "Invalid File",
+        message: validation.error || "Please select a valid image file",
+        color: "red",
+      });
+      return;
+    }
+
+    // Set selected image and create preview
+    setSelectedImage(file);
+    const preview = mediaService.createPreviewUrl(file);
+    setImagePreview(preview);
+  };
+
+  const handleRemoveImage = () => {
+    if (imagePreview) {
+      mediaService.revokePreviewUrl(imagePreview);
+    }
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async () => {
-    if (!content.trim()) {
+    if (!content.trim() && !selectedImage) {
       notifications.show({
         title: "Error",
-        message: "Please enter some content for your post",
+        message: "Please enter some content or select an image for your post",
         color: "red",
       });
       return;
@@ -52,11 +92,24 @@ function CreatePostPage() {
 
     setIsSubmitting(true);
     try {
+      let imageUrl: string | null = null;
+
+      // Upload image if selected
+      if (selectedImage) {
+        const uploadResult = await mediaService.uploadMedia(
+          selectedImage,
+          "dating",
+          "posts"
+        );
+        imageUrl = uploadResult.publicUrl;
+      }
+
       const postData = {
         id: crypto.randomUUID(),
         authorId: session.user.id,
         content: { text: content.trim() },
         visibility: "PUBLIC" as const,
+        imageUrl: imageUrl,
         updatedAt: new Date().toISOString(),
       };
 
@@ -67,6 +120,12 @@ function CreatePostPage() {
         message: "Post created successfully!",
         color: "green",
       });
+
+      // Clean up preview URL
+      if (imagePreview) {
+        mediaService.revokePreviewUrl(imagePreview);
+      }
+
       router.push("/feed");
     } catch (error) {
       notifications.show({
@@ -108,7 +167,7 @@ function CreatePostPage() {
             size="sm"
             onClick={handleSubmit}
             loading={isSubmitting}
-            disabled={!content.trim()}
+            disabled={!content.trim() && !selectedImage}
           >
             Post
           </Button>
@@ -157,6 +216,54 @@ function CreatePostPage() {
               },
             }}
           />
+
+          {/* Image Preview */}
+          {imagePreview && (
+            <Box pos="relative">
+              <Image
+                src={imagePreview}
+                alt="Preview"
+                radius="md"
+                fit="contain"
+                mah={400}
+              />
+              <CloseButton
+                pos="absolute"
+                top={10}
+                right={10}
+                size="lg"
+                radius="xl"
+                variant="filled"
+                onClick={handleRemoveImage}
+                style={{
+                  backgroundColor: "rgba(0, 0, 0, 0.6)",
+                  color: "white",
+                }}
+              />
+            </Box>
+          )}
+
+          {/* Camera Button */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            style={{ display: "none" }}
+          />
+          <Group>
+            <ActionIcon
+              size="lg"
+              variant="subtle"
+              color="gray"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <CameraIcon color="#989898" />
+            </ActionIcon>
+            <Text size="sm" c="dimmed">
+              Add a photo to your post
+            </Text>
+          </Group>
         </Stack>
       </Container>
 

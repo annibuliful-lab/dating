@@ -41,7 +41,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then((data) => {
-      console.log('data', data);
+      console.log('[supabase-session]', data);
     });
   }, []);
 

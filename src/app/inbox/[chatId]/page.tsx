@@ -2,20 +2,21 @@
 
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { EditMessageModal } from "@/components/chat/EditMessageModal";
+import { GroupInfoModal } from "@/components/chat/GroupInfoModal";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
-import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
+import { InfoIcon } from "@/components/icons/InfoIcon";
 import { useChatMessages } from "@/hooks/useChatMessages";
+import { messageService } from "@/services/supabase/messages";
 import {
   ActionIcon,
   Box,
   Center,
   Container,
-  Group,
   Loader,
   ScrollArea,
   Stack,
@@ -24,13 +25,18 @@ import {
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams<{ chatId: string }>();
   const { status } = useSession();
   const messageInputRef = useRef<HTMLInputElement>(null);
+  const [groupInfoModalOpened, setGroupInfoModalOpened] = useState(false);
+  const [chatInfo, setChatInfo] = useState<{
+    name: string | null;
+    isGroup: boolean;
+  }>({ name: null, isGroup: false });
 
   const {
     message,
@@ -43,8 +49,6 @@ export default function ChatPage() {
     editText,
     setEditText,
     showEditModal,
-    soundEnabled,
-    setSoundEnabled,
     messagesEndRef,
     messagesContainerRef,
     selectedMedia,
@@ -72,10 +76,38 @@ export default function ChatPage() {
     }
   }, [status, router]);
 
+  // Fetch chat info
+  useEffect(() => {
+    const fetchChatInfo = async () => {
+      if (params.chatId) {
+        try {
+          const info = await messageService.getChatInfo(params.chatId);
+          setChatInfo({ name: info.name, isGroup: info.isGroup });
+        } catch (error) {
+          console.error("Error fetching chat info:", error);
+        }
+      }
+    };
+
+    fetchChatInfo();
+  }, [params.chatId]);
+
   if (status === "loading" || loading) {
     return (
       <Box>
-        <TopNavbar title="Chat" showBack rightSlot={<UserPlusIcon />} />
+        <TopNavbar
+          title={chatInfo.name || "Chat"}
+          showBack
+          rightSlot={
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={() => setGroupInfoModalOpened(true)}
+            >
+              <InfoIcon />
+            </ActionIcon>
+          }
+        />
         <Container
           size="xs"
           px="md"
@@ -93,7 +125,19 @@ export default function ChatPage() {
   if (error) {
     return (
       <Box>
-        <TopNavbar title="Chat" showBack rightSlot={<UserPlusIcon />} />
+        <TopNavbar
+          title={chatInfo.name || "Chat"}
+          showBack
+          rightSlot={
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={() => setGroupInfoModalOpened(true)}
+            >
+              <InfoIcon />
+            </ActionIcon>
+          }
+        />
         <Container
           size="xs"
           px="md"
@@ -122,20 +166,16 @@ export default function ChatPage() {
   return (
     <Box>
       <TopNavbar
-        title="Chat"
+        title={chatInfo.name || "Chat"}
         showBack
         rightSlot={
-          <Group gap="xs">
-            <ActionIcon
-              variant="subtle"
-              size="lg"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              color={soundEnabled ? "blue" : "gray"}
-            >
-              <Text size="lg">{soundEnabled ? "🔊" : "🔇"}</Text>
-            </ActionIcon>
-            <UserPlusIcon />
-          </Group>
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            onClick={() => setGroupInfoModalOpened(true)}
+          >
+            <InfoIcon />
+          </ActionIcon>
         }
       />
 
@@ -216,6 +256,14 @@ export default function ChatPage() {
         editText={editText}
         setEditText={setEditText}
         onSave={handleSaveEdit}
+      />
+
+      <GroupInfoModal
+        opened={groupInfoModalOpened}
+        onClose={() => setGroupInfoModalOpened(false)}
+        chatId={params.chatId || ""}
+        chatName={chatInfo.name}
+        isGroup={chatInfo.isGroup}
       />
     </Box>
   );

@@ -209,6 +209,45 @@ export const messageService = {
     return data;
   },
 
+  // Remove participant from chat
+  async removeChatParticipant(chatId: string, userId: string) {
+    const { error } = await supabase
+      .from("ChatParticipant")
+      .delete()
+      .eq("chatId", chatId)
+      .eq("userId", userId);
+
+    if (error) throw new Error(error.message);
+    return true;
+  },
+
+  // Update chat name
+  async updateChatName(chatId: string, name: string) {
+    const { data, error } = await supabase
+      .from("Chat")
+      .update({ name })
+      .eq("id", chatId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("Failed to update chat name");
+    return data;
+  },
+
+  // Get chat info
+  async getChatInfo(chatId: string) {
+    const { data, error } = await supabase
+      .from("Chat")
+      .select("*")
+      .eq("id", chatId)
+      .single();
+
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("Chat not found");
+    return data;
+  },
+
   // Get chat participants
   async getChatParticipants(chatId: string) {
     const { data, error } = await supabase

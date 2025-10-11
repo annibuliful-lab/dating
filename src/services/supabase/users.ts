@@ -1,4 +1,4 @@
-import { supabase } from "@/client/supabase";
+import { supabase } from '@/client/supabase';
 
 type UserUpdate = {
   fullName?: string;
@@ -16,10 +16,10 @@ export const userService = {
   // Fetch all active users
   async getActiveUsers() {
     const { data, error } = await supabase
-      .from("User")
-      .select("*")
-      .eq("status", "ACTIVE")
-      .order("createdAt", { ascending: false });
+      .from('User')
+      .select('*')
+      .eq('status', 'ACTIVE')
+      .order('createdAt', { ascending: false });
 
     if (error) throw new Error(error.message);
     return data;
@@ -28,9 +28,9 @@ export const userService = {
   // Fetch user by ID
   async getUserById(id: string) {
     const { data, error } = await supabase
-      .from("User")
-      .select("*")
-      .eq("id", id)
+      .from('User')
+      .select('*')
+      .eq('id', id)
       .single();
 
     if (error) throw new Error(error.message);
@@ -40,11 +40,11 @@ export const userService = {
   // Fetch user profile data (excluding sensitive info)
   async getUserProfile(id: string) {
     const { data, error } = await supabase
-      .from("User")
+      .from('User')
       .select(
-        "id, fullName, username, age, gender, bio, profileImageKey, height, weight, relationShipStatus"
+        'id, fullName, username, age, gender, bio, profileImageKey, height, weight, relationShipStatus'
       )
-      .eq("id", id)
+      .eq('id', id)
       .single();
 
     if (error) throw new Error(error.message);
@@ -54,10 +54,12 @@ export const userService = {
   // Search users by username or full name
   async searchUsers(searchTerm: string) {
     const { data, error } = await supabase
-      .from("User")
-      .select("id, fullName, username, profileImageKey, age, gender")
-      .or(`fullName.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`)
-      .eq("status", "ACTIVE")
+      .from('User')
+      .select('id, fullName, username, profileImageKey, age, gender')
+      .or(
+        `fullName.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`
+      )
+      .eq('status', 'ACTIVE')
       .limit(20);
 
     if (error) throw new Error(error.message);
@@ -67,11 +69,13 @@ export const userService = {
   // Get users by age range
   async getUsersByAgeRange(minAge: number, maxAge: number) {
     const { data, error } = await supabase
-      .from("User")
-      .select("id, fullName, username, age, gender, bio, profileImageKey")
-      .gte("age", minAge)
-      .lte("age", maxAge)
-      .eq("status", "ACTIVE");
+      .from('User')
+      .select(
+        'id, fullName, username, age, gender, bio, profileImageKey'
+      )
+      .gte('age', minAge)
+      .lte('age', maxAge)
+      .eq('status', 'ACTIVE');
 
     if (error) throw new Error(error.message);
     return data;
@@ -80,9 +84,9 @@ export const userService = {
   // Update user profile
   async updateUserProfile(id: string, updates: UserUpdate) {
     const { data, error } = await supabase
-      .from("User")
-      .update(updates)
-      .eq("id", id)
+      .from('User')
+      .update(updates as never)
+      .eq('id', id)
       .select()
       .single();
 
@@ -93,7 +97,7 @@ export const userService = {
   // Get users with their post counts
   async getUsersWithPostCounts() {
     const { data, error } = await supabase
-      .from("User")
+      .from('User')
       .select(
         `
         id,
@@ -103,7 +107,7 @@ export const userService = {
         Post!Post_authorId_fkey (count)
       `
       )
-      .eq("status", "ACTIVE");
+      .eq('status', 'ACTIVE');
 
     if (error) throw new Error(error.message);
     return data;

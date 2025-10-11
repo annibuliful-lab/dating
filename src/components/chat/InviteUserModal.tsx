@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { userService } from "@/services/supabase/users";
+import { userService } from '@/services/supabase/users';
 import {
   Avatar,
   Button,
@@ -12,9 +12,9 @@ import {
   Text,
   TextInput,
   UnstyledButton,
-} from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
-import { useEffect, useState } from "react";
+} from '@mantine/core';
+import { useDebouncedValue } from '@mantine/hooks';
+import { useEffect, useState } from 'react';
 
 interface User {
   id: string;
@@ -36,11 +36,10 @@ interface InviteUserModalProps {
 export function InviteUserModal({
   opened,
   onClose,
-  chatId,
   currentParticipantIds,
   onInvite,
 }: InviteUserModalProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch] = useDebouncedValue(searchTerm, 300);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,14 +54,16 @@ export function InviteUserModal({
 
       setLoading(true);
       try {
-        const results = await userService.searchUsers(debouncedSearch);
+        const results = await userService.searchUsers(
+          debouncedSearch
+        );
         // Filter out users who are already participants
         const filteredResults = results.filter(
           (user) => !currentParticipantIds.includes(user.id)
         );
         setUsers(filteredResults);
       } catch (error) {
-        console.error("Error searching users:", error);
+        console.error('Error searching users:', error);
       } finally {
         setLoading(false);
       }
@@ -78,14 +79,14 @@ export function InviteUserModal({
       // Remove the invited user from the list
       setUsers(users.filter((u) => u.id !== userId));
     } catch (error) {
-      console.error("Error inviting user:", error);
+      console.error('Error inviting user:', error);
     } finally {
       setInviting(null);
     }
   };
 
   const handleClose = () => {
-    setSearchTerm("");
+    setSearchTerm('');
     setUsers([]);
     onClose();
   };
@@ -112,27 +113,31 @@ export function InviteUserModal({
           </Center>
         )}
 
-        {!loading && searchTerm.length > 0 && searchTerm.length < 2 && (
-          <Text size="sm" c="dimmed" ta="center" py="xl">
-            Type at least 2 characters to search
-          </Text>
-        )}
+        {!loading &&
+          searchTerm.length > 0 &&
+          searchTerm.length < 2 && (
+            <Text size="sm" c="dimmed" ta="center" py="xl">
+              Type at least 2 characters to search
+            </Text>
+          )}
 
-        {!loading && debouncedSearch.length >= 2 && users.length === 0 && (
-          <Text size="sm" c="dimmed" ta="center" py="xl">
-            No users found
-          </Text>
-        )}
+        {!loading &&
+          debouncedSearch.length >= 2 &&
+          users.length === 0 && (
+            <Text size="sm" c="dimmed" ta="center" py="xl">
+              No users found
+            </Text>
+          )}
 
         <Stack gap="xs">
           {users.map((user) => (
             <UnstyledButton
               key={user.id}
               style={{
-                padding: "12px",
-                borderRadius: "8px",
-                border: "1px solid #e0e0e0",
-                width: "100%",
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #e0e0e0',
+                width: '100%',
               }}
               disabled={inviting === user.id}
             >

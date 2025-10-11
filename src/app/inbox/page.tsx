@@ -11,6 +11,7 @@ import {
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
 // Using a simple refresh icon from Mantine
 import { messageService } from "@/services/supabase/messages";
+import { userService } from "@/services/supabase/users";
 import {
   ActionIcon,
   Avatar,
@@ -20,10 +21,13 @@ import {
   Divider,
   Group,
   Loader,
+  Modal,
   Stack,
   Text,
+  TextInput,
   rem,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -46,12 +50,26 @@ type ChatPreview = {
   };
 };
 
+type UserSearchResult = {
+  id: string;
+  fullName: string;
+  username: string | null;
+  profileImageKey: string | null;
+  age: number | null;
+  gender: string | null;
+};
+
 function InboxPage() {
   const router = useRouter();
   const { status, data: session } = useSession();
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [opened, { open, close }] = useDisclosure(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [creatingChat, setCreatingChat] = useState(false);
 
   const fetchUserChats = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -184,10 +202,90 @@ function InboxPage() {
     fetchUserChats();
   };
 
+  // Search users when query changes
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (!searchQuery.trim()) {
+        // If no search query, show active users
+        try {
+          setSearchLoading(true);
+          const users = await userService.getActiveUsers();
+          // Filter out current user
+          const filteredUsers = users.filter(
+            (user) => user.id !== session?.user?.id
+          );
+          setSearchResults(filteredUsers);
+        } catch (err) {
+          console.error("Error fetching users:", err);
+        } finally {
+          setSearchLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setSearchLoading(true);
+        const results = await userService.searchUsers(searchQuery);
+        // Filter out current user
+        const filteredResults = results.filter(
+          (user) => user.id !== session?.user?.id
+        );
+        setSearchResults(filteredResults);
+      } catch (err) {
+        console.error("Error searching users:", err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchUsers, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, session?.user?.id]);
+
+  const handleStartChat = async (userId: string) => {
+    if (!session?.user?.id) return;
+
+    try {
+      setCreatingChat(true);
+      // Get or create direct chat
+      const chat = await messageService.getOrCreateDirectChat(
+        session.user.id,
+        userId
+      );
+      // Close modal and navigate to chat
+      close();
+      router.push(`/inbox/${chat.id}`);
+    } catch (err) {
+      console.error("Error creating chat:", err);
+      alert("Failed to start chat. Please try again.");
+    } finally {
+      setCreatingChat(false);
+    }
+  };
+
+  const handleOpenModal = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+    open();
+  };
+
   if (status === "loading" || loading) {
     return (
       <Box>
-        <TopNavbar title="Inbox" rightSlot={<UserPlusIcon />} />
+        <TopNavbar
+          title="Inbox"
+          rightSlot={
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={handleOpenModal}
+              disabled={status !== "authenticated"}
+            >
+              <UserPlusIcon />
+            </ActionIcon>
+          }
+        />
         <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Center py="xl">
             <Loader size="lg" />
@@ -201,7 +299,19 @@ function InboxPage() {
   if (error) {
     return (
       <Box>
-        <TopNavbar title="Inbox" rightSlot={<UserPlusIcon />} />
+        <TopNavbar
+          title="Inbox"
+          rightSlot={
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={handleOpenModal}
+              disabled={status !== "authenticated"}
+            >
+              <UserPlusIcon />
+            </ActionIcon>
+          }
+        />
         <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Center py="xl">
             <Stack align="center" gap="md">
@@ -237,7 +347,9 @@ function InboxPage() {
             >
               <Text size="lg">↻</Text>
             </ActionIcon>
-            <UserPlusIcon />
+            <ActionIcon variant="subtle" size="lg" onClick={handleOpenModal}>
+              <UserPlusIcon />
+            </ActionIcon>
           </Group>
         }
       />
@@ -305,6 +417,94 @@ function InboxPage() {
       </Container>
 
       <BottomNavbar />
+
+      {/* New Chat Modal */}
+      <Modal
+        opened={opened}
+        onClose={close}
+        title="Start New Chat"
+        size="md"
+        centered
+      >
+        <Stack gap="md">
+          <TextInput
+            placeholder="Search users by name or username..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          />
+
+          {searchLoading ? (
+            <Center py="xl">
+              <Loader size="md" />
+            </Center>
+          ) : searchResults.length === 0 ? (
+            <Center py="xl">
+              <Text c="dimmed" size="sm">
+                {searchQuery.trim()
+                  ? "No users found"
+                  : "No active users available"}
+              </Text>
+            </Center>
+          ) : (
+            <Stack gap="xs" mah={400} style={{ overflowY: "auto" }}>
+              {searchResults.map((user) => (
+                <Box
+                  key={user.id}
+                  p="sm"
+                  style={{
+                    cursor: "pointer",
+                    borderRadius: "8px",
+                    border: "1px solid #373A40",
+                    transition: "background-color 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#25262b";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                  onClick={() => handleStartChat(user.id)}
+                >
+                  <Group wrap="nowrap">
+                    <Avatar
+                      src={user.profileImageKey}
+                      alt={user.fullName}
+                      radius="xl"
+                      size={50}
+                    />
+                    <Stack gap={2}>
+                      <Text fw={600}>{user.fullName}</Text>
+                      <Group gap="xs">
+                        {user.username && (
+                          <Text c="dimmed" size="sm">
+                            @{user.username}
+                          </Text>
+                        )}
+                        {user.age && (
+                          <Text c="dimmed" size="sm">
+                            • {user.age} years
+                          </Text>
+                        )}
+                        {user.gender && (
+                          <Text c="dimmed" size="sm">
+                            • {user.gender}
+                          </Text>
+                        )}
+                      </Group>
+                    </Stack>
+                  </Group>
+                </Box>
+              ))}
+            </Stack>
+          )}
+
+          {creatingChat && (
+            <Center>
+              <Loader size="sm" />
+            </Center>
+          )}
+        </Stack>
+      </Modal>
     </Box>
   );
 }

@@ -8,7 +8,6 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
-import { SendIcon } from "@/components/icons/SendIcon";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
 import {
@@ -243,7 +242,7 @@ function FeedPage() {
                             opacity: chatLoading === post.User.id ? 0.6 : 1,
                           }}
                         >
-                          <SendIcon />
+                          <Text c="yellow">ทักแชทได้ป่ะ</Text>
                         </Box>
                         <Badge color="teal" radius="xl" variant="light">
                           Verified

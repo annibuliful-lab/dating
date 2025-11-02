@@ -49,7 +49,7 @@ export function ChatMessage({
             <Menu.Target>
               <Box
                 p="md"
-                bg="#FFD700"
+                bg="#ebb609"
                 c="#191919"
                 style={{
                   borderRadius: "16px 16px 4px 16px",

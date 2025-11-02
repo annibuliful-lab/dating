@@ -9,7 +9,7 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
-import { InfoIcon } from "@/components/icons/InfoIcon";
+import { MoreOptionsIcon } from "@/components/icons/MoreOptionsIcon";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { messageService } from "@/services/supabase/messages";
 import {
@@ -128,7 +128,7 @@ export default function ChatPage() {
               size="lg"
               onClick={() => setGroupInfoModalOpened(true)}
             >
-              <InfoIcon />
+              <MoreOptionsIcon />
             </ActionIcon>
           }
         />
@@ -158,7 +158,7 @@ export default function ChatPage() {
               size="lg"
               onClick={() => setGroupInfoModalOpened(true)}
             >
-              <InfoIcon />
+              <MoreOptionsIcon />
             </ActionIcon>
           }
         />
@@ -198,7 +198,7 @@ export default function ChatPage() {
             size="lg"
             onClick={() => setGroupInfoModalOpened(true)}
           >
-            <InfoIcon />
+            <MoreOptionsIcon />
           </ActionIcon>
         }
       />

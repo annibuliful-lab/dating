@@ -30,7 +30,7 @@ import { useEffect, useRef, useState } from "react";
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams<{ chatId: string }>();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const messageInputRef = useRef<HTMLInputElement>(null);
   const [groupInfoModalOpened, setGroupInfoModalOpened] = useState(false);
   const [chatInfo, setChatInfo] = useState<{
@@ -82,15 +82,38 @@ export default function ChatPage() {
       if (params.chatId) {
         try {
           const info = await messageService.getChatInfo(params.chatId);
-          setChatInfo({ name: info.name, isGroup: info.isGroup });
+          let chatName = info.name;
+
+          // If it's not a group chat and no name is set, use participant names
+          if (!info.isGroup && !chatName) {
+            const participants = await messageService.getChatParticipants(
+              params.chatId
+            );
+            // Get other participants (excluding current user)
+            const otherParticipants = participants.filter(
+              (p) => p.userId !== session?.user?.id
+            );
+
+            if (otherParticipants.length > 0) {
+              chatName = otherParticipants
+                .map((p) => p.User?.fullName || "Unknown")
+                .join(", ");
+            } else {
+              chatName = `Chat ${params.chatId.slice(0, 8)}`;
+            }
+          }
+
+          setChatInfo({ name: chatName, isGroup: info.isGroup });
         } catch (error) {
           console.error("Error fetching chat info:", error);
         }
       }
     };
 
-    fetchChatInfo();
-  }, [params.chatId]);
+    if (session?.user?.id) {
+      fetchChatInfo();
+    }
+  }, [params.chatId, session?.user?.id]);
 
   if (status === "loading" || loading) {
     return (

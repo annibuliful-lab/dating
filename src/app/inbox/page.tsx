@@ -1,5 +1,6 @@
 "use client";
 
+import { BUCKET_NAME, supabase } from "@/client/supabase";
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
@@ -8,7 +9,6 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
-import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
 // Using a simple refresh icon from Mantine
 import { messageService } from "@/services/supabase/messages";
@@ -468,7 +468,7 @@ function InboxPage() {
                           />
                         </Flex>
                       </Group>
-                      <Text c="dimmed" size="sm" lineClamp={2}>
+                      <Text c="white" size="md" lineClamp={2}>
                         {chat.preview}
                       </Text>
                     </Stack>

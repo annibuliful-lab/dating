@@ -1,16 +1,18 @@
-'use client';
+"use client";
 
-import { supabase } from '@/client/supabase';
-import { TOP_NAVBAR_HEIGHT_PX } from '@/components/element/TopNavbar';
-import { CalendarIcon } from '@/components/icons/CalendarIcon';
-import { CameraIcon } from '@/components/icons/CameraIcon';
-import { getUserProfile } from '@/services/profile/get';
-import { updateUserProfile } from '@/services/profile/update';
+import { supabase } from "@/client/supabase";
+import { TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
+import { CalendarIcon } from "@/components/icons/CalendarIcon";
+import { CameraIcon } from "@/components/icons/CameraIcon";
+import { getUserProfile } from "@/services/profile/get";
+import { updateUserProfile } from "@/services/profile/update";
 import {
   Box,
+  Button,
   Container,
   Group,
   LoadingOverlay,
+  Modal,
   Select,
   Stack,
   Text,
@@ -18,40 +20,42 @@ import {
   Textarea,
   ThemeIcon,
   rem,
-} from '@mantine/core';
-import { DateInput } from '@mantine/dates';
-import { notifications } from '@mantine/notifications';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+} from "@mantine/core";
+import { DateInput } from "@mantine/dates";
+import { notifications } from "@mantine/notifications";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 function EditProfilePage() {
   const { data } = useSession();
   const router = useRouter();
 
   // Public profile states
-  const [username, setUsername] = useState('');
-  const [name, setName] = useState('');
-  const [lastname, setLastname] = useState('');
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [lastname, setLastname] = useState("");
   const [gender, setGender] = useState<string | null>(null);
   const [birthday, setBirthday] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [bio, setBio] = useState('');
+  const [bio, setBio] = useState("");
   const BIO_LIMIT = 150;
 
   // Private details states
-  const [phone, setPhone] = useState('');
-  const [lineId, setLineId] = useState('');
-  const [height, setHeight] = useState('');
-  const [weight, setWeight] = useState('');
+  const [phone, setPhone] = useState("");
+  const [lineId, setLineId] = useState("");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarKey, setAvatarKey] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const userId = data?.user?.id;
-  const BUCKET = 'dating';
+  const BUCKET = "dating";
 
   const openFilePicker = () => fileInputRef.current?.click();
 
@@ -63,8 +67,8 @@ function EditProfilePage() {
     (async () => {
       try {
         const profile = await getUserProfile(userId);
-        console.log('profile', profile);
-        setUsername(profile.username ?? '');
+        console.log("profile", profile);
+        setUsername(profile.username ?? "");
         // If you only have fullName in the DB, split it loosely for display
         // const fullName = (profile.fullName as string | null) ?? '';
         // if (fullName && !name && !lastname) {
@@ -73,56 +77,49 @@ function EditProfilePage() {
         //   setLastname(rest.join(' ') ?? '');
         // }
 
-        setName(profile.fullName ?? '');
+        setName(profile.fullName ?? "");
         setLastname(profile.lastname);
 
         setGender(profile.gender ?? null);
         setBirthday(profile.birthday ? profile.birthday : null);
         setStatus(profile.relationShipStatus ?? null);
-        setBio(profile.bio ?? '');
-        setPhone(profile.phone ?? '');
-        setLineId(profile.lineId ?? '');
-        setHeight(
-          profile.height != null ? String(profile.height) : ''
-        );
-        setWeight(
-          profile.weight != null ? String(profile.weight) : ''
-        );
+        setBio(profile.bio ?? "");
+        setPhone(profile.phone ?? "");
+        setLineId(profile.lineId ?? "");
+        setHeight(profile.height != null ? String(profile.height) : "");
+        setWeight(profile.weight != null ? String(profile.weight) : "");
         setAvatarUrl(profile.avatarUrl ?? null);
       } catch (err) {
         console.error(err);
         notifications.show({
-          color: 'red',
-          title: 'Load failed',
-          message:
-            (err as Error).message ?? 'Could not load your profile.',
+          color: "red",
+          title: "Load failed",
+          message: (err as Error).message ?? "Could not load your profile.",
         });
       }
     })();
   }, [userId]);
 
-  const handleFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // basic validation
-    const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
+    const validTypes = ["image/png", "image/jpeg", "image/webp"];
     if (!validTypes.includes(file.type)) {
-      alert('Only PNG, JPG, or WEBP allowed.');
+      alert("Only PNG, JPG, or WEBP allowed.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert('Max 5MB.');
+      alert("Max 5MB.");
       return;
     }
 
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
+      const ext = file.name.split(".").pop() || "jpg";
       const key = `users/${
-        userId || 'anon'
+        userId || "anon"
       }/avatar-${userId}-${new Date().toISOString()}.${ext}`;
 
       // upload (upsert true lets you replace on re-upload)
@@ -131,49 +128,88 @@ function EditProfilePage() {
         .upload(key, file, {
           upsert: true,
           contentType: file.type,
-          cacheControl: '3600',
+          cacheControl: "3600",
         });
 
       if (uploadErr) throw uploadErr;
 
       // get a public URL (or use createSignedUrl if your bucket is private)
-      const { data: pub } = supabase.storage
-        .from(BUCKET)
-        .getPublicUrl(key);
+      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(key);
 
       setAvatarUrl(pub.publicUrl);
       setAvatarKey(key);
     } catch (err) {
       console.error(err);
-      alert((err as Error).message ?? 'Upload failed');
+      alert((err as Error).message ?? "Upload failed");
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const handleSave = async () => {
-    const profileData = {
-      username,
-      name,
-      lastname,
-      gender,
-      birthday,
-      relationShipStatus: status,
-      bio,
-      phone,
-      lineId,
-      height,
-      weight,
-    };
-    console.log('Saving profile:', profileData);
+  const handleSaveClick = () => {
+    setShowConfirmModal(true);
+  };
 
-    await updateUserProfile(
-      data?.user.id as string,
-      { ...profileData, profileImageKey: avatarKey } as never
-    );
-    // Call API or mutation here
-    // router.back();
+  const handleConfirmSave = async () => {
+    if (!data?.user.id) return;
+
+    // Validate required fields
+    if (
+      !username.trim() ||
+      !name.trim() ||
+      !lastname.trim() ||
+      !gender ||
+      !birthday ||
+      !status
+    ) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: "red",
+        title: "Error",
+        message: "Please complete all data",
+      });
+      return;
+    }
+
+    setShowConfirmModal(false);
+    setSaving(true);
+
+    try {
+      const profileData = {
+        username,
+        name,
+        lastname,
+        gender,
+        birthday,
+        relationShipStatus: status,
+        bio,
+        phone,
+        lineId,
+        height,
+        weight,
+      };
+
+      await updateUserProfile(data.user.id, {
+        ...profileData,
+        profileImageKey: avatarKey,
+      } as never);
+
+      notifications.show({
+        color: "green",
+        title: "Success",
+        message: "Profile saved successfully",
+      });
+    } catch (err) {
+      console.error("Error saving profile:", err);
+      notifications.show({
+        color: "red",
+        title: "Error",
+        message: "Please complete all data",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -186,42 +222,38 @@ function EditProfilePage() {
         right={0}
         bg="#0F0F0F"
         style={{
-          borderBottom: '1px solid var(--mantine-color-dark-4)',
+          borderBottom: "1px solid var(--mantine-color-dark-4)",
           height: `calc(${rem(
             TOP_NAVBAR_HEIGHT_PX
           )} + env(safe-area-inset-top))`,
-          paddingTop: 'env(safe-area-inset-top)',
+          paddingTop: "env(safe-area-inset-top)",
           zIndex: 100,
         }}
       >
-        <Group
-          h={rem(TOP_NAVBAR_HEIGHT_PX)}
-          px="md"
-          justify="space-between"
-        >
+        <Group h={rem(TOP_NAVBAR_HEIGHT_PX)} px="md" justify="space-between">
           <Text c="white" onClick={() => router.back()}>
             ← Back
           </Text>
           <Text c="white" fw={600}>
             Edit Profile
           </Text>
-          <Text c="gold.5" fw={600} onClick={handleSave}>
+          <Text
+            c="gold.5"
+            fw={600}
+            onClick={handleSaveClick}
+            style={{ cursor: "pointer" }}
+          >
             Save
           </Text>
         </Group>
       </Box>
 
-      <Container
-        size="xs"
-        pt="md"
-        px="md"
-        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-      >
+      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <Stack gap="lg" pb="xl">
-          <Box style={{ display: 'grid', placeItems: 'center' }}>
+          <Box style={{ display: "grid", placeItems: "center" }}>
             <Box
               style={{
-                position: 'relative',
+                position: "relative",
                 width: rem(150),
                 height: rem(150),
               }}
@@ -229,20 +261,20 @@ function EditProfilePage() {
               <LoadingOverlay
                 visible={uploading}
                 zIndex={2}
-                overlayProps={{ radius: 'lg', blur: 2 }}
+                overlayProps={{ radius: "lg", blur: 2 }}
               />
               <Box
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  border: '1px solid var(--mantine-color-dark-4)',
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "1px solid var(--mantine-color-dark-4)",
                   background: avatarUrl
                     ? `center/cover no-repeat url(${avatarUrl})`
-                    : 'repeating-conic-gradient(#333 0% 25%, transparent 0% 50%) 50% / 20px 20px',
+                    : "repeating-conic-gradient(#333 0% 25%, transparent 0% 50%) 50% / 20px 20px",
                   opacity: avatarUrl ? 1 : 0.8,
-                  cursor: 'pointer',
+                  cursor: "pointer",
                 }}
                 onClick={openFilePicker}
                 title="Change avatar"
@@ -252,14 +284,14 @@ function EditProfilePage() {
                 radius="xl"
                 size={34}
                 style={{
-                  position: 'absolute',
+                  position: "absolute",
                   right: rem(4),
                   bottom: rem(4),
-                  backgroundColor: 'white',
-                  border: '1px solid var(--mantine-color-dark-4)',
-                  boxShadow: '0 8px 20px rgba(0, 0, 0, 0.35)',
+                  backgroundColor: "white",
+                  border: "1px solid var(--mantine-color-dark-4)",
+                  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.35)",
                   zIndex: 3,
-                  cursor: 'pointer',
+                  cursor: "pointer",
                 }}
                 variant="light"
                 color="dark.4"
@@ -275,7 +307,7 @@ function EditProfilePage() {
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={handleFileChange}
-                style={{ display: 'none' }}
+                style={{ display: "none" }}
               />
             </Box>
           </Box>
@@ -300,7 +332,7 @@ function EditProfilePage() {
 
             <Select
               placeholder="Gender"
-              data={['Male', 'Female', 'Other']}
+              data={["Male", "Female", "Other"]}
               value={gender}
               onChange={setGender}
               rightSection={<Text>›</Text>}
@@ -318,7 +350,7 @@ function EditProfilePage() {
 
             <Select
               placeholder="Status"
-              data={['Single', 'In a relationship', 'Married']}
+              data={["Single", "In a relationship", "Married"]}
               value={status}
               onChange={setStatus}
               rightSection={<Text>›</Text>}
@@ -371,6 +403,30 @@ function EditProfilePage() {
           </Stack>
         </Stack>
       </Container>
+
+      {/* Confirmation Modal */}
+      <Modal
+        opened={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        title="Confirm Save"
+        centered
+      >
+        <Stack gap="md">
+          <Text>Are you sure you want to save these changes?</Text>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="subtle"
+              onClick={() => setShowConfirmModal(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmSave} loading={saving}>
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Box>
   );
 }

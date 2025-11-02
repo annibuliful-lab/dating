@@ -8,6 +8,7 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
 import {
@@ -41,6 +42,7 @@ type Post = {
     fullName: string;
     username: string;
     profileImageKey: string | null;
+    profileImageUrl?: string | null;
   };
 };
 
@@ -71,7 +73,24 @@ function FeedPage() {
         setLoading(true);
       }
       const data = await postService.getPublicPosts();
-      setPosts((data || []) as Post[]);
+      // Convert profileImageKey to URL for each post
+      const postsWithImageUrls = (data || []).map((post: Post) => {
+        let profileImageUrl = null;
+        if (post.User?.profileImageKey) {
+          const { data: imageData } = supabase.storage
+            .from(BUCKET_NAME)
+            .getPublicUrl(post.User.profileImageKey);
+          profileImageUrl = imageData.publicUrl;
+        }
+        return {
+          ...post,
+          User: {
+            ...post.User,
+            profileImageUrl,
+          },
+        };
+      });
+      setPosts(postsWithImageUrls as Post[]);
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to fetch posts"));
     } finally {
@@ -221,12 +240,14 @@ function FeedPage() {
                         <Avatar
                           radius="xl"
                           color="gray"
-                          src={post.User.profileImageKey}
+                          src={post.User.profileImageUrl || undefined}
                         >
-                          {post.User.fullName.charAt(0)}
+                          {post.User.fullName?.charAt(0) || "?"}
                         </Avatar>
                         <Text fw={600}>{post.User.fullName}</Text>
-                        <Text c="dimmed">{formatDate(post.createdAt)}</Text>
+                        <Text c="dimmed" size="sm">
+                          {formatDate(post.createdAt)}
+                        </Text>
                       </Group>
 
                       {post.content?.text && (

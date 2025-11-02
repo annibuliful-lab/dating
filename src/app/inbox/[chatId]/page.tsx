@@ -84,8 +84,8 @@ export default function ChatPage() {
           const info = await messageService.getChatInfo(params.chatId);
           let chatName = info.name;
 
-          // If it's not a group chat and no name is set, use participant names
-          if (!info.isGroup && !chatName) {
+          // If no name is set, use participant names
+          if (!chatName) {
             const participants = await messageService.getChatParticipants(
               params.chatId
             );
@@ -230,6 +230,7 @@ export default function ChatPage() {
               messages.map((m, index) => {
                 const prevMessage = index > 0 ? messages[index - 1] : null;
                 const showAvatar =
+                  chatInfo.isGroup &&
                   m.author === "other" &&
                   (!prevMessage || prevMessage.senderId !== m.senderId);
                 const showTimestamp =

@@ -8,6 +8,7 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
 // Using a simple refresh icon from Mantine
 import { messageService } from "@/services/supabase/messages";
@@ -43,6 +44,7 @@ type ChatPreview = {
     id: string;
     fullName: string;
     profileImageKey: string | null;
+    profileImageUrl?: string | null;
   }>;
   latestMessage?: {
     text: string | null;
@@ -56,6 +58,7 @@ type UserSearchResult = {
   fullName: string;
   username: string | null;
   profileImageKey: string | null;
+  profileImageUrl?: string | null;
   age: number | null;
   gender: string | null;
 };
@@ -130,11 +133,21 @@ function InboxPage() {
             unread,
             participants: otherParticipants
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .map((p: any) => ({
-                id: p.userId,
-                fullName: p.User?.fullName || "Unknown",
-                profileImageKey: p.User?.profileImageKey || null,
-              })),
+              .map((p: any) => {
+                let profileImageUrl = null;
+                if (p.User?.profileImageKey) {
+                  const { data: imageData } = supabase.storage
+                    .from(BUCKET_NAME)
+                    .getPublicUrl(p.User.profileImageKey);
+                  profileImageUrl = imageData.publicUrl;
+                }
+                return {
+                  id: p.userId,
+                  fullName: p.User?.fullName || "Unknown",
+                  profileImageKey: p.User?.profileImageKey || null,
+                  profileImageUrl,
+                };
+              }),
             latestMessage: latestMessage
               ? {
                   text: latestMessage.text,
@@ -211,10 +224,22 @@ function InboxPage() {
         try {
           setSearchLoading(true);
           const users = await userService.getActiveUsers();
-          // Filter out current user
-          const filteredUsers = users.filter(
-            (user) => user.id !== session?.user?.id
-          );
+          // Filter out current user and convert profileImageKey to URL
+          const filteredUsers = users
+            .filter((user) => user.id !== session?.user?.id)
+            .map((user) => {
+              let profileImageUrl = null;
+              if (user.profileImageKey) {
+                const { data: imageData } = supabase.storage
+                  .from(BUCKET_NAME)
+                  .getPublicUrl(user.profileImageKey);
+                profileImageUrl = imageData.publicUrl;
+              }
+              return {
+                ...user,
+                profileImageUrl,
+              };
+            });
           setSearchResults(filteredUsers);
         } catch (err) {
           console.error("Error fetching users:", err);
@@ -227,10 +252,22 @@ function InboxPage() {
       try {
         setSearchLoading(true);
         const results = await userService.searchUsers(searchQuery);
-        // Filter out current user
-        const filteredResults = results.filter(
-          (user) => user.id !== session?.user?.id
-        );
+        // Filter out current user and convert profileImageKey to URL
+        const filteredResults = results
+          .filter((user) => user.id !== session?.user?.id)
+          .map((user) => {
+            let profileImageUrl = null;
+            if (user.profileImageKey) {
+              const { data: imageData } = supabase.storage
+                .from(BUCKET_NAME)
+                .getPublicUrl(user.profileImageKey);
+              profileImageUrl = imageData.publicUrl;
+            }
+            return {
+              ...user,
+              profileImageUrl,
+            };
+          });
         setSearchResults(filteredResults);
       } catch (err) {
         console.error("Error searching users:", err);
@@ -381,8 +418,10 @@ function InboxPage() {
                       radius="xl"
                       color="gray"
                       size={62}
-                      src={chat.participants[0]?.profileImageKey}
-                    />
+                      src={chat.participants[0]?.profileImageUrl || undefined}
+                    >
+                      {chat.participants[0]?.fullName?.charAt(0) || "?"}
+                    </Avatar>
 
                     <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
                       <Group
@@ -493,11 +532,13 @@ function InboxPage() {
                 >
                   <Group wrap="nowrap">
                     <Avatar
-                      src={user.profileImageKey}
+                      src={user.profileImageUrl || undefined}
                       alt={user.fullName}
                       radius="xl"
                       size={50}
-                    />
+                    >
+                      {user.fullName?.charAt(0) || "?"}
+                    </Avatar>
                     <Stack gap={2}>
                       <Text fw={600}>{user.fullName}</Text>
                       <Group gap="xs">

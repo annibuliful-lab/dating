@@ -51,6 +51,7 @@ interface GroupInfoModalProps {
   chatId: string;
   chatName: string | null;
   isGroup: boolean;
+  onNameUpdated?: (newName: string) => void;
 }
 
 export function GroupInfoModal({
@@ -59,6 +60,7 @@ export function GroupInfoModal({
   chatId,
   chatName,
   isGroup,
+  onNameUpdated,
 }: GroupInfoModalProps) {
   const { data: session } = useSession();
   const [participants, setParticipants] = useState<ChatParticipant[]>([]);
@@ -75,6 +77,11 @@ export function GroupInfoModal({
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [searching, setSearching] = useState(false);
   const [inviting, setInviting] = useState<string | null>(null);
+
+  // Sync chatName prop with local state
+  useEffect(() => {
+    setNewName(chatName || "");
+  }, [chatName]);
 
   // Fetch participants
   useEffect(() => {
@@ -162,6 +169,11 @@ export function GroupInfoModal({
         color: "green",
       });
       setEditingName(false);
+
+      // Notify parent component of the name change
+      if (onNameUpdated) {
+        onNameUpdated(newName.trim());
+      }
     } catch (error) {
       console.error("Error updating chat name:", error);
       notifications.show({
@@ -328,15 +340,13 @@ export function GroupInfoModal({
                 <Text size="lg" fw={500}>
                   {chatName || "Unnamed Group"}
                 </Text>
-                {currentUserIsAdmin && (
-                  <Button
-                    variant="subtle"
-                    size="sm"
-                    onClick={() => setEditingName(true)}
-                  >
-                    Edit
-                  </Button>
-                )}
+                <Button
+                  variant="subtle"
+                  size="sm"
+                  onClick={() => setEditingName(true)}
+                >
+                  Edit
+                </Button>
               </Group>
             )}
             <Divider my="md" />

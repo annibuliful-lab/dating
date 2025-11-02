@@ -25,7 +25,7 @@ import {
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -76,44 +76,45 @@ export default function ChatPage() {
     }
   }, [status, router]);
 
+  // Fetch chat info function
+  const fetchChatInfo = useCallback(async () => {
+    if (params.chatId) {
+      try {
+        const info = await messageService.getChatInfo(params.chatId);
+        let chatName = info.name;
+
+        // If no name is set, use participant names
+        if (!chatName) {
+          const participants = await messageService.getChatParticipants(
+            params.chatId
+          );
+          // Get other participants (excluding current user)
+          const otherParticipants = participants.filter(
+            (p) => p.userId !== session?.user?.id
+          );
+
+          if (otherParticipants.length > 0) {
+            chatName = otherParticipants
+              .map((p) => p.User?.fullName || "Unknown")
+              .join(", ");
+          } else {
+            chatName = `Chat ${params.chatId.slice(0, 8)}`;
+          }
+        }
+
+        setChatInfo({ name: chatName, isGroup: info.isGroup });
+      } catch (error) {
+        console.error("Error fetching chat info:", error);
+      }
+    }
+  }, [params.chatId, session?.user?.id]);
+
   // Fetch chat info
   useEffect(() => {
-    const fetchChatInfo = async () => {
-      if (params.chatId) {
-        try {
-          const info = await messageService.getChatInfo(params.chatId);
-          let chatName = info.name;
-
-          // If no name is set, use participant names
-          if (!chatName) {
-            const participants = await messageService.getChatParticipants(
-              params.chatId
-            );
-            // Get other participants (excluding current user)
-            const otherParticipants = participants.filter(
-              (p) => p.userId !== session?.user?.id
-            );
-
-            if (otherParticipants.length > 0) {
-              chatName = otherParticipants
-                .map((p) => p.User?.fullName || "Unknown")
-                .join(", ");
-            } else {
-              chatName = `Chat ${params.chatId.slice(0, 8)}`;
-            }
-          }
-
-          setChatInfo({ name: chatName, isGroup: info.isGroup });
-        } catch (error) {
-          console.error("Error fetching chat info:", error);
-        }
-      }
-    };
-
     if (session?.user?.id) {
       fetchChatInfo();
     }
-  }, [params.chatId, session?.user?.id]);
+  }, [session?.user?.id, fetchChatInfo]);
 
   if (status === "loading" || loading) {
     return (
@@ -288,6 +289,9 @@ export default function ChatPage() {
         chatId={params.chatId || ""}
         chatName={chatInfo.name}
         isGroup={chatInfo.isGroup}
+        onNameUpdated={(_newName: string) => {
+          fetchChatInfo();
+        }}
       />
     </Box>
   );

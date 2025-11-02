@@ -110,8 +110,10 @@ export function ChatMessage({
               radius="xl"
               color="gray"
               size={40}
-              src={message.senderAvatar}
-            />
+              src={message.senderAvatar || undefined}
+            >
+              {message.senderName?.charAt(0) || "?"}
+            </Avatar>
           ) : (
             <Box w={40} />
           )}

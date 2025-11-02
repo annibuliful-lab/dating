@@ -1,5 +1,6 @@
 "use client";
 
+import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { ChatMessage, MessageWithUser, TypingUser } from "@/@types/message";
 import { mediaService } from "@/services/supabase/media";
 import { messageService } from "@/services/supabase/messages";
@@ -109,19 +110,28 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       const transformedMessages: ChatMessage[] = chatMessages
         .reverse() // Reverse to show oldest first in chat (Facebook-style)
-        .map((msg: MessageWithUser) => ({
-          id: msg.id,
-          text: msg.text,
-          imageUrl: msg.imageUrl,
-          videoUrl:
-            (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
-          author: msg.senderId === session?.user?.id ? "me" : "other",
-          senderId: msg.senderId,
-          senderName: msg.User?.fullName || "Unknown",
-          senderAvatar: msg.User?.profileImageKey,
-          createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
-          createdAt: msg.createdAt,
-        }));
+        .map((msg: MessageWithUser) => {
+          let senderAvatarUrl = null;
+          if (msg.User?.profileImageKey) {
+            const { data: imageData } = supabase.storage
+              .from(BUCKET_NAME)
+              .getPublicUrl(msg.User.profileImageKey);
+            senderAvatarUrl = imageData.publicUrl;
+          }
+          return {
+            id: msg.id,
+            text: msg.text,
+            imageUrl: msg.imageUrl,
+            videoUrl:
+              (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
+            author: msg.senderId === session?.user?.id ? "me" : "other",
+            senderId: msg.senderId,
+            senderName: msg.User?.fullName || "Unknown",
+            senderAvatar: senderAvatarUrl,
+            createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
+            createdAt: msg.createdAt,
+          };
+        });
 
       setMessages(transformedMessages);
       setHasOlderMessages(chatMessages.length >= 50); // Assume more if we got a full page
@@ -164,19 +174,28 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       }
 
       const transformedOlderMessages: ChatMessage[] = olderMessages.map(
-        (msg: MessageWithUser) => ({
-          id: msg.id,
-          text: msg.text,
-          imageUrl: msg.imageUrl,
-          videoUrl:
-            (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
-          author: msg.senderId === session?.user?.id ? "me" : "other",
-          senderId: msg.senderId,
-          senderName: msg.User?.fullName || "Unknown",
-          senderAvatar: msg.User?.profileImageKey,
-          createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
-          createdAt: msg.createdAt,
-        })
+        (msg: MessageWithUser) => {
+          let senderAvatarUrl = null;
+          if (msg.User?.profileImageKey) {
+            const { data: imageData } = supabase.storage
+              .from(BUCKET_NAME)
+              .getPublicUrl(msg.User.profileImageKey);
+            senderAvatarUrl = imageData.publicUrl;
+          }
+          return {
+            id: msg.id,
+            text: msg.text,
+            imageUrl: msg.imageUrl,
+            videoUrl:
+              (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
+            author: msg.senderId === session?.user?.id ? "me" : "other",
+            senderId: msg.senderId,
+            senderName: msg.User?.fullName || "Unknown",
+            senderAvatar: senderAvatarUrl,
+            createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
+            createdAt: msg.createdAt,
+          };
+        }
       );
 
       // Store current scroll position
@@ -233,6 +252,13 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       chatId,
       (newMessage: MessageWithUser) => {
         console.log("New message received:", newMessage);
+        let senderAvatarUrl = null;
+        if (newMessage.User?.profileImageKey) {
+          const { data: imageData } = supabase.storage
+            .from(BUCKET_NAME)
+            .getPublicUrl(newMessage.User.profileImageKey);
+          senderAvatarUrl = imageData.publicUrl;
+        }
         const transformedMessage: ChatMessage = {
           id: newMessage.id,
           text: newMessage.text,
@@ -241,7 +267,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           author: newMessage.senderId === session?.user?.id ? "me" : "other",
           senderId: newMessage.senderId,
           senderName: newMessage.User?.fullName || "Unknown",
-          senderAvatar: newMessage.User?.profileImageKey,
+          senderAvatar: senderAvatarUrl,
           createdAtLabel: formatMessageTime(new Date(newMessage.createdAt)),
           createdAt: newMessage.createdAt,
         };

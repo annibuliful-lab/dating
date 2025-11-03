@@ -1,5 +1,6 @@
 "use client";
 
+import { supabase } from "@/client/supabase";
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
@@ -15,7 +16,6 @@ import { RulerIcon } from "@/components/icons/RulerIcon";
 import { SingleIcon } from "@/components/icons/SingleIcon";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { getUserProfile } from "@/services/profile/get";
-import { supabase } from "@/client/supabase";
 import {
   Box,
   Button,
@@ -85,7 +85,7 @@ function ProfileViewPage() {
 
   const handleVerify = async () => {
     if (!params.userId) return;
-    
+
     try {
       setIsVerifying(true);
       await verifyMutation.mutate({ verificationType: "ADMIN" });
@@ -101,7 +101,7 @@ function ProfileViewPage() {
 
   const handleUnverify = async () => {
     if (!params.userId) return;
-    
+
     try {
       setIsUnverifying(true);
       await unverifyMutation.mutate({});
@@ -235,12 +235,48 @@ function ProfileViewPage() {
             </Text>
           </Stack>
 
+          {isAdmin && !isOwnProfile && (
+            <Stack
+              gap="xs"
+              style={{
+                position: "absolute",
+                bottom: rem(30),
+                left: rem(16),
+                right: rem(16),
+              }}
+            >
+              {profile.isVerified ? (
+                <Button
+                  variant="filled"
+                  color="red"
+                  radius="md"
+                  onClick={handleUnverify}
+                  loading={isUnverifying}
+                  fullWidth
+                >
+                  Unverify User
+                </Button>
+              ) : (
+                <Button
+                  variant="filled"
+                  color="blue"
+                  radius="md"
+                  onClick={handleVerify}
+                  loading={isVerifying}
+                  fullWidth
+                >
+                  Verify User (Admin)
+                </Button>
+              )}
+            </Stack>
+          )}
+
           <Group
             justify="center"
             gap={36}
             style={{
               position: "absolute",
-              bottom: rem(30),
+              bottom: isAdmin && !isOwnProfile ? rem(90) : rem(30),
               left: rem(16),
               right: rem(16),
             }}

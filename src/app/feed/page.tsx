@@ -167,6 +167,10 @@ function FeedPage() {
     }
   };
 
+  const handleViewProfile = (userId: string) => {
+    router.push(`/profile/${userId}`);
+  };
+
   if (loading) {
     return (
       <Box>
@@ -241,10 +245,18 @@ function FeedPage() {
                           radius="xl"
                           color="gray"
                           src={post.User.profileImageUrl || undefined}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => handleViewProfile(post.User.id)}
                         >
                           {post.User.fullName?.charAt(0) || "?"}
                         </Avatar>
-                        <Text fw={600}>{post.User.fullName}</Text>
+                        <Text 
+                          fw={600} 
+                          style={{ cursor: "pointer" }}
+                          onClick={() => handleViewProfile(post.User.id)}
+                        >
+                          {post.User.fullName}
+                        </Text>
                         <Text c="dimmed" size="sm">
                           {formatDate(post.createdAt)}
                         </Text>

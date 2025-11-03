@@ -12,6 +12,7 @@ interface ChatMessageProps {
   onEdit: (message: ChatMessageType) => void;
   onDelete: (messageId: string) => void;
   formatMessageTime: (date: Date) => string;
+  onViewProfile?: (userId: string) => void;
 }
 
 export function ChatMessage({
@@ -22,6 +23,7 @@ export function ChatMessage({
   onEdit,
   onDelete,
   formatMessageTime,
+  onViewProfile,
 }: ChatMessageProps) {
   return (
     <Box>
@@ -111,6 +113,8 @@ export function ChatMessage({
               color="gray"
               size={40}
               src={message.senderAvatar || undefined}
+              style={{ cursor: onViewProfile ? "pointer" : "default" }}
+              onClick={() => onViewProfile && message.senderId && onViewProfile(message.senderId)}
             >
               {message.senderName?.charAt(0) || "?"}
             </Avatar>
@@ -119,7 +123,13 @@ export function ChatMessage({
           )}
           <Stack gap={4} style={{ flex: 1 }}>
             {showAvatar && (
-              <Text fw={600} size="sm" c="dimmed">
+              <Text 
+                fw={600} 
+                size="sm" 
+                c="dimmed"
+                style={{ cursor: onViewProfile ? "pointer" : "default" }}
+                onClick={() => onViewProfile && message.senderId && onViewProfile(message.senderId)}
+              >
                 {message.senderName}
               </Text>
             )}

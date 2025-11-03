@@ -13,21 +13,98 @@ import { CheckCircle } from "@/components/icons/CheckCircle";
 import { GenderIcon } from "@/components/icons/GenderIcon";
 import { RulerIcon } from "@/components/icons/RulerIcon";
 import { SingleIcon } from "@/components/icons/SingleIcon";
+import { getUserProfile } from "@/services/profile/get";
 import {
   Box,
+  Center,
   Container,
   Group,
   Image,
+  Loader,
   rem,
   Stack,
   Text,
   ThemeIcon,
 } from "@mantine/core";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 function ProfileViewPage() {
+  const params = useParams<{ userId: string }>();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!params.userId) {
+        setError("User ID not provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const userProfile = await getUserProfile(params.userId);
+        setProfile(userProfile);
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        setError("Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [params.userId]);
+
+  const calculateAge = (birthday: string | null): number | null => {
+    if (!birthday) return null;
+    const birthDate = new Date(birthday);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  if (loading) {
+    return (
+      <Box>
+        <TopNavbar title="Profile" showBack />
+        <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+          <Center py="xl">
+            <Loader size="lg" />
+          </Center>
+        </Container>
+        <BottomNavbar />
+      </Box>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <Box>
+        <TopNavbar title="Profile" showBack />
+        <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+          <Center py="xl">
+            <Text c="red" ta="center">
+              {error || "Profile not found"}
+            </Text>
+          </Center>
+        </Container>
+        <BottomNavbar />
+      </Box>
+    );
+  }
+
+  const age = calculateAge(profile.birthday);
+
   return (
     <Box>
-      <TopNavbar title="Profile" />
+      <TopNavbar title="Profile" showBack />
       <Container
         size="xs"
         px={0}
@@ -43,7 +120,7 @@ function ProfileViewPage() {
       >
         <Box h="100%" style={{ position: "relative" }}>
           <Image
-            src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1974&auto=format&fit=crop"
+            src={profile.avatarUrl || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1974&auto=format&fit=crop"}
             alt="profile"
             radius={0}
             h="100%"
@@ -66,18 +143,17 @@ function ProfileViewPage() {
           >
             <Group gap={6} align="center">
               <Text fw={700} fz={24}>
-                Toxic_cat
+                {profile.username || "User"}
               </Text>
               <ThemeIcon size={20} radius="xl" color="teal" variant="light">
                 <CheckCircle />
               </ThemeIcon>
             </Group>
             <Text c="dimmed" fz="sm">
-              Luca meowmeow
+              {profile.fullName || "Unknown"}
             </Text>
             <Text fz="sm" style={{ maxWidth: rem(320), lineHeight: 1.5 }}>
-              Looking for someone who won’t judge my obsession with wet bathroom
-              floors.
+              {profile.bio || "No bio available"}
             </Text>
           </Stack>
 
@@ -93,19 +169,23 @@ function ProfileViewPage() {
           >
             <Stack gap={2} align="center">
               <SingleIcon />
-              <Text fz="sm">Single</Text>
+              <Text fz="sm">{profile.relationShipStatus || "N/A"}</Text>
             </Stack>
             <Stack gap={2} align="center">
               <GenderIcon />
-              <Text fz="sm">Female</Text>
+              <Text fz="sm">{profile.gender || "N/A"}</Text>
             </Stack>
             <Stack gap={2} align="center">
               <AgeIcon />
-              <Text fz="sm">32</Text>
+              <Text fz="sm">{age || "N/A"}</Text>
             </Stack>
             <Stack gap={2} align="center">
               <RulerIcon />
-              <Text fz="sm">190/82</Text>
+              <Text fz="sm">
+                {profile.height && profile.weight
+                  ? `${profile.height}/${profile.weight}`
+                  : "N/A"}
+              </Text>
             </Stack>
           </Group>
         </Box>
@@ -117,3 +197,4 @@ function ProfileViewPage() {
 }
 
 export default ProfileViewPage;
+

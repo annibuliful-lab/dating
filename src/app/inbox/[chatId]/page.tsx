@@ -116,6 +116,13 @@ export default function ChatPage() {
     }
   }, [session?.user?.id, fetchChatInfo]);
 
+  const handleViewProfile = useCallback(
+    (userId: string) => {
+      router.push(`/profile/${userId}`);
+    },
+    [router]
+  );
+
   if (status === "loading" || loading) {
     return (
       <Box>
@@ -250,6 +257,7 @@ export default function ChatPage() {
                     onEdit={handleEditMessage}
                     onDelete={handleDeleteMessage}
                     formatMessageTime={formatMessageTime}
+                    onViewProfile={handleViewProfile}
                   />
                 );
               })
@@ -292,6 +300,7 @@ export default function ChatPage() {
         onNameUpdated={(_newName: string) => {
           fetchChatInfo();
         }}
+        onViewProfile={handleViewProfile}
       />
     </Box>
   );

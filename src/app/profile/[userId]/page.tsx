@@ -64,7 +64,10 @@ function ProfileViewPage() {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
     return age;
@@ -120,7 +123,10 @@ function ProfileViewPage() {
       >
         <Box h="100%" style={{ position: "relative" }}>
           <Image
-            src={profile.avatarUrl || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1974&auto=format&fit=crop"}
+            src={
+              profile.avatarUrl ||
+              "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1974&auto=format&fit=crop"
+            }
             alt="profile"
             radius={0}
             h="100%"
@@ -145,9 +151,21 @@ function ProfileViewPage() {
               <Text fw={700} fz={24}>
                 {profile.username || "User"}
               </Text>
-              <ThemeIcon size={20} radius="xl" color="teal" variant="light">
-                <CheckCircle />
-              </ThemeIcon>
+              {profile.isVerified && (
+                <ThemeIcon
+                  size={20}
+                  radius="xl"
+                  color={profile.verificationType === "ADMIN" ? "blue" : "teal"}
+                  variant="light"
+                  title={
+                    profile.verificationType === "ADMIN"
+                      ? "Verified by Admin"
+                      : "Verified by User"
+                  }
+                >
+                  <CheckCircle />
+                </ThemeIcon>
+              )}
             </Group>
             <Text c="dimmed" fz="sm">
               {profile.fullName || "Unknown"}
@@ -197,4 +215,3 @@ function ProfileViewPage() {
 }
 
 export default ProfileViewPage;
-

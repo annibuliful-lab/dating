@@ -25,7 +25,9 @@ export const messageService = {
           id,
           fullName,
           username,
-          profileImageKey
+          profileImageKey,
+          isVerified,
+          verificationType
         )
       `
       )
@@ -64,7 +66,9 @@ export const messageService = {
           id,
           fullName,
           username,
-          profileImageKey
+          profileImageKey,
+          isVerified,
+          verificationType
         )
       `
       )
@@ -98,7 +102,9 @@ export const messageService = {
           id,
           fullName,
           username,
-          profileImageKey
+          profileImageKey,
+          isVerified,
+          verificationType
         )
       `
       )
@@ -153,7 +159,7 @@ export const messageService = {
 
     const chatsWithMessages = await Promise.all(
       data.map(async (participant) => {
-        const { data: latestMessage } = await supabase
+          const { data: latestMessage } = await supabase
           .from('Message')
           .select(
             `
@@ -162,7 +168,9 @@ export const messageService = {
               id,
               fullName,
               username,
-              profileImageKey
+              profileImageKey,
+              isVerified,
+              verificationType
             )
           `
           )
@@ -533,7 +541,9 @@ export const messageService = {
           id,
           fullName,
           username,
-          profileImageKey
+          profileImageKey,
+          isVerified,
+          verificationType
         )
       `
       )
@@ -566,7 +576,9 @@ export const messageService = {
           id,
           fullName,
           username,
-          profileImageKey
+          profileImageKey,
+          isVerified,
+          verificationType
         )
       `
       )

@@ -33,6 +33,8 @@ export interface MessageWithUser {
     fullName: string;
     username: string;
     profileImageKey: string | null;
+    isVerified?: boolean;
+    verificationType?: "ADMIN" | "USER" | null;
   };
 }
 
@@ -45,6 +47,8 @@ export interface ChatMessage {
   senderId: string;
   senderName: string;
   senderAvatar: string | null | undefined;
+  senderIsVerified?: boolean;
+  senderVerificationType?: "ADMIN" | "USER" | null;
   createdAtLabel: string;
   createdAt: string;
 }

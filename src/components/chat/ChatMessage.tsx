@@ -123,15 +123,39 @@ export function ChatMessage({
           )}
           <Stack gap={4} style={{ flex: 1 }}>
             {showAvatar && (
-              <Text 
-                fw={600} 
-                size="sm" 
-                c="dimmed"
-                style={{ cursor: onViewProfile ? "pointer" : "default" }}
-                onClick={() => onViewProfile && message.senderId && onViewProfile(message.senderId)}
-              >
-                {message.senderName}
-              </Text>
+              <Group gap={6} align="center" wrap="nowrap">
+                <Text 
+                  fw={600} 
+                  size="sm" 
+                  c="dimmed"
+                  style={{ cursor: onViewProfile ? "pointer" : "default" }}
+                  onClick={() => onViewProfile && message.senderId && onViewProfile(message.senderId)}
+                >
+                  {message.senderName}
+                </Text>
+                {message.senderIsVerified && (
+                  <Text
+                  size="xs"
+                  fw={700}
+                  c={message.senderVerificationType === "ADMIN" ? "blue" : "teal"}
+                  style={{
+                    backgroundColor: message.senderVerificationType === "ADMIN" 
+                      ? "rgba(37, 99, 235, 0.2)" 
+                      : "rgba(20, 184, 166, 0.2)",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    border: `1px solid ${message.senderVerificationType === "ADMIN" ? "#2563eb" : "#14b8a6"}`,
+                  }}
+                  title={
+                    message.senderVerificationType === "ADMIN"
+                      ? "Verified by Admin"
+                      : "Verified by User"
+                  }
+                >
+                  VERIFIED
+                </Text>
+                )}
+              </Group>
             )}
             <Menu shadow="md" width={200}>
               <Menu.Target>

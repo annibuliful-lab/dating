@@ -1,5 +1,6 @@
 "use client";
 
+import { BUCKET_NAME, supabase } from "@/client/supabase";
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
@@ -8,7 +9,6 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
-import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
 import {
@@ -43,6 +43,8 @@ type Post = {
     username: string;
     profileImageKey: string | null;
     profileImageUrl?: string | null;
+    isVerified?: boolean;
+    verificationType?: "ADMIN" | "USER" | null;
   };
 };
 
@@ -74,7 +76,7 @@ function FeedPage() {
       }
       const data = await postService.getPublicPosts();
       // Convert profileImageKey to URL for each post
-      const postsWithImageUrls = (data || []).map((post: Post) => {
+      const postsWithImageUrls = (data || []).map((post: any) => {
         let profileImageUrl = null;
         if (post.User?.profileImageKey) {
           const { data: imageData } = supabase.storage
@@ -84,6 +86,10 @@ function FeedPage() {
         }
         return {
           ...post,
+          content: post.content as {
+            text?: string;
+            [key: string]: unknown;
+          } | null,
           User: {
             ...post.User,
             profileImageUrl,
@@ -250,8 +256,8 @@ function FeedPage() {
                         >
                           {post.User.fullName?.charAt(0) || "?"}
                         </Avatar>
-                        <Text 
-                          fw={600} 
+                        <Text
+                          fw={600}
                           style={{ cursor: "pointer" }}
                           onClick={() => handleViewProfile(post.User.id)}
                         >
@@ -291,9 +297,24 @@ function FeedPage() {
                         >
                           <Text c="yellow">ทักแชท</Text>
                         </Box>
-                        <Badge color="teal" radius="xl" variant="light">
-                          Verified
-                        </Badge>
+                        {post.User.isVerified && (
+                          <Badge
+                            color={
+                              post.User.verificationType === "ADMIN"
+                                ? "blue"
+                                : "teal"
+                            }
+                            radius="xl"
+                            variant="light"
+                            title={
+                              post.User.verificationType === "ADMIN"
+                                ? "Verified by Admin"
+                                : "Verified by User"
+                            }
+                          >
+                            Verified
+                          </Badge>
+                        )}
                       </Group>
                     </Stack>
                     {index < posts.length - 1 && (

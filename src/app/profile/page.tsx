@@ -66,14 +66,21 @@ function ProfilePage() {
               <Text fw={800} fz={20}>
                 {userProfile.username}
               </Text>
-              <ThemeIcon
-                size={22}
-                radius="xl"
-                color="teal"
-                variant="light"
-              >
-                <CheckCircle />
-              </ThemeIcon>
+              {userProfile.isVerified && (
+                <ThemeIcon
+                  size={22}
+                  radius="xl"
+                  color={userProfile.verificationType === "ADMIN" ? "blue" : "teal"}
+                  variant="light"
+                  title={
+                    userProfile.verificationType === "ADMIN"
+                      ? "Verified by Admin"
+                      : "Verified by User"
+                  }
+                >
+                  <CheckCircle />
+                </ThemeIcon>
+              )}
             </Group>
             <Text c="#979797">
               {userProfile.fullName} {userProfile.lastname}

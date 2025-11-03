@@ -15,4 +15,8 @@ export type UserProfile = {
   profileImageKey: string;
   avatarUrl: string | null;
   relationShipStatus: string;
+  isVerified?: boolean;
+  verificationType?: "ADMIN" | "USER" | null;
+  verifiedAt?: string | null;
+  isAdmin?: boolean;
 };

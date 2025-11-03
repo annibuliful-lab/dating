@@ -128,6 +128,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             senderId: msg.senderId,
             senderName: msg.User?.fullName || "Unknown",
             senderAvatar: senderAvatarUrl,
+            senderIsVerified: msg.User?.isVerified || false,
+            senderVerificationType: msg.User?.verificationType || null,
             createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
             createdAt: msg.createdAt,
           };
@@ -192,6 +194,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             senderId: msg.senderId,
             senderName: msg.User?.fullName || "Unknown",
             senderAvatar: senderAvatarUrl,
+            senderIsVerified: msg.User?.isVerified || false,
+            senderVerificationType: msg.User?.verificationType || null,
             createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
             createdAt: msg.createdAt,
           };
@@ -268,6 +272,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           senderId: newMessage.senderId,
           senderName: newMessage.User?.fullName || "Unknown",
           senderAvatar: senderAvatarUrl,
+          senderIsVerified: newMessage.User?.isVerified || false,
+          senderVerificationType: newMessage.User?.verificationType || null,
           createdAtLabel: formatMessageTime(new Date(newMessage.createdAt)),
           createdAt: newMessage.createdAt,
         };

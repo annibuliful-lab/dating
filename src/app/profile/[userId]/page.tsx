@@ -13,9 +13,12 @@ import { CheckCircle } from "@/components/icons/CheckCircle";
 import { GenderIcon } from "@/components/icons/GenderIcon";
 import { RulerIcon } from "@/components/icons/RulerIcon";
 import { SingleIcon } from "@/components/icons/SingleIcon";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { getUserProfile } from "@/services/profile/get";
+import { supabase } from "@/client/supabase";
 import {
   Box,
+  Button,
   Center,
   Container,
   Group,
@@ -26,14 +29,26 @@ import {
   Text,
   ThemeIcon,
 } from "@mantine/core";
+import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 function ProfileViewPage() {
   const params = useParams<{ userId: string }>();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isUnverifying, setIsUnverifying] = useState(false);
+
+  const verifyMutation = useApiMutation<{ success: boolean }>(
+    `/api/users/${params.userId}/verify`
+  );
+  const unverifyMutation = useApiMutation<{ success: boolean }>(
+    `/api/users/${params.userId}/unverify`
+  );
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -47,6 +62,16 @@ function ProfileViewPage() {
         setLoading(true);
         const userProfile = await getUserProfile(params.userId);
         setProfile(userProfile);
+
+        // Fetch current user to check if admin
+        if (session?.user?.id) {
+          const { data: currentUserData } = await supabase
+            .from("User")
+            .select("isAdmin")
+            .eq("id", session.user.id)
+            .single();
+          setCurrentUser(currentUserData);
+        }
       } catch (err) {
         console.error("Error fetching profile:", err);
         setError("Failed to load profile");
@@ -56,7 +81,42 @@ function ProfileViewPage() {
     };
 
     fetchProfile();
-  }, [params.userId]);
+  }, [params.userId, session?.user?.id]);
+
+  const handleVerify = async () => {
+    if (!params.userId) return;
+    
+    try {
+      setIsVerifying(true);
+      await verifyMutation.mutate({ verificationType: "ADMIN" });
+      // Refresh profile after verification
+      window.location.reload();
+    } catch (error: any) {
+      console.error("Error verifying user:", error);
+      alert(error?.message || "Failed to verify. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleUnverify = async () => {
+    if (!params.userId) return;
+    
+    try {
+      setIsUnverifying(true);
+      await unverifyMutation.mutate({});
+      // Refresh profile after unverification
+      window.location.reload();
+    } catch (error: any) {
+      console.error("Error unverifying user:", error);
+      alert(error?.message || "Failed to unverify. Please try again.");
+    } finally {
+      setIsUnverifying(false);
+    }
+  };
+
+  const isAdmin = currentUser?.isAdmin === true;
+  const isOwnProfile = session?.user?.id === params.userId;
 
   const calculateAge = (birthday: string | null): number | null => {
     if (!birthday) return null;

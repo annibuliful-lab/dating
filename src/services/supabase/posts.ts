@@ -22,7 +22,9 @@ export const postService = {
           id,
           fullName,
           username,
-          profileImageKey
+          profileImageKey,
+          isVerified,
+          verificationType
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
@@ -47,7 +49,9 @@ export const postService = {
           id,
           fullName,
           username,
-          profileImageKey
+          profileImageKey,
+          isVerified,
+          verificationType
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
@@ -74,7 +78,9 @@ export const postService = {
           username,
           profileImageKey,
           age,
-          gender
+          gender,
+          isVerified,
+          verificationType
         ),
         PostLike!PostLike_postId_fkey (
           id,
@@ -106,7 +112,9 @@ export const postService = {
             id,
             fullName,
             username,
-            profileImageKey
+            profileImageKey,
+            isVerified,
+            verificationType
           )
         )
       `

@@ -52,6 +52,7 @@ interface GroupInfoModalProps {
   chatName: string | null;
   isGroup: boolean;
   onNameUpdated?: (newName: string) => void;
+  onViewProfile?: (userId: string) => void;
 }
 
 export function GroupInfoModal({
@@ -61,6 +62,7 @@ export function GroupInfoModal({
   chatName,
   isGroup,
   onNameUpdated,
+  onViewProfile,
 }: GroupInfoModalProps) {
   const { data: session } = useSession();
   const [participants, setParticipants] = useState<ChatParticipant[]>([]);
@@ -379,7 +381,9 @@ export function GroupInfoModal({
                         padding: "12px",
                         borderRadius: "8px",
                         border: "1px solid #e0e0e0",
+                        cursor: onViewProfile ? "pointer" : "default",
                       }}
+                      onClick={() => onViewProfile && onViewProfile(participant.userId)}
                     >
                       <Group justify="space-between" wrap="nowrap">
                         <Group gap="sm" wrap="nowrap">
@@ -421,9 +425,10 @@ export function GroupInfoModal({
                             <ActionIcon
                               color="red"
                               variant="subtle"
-                              onClick={() =>
-                                handleRemoveMember(participant.userId)
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveMember(participant.userId);
+                              }}
                               loading={removingUserId === participant.userId}
                             >
                               ✕

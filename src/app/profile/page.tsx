@@ -6,6 +6,7 @@ import {
   TopNavbar,
 } from '@/components/element/TopNavbar';
 import { CheckCircle } from '@/components/icons/CheckCircle';
+import { useApiMutation } from '@/hooks/useApiMutation';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   Box,
@@ -21,6 +22,7 @@ import {
 } from '@mantine/core';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 function ProfilePage() {
   const router = useRouter();
@@ -28,6 +30,27 @@ function ProfilePage() {
   const userId = data?.user.id;
 
   const { userProfile, loading } = useUserProfile(userId as string);
+  const [isVerifying, setIsVerifying] = useState(false);
+  
+  const verifyMutation = useApiMutation<{ success: boolean }>(
+    `/api/users/${userId}/verify`
+  );
+
+  const handleVerify = async () => {
+    if (!userId) return;
+    
+    try {
+      setIsVerifying(true);
+      await verifyMutation.mutate({ verificationType: "USER" });
+      // Refresh profile after verification
+      window.location.reload();
+    } catch (error) {
+      console.error("Error verifying user:", error);
+      alert("Failed to verify. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   if ((loading && status === 'loading') || !userProfile) {
     return null;
@@ -66,14 +89,21 @@ function ProfilePage() {
               <Text fw={800} fz={20}>
                 {userProfile.username}
               </Text>
-              <ThemeIcon
-                size={22}
-                radius="xl"
-                color="teal"
-                variant="light"
-              >
-                <CheckCircle />
-              </ThemeIcon>
+              {userProfile.isVerified && (
+                <ThemeIcon
+                  size={22}
+                  radius="xl"
+                  color={userProfile.verificationType === "ADMIN" ? "blue" : "teal"}
+                  variant="light"
+                  title={
+                    userProfile.verificationType === "ADMIN"
+                      ? "Verified by Admin"
+                      : "Verified by User"
+                  }
+                >
+                  <CheckCircle />
+                </ThemeIcon>
+              )}
             </Group>
             <Text c="#979797">
               {userProfile.fullName} {userProfile.lastname}
@@ -83,6 +113,19 @@ function ProfilePage() {
           <Text ta="center" px="lg" style={{ lineHeight: 1.5 }}>
             {userProfile.bio}
           </Text>
+
+          {!userProfile.isVerified && (
+            <Button
+              variant="filled"
+              color="teal"
+              radius="md"
+              mt="xs"
+              onClick={handleVerify}
+              loading={isVerifying}
+            >
+              Verify Yourself
+            </Button>
+          )}
 
           <Button
             variant="secondary"

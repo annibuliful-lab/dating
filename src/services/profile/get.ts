@@ -21,6 +21,10 @@ export async function getUserProfile(
         'profileImageKey',
         'lastname',
         'relationShipStatus',
+        'isVerified',
+        'verificationType',
+        'verifiedAt',
+        'isAdmin',
       ].join(',')
     )
     .eq('id', userId)

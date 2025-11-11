@@ -21,6 +21,11 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum VerificationType {
+  ADMIN
+  USER
+}
+
 model User {
   id                 String            @id @default(uuid()) @db.Uuid
   profileImageKey    String?
@@ -40,6 +45,13 @@ model User {
   height             Float?
   weight             Float?
   status             UserStatus        @default(ACTIVE)
+  isAdmin            Boolean           @default(false)
+  isVerified         Boolean           @default(false)
+  verificationType   VerificationType?
+  verifiedAt         DateTime?         @db.Timestamptz(6)
+  verifiedBy         String?           @db.Uuid
+  verifiedByUser     User?             @relation("UserVerification", fields: [verifiedBy], references: [id])
+  verifiedUsers      User[]            @relation("UserVerification")
   createdAt          DateTime          @default(now()) @db.Timestamptz(6)
   updatedAt          DateTime          @updatedAt @db.Timestamptz(6)
   Chat               Chat[]

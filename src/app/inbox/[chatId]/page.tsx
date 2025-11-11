@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { ChatMessage } from "@/components/chat/ChatMessage";
-import { EditMessageModal } from "@/components/chat/EditMessageModal";
-import { GroupInfoModal } from "@/components/chat/GroupInfoModal";
-import { MessageInput } from "@/components/chat/MessageInput";
-import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { ChatMessage } from '@/components/chat/ChatMessage';
+import { EditMessageModal } from '@/components/chat/EditMessageModal';
+import { GroupInfoModal } from '@/components/chat/GroupInfoModal';
+import { MessageInput } from '@/components/chat/MessageInput';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { MoreOptionsIcon } from "@/components/icons/MoreOptionsIcon";
-import { useChatMessages } from "@/hooks/useChatMessages";
-import { messageService } from "@/services/supabase/messages";
+} from '@/components/element/TopNavbar';
+import { MoreOptionsIcon } from '@/components/icons/MoreOptionsIcon';
+import { useChatMessages } from '@/hooks/useChatMessages';
+import { messageService } from '@/services/supabase/messages';
 import {
   ActionIcon,
   Box,
@@ -22,17 +22,18 @@ import {
   Stack,
   Text,
   rem,
-} from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams<{ chatId: string }>();
   const { status, data: session } = useSession();
   const messageInputRef = useRef<HTMLInputElement>(null);
-  const [groupInfoModalOpened, setGroupInfoModalOpened] = useState(false);
+  const [groupInfoModalOpened, setGroupInfoModalOpened] =
+    useState(false);
   const [chatInfo, setChatInfo] = useState<{
     name: string | null;
     isGroup: boolean;
@@ -67,12 +68,12 @@ export default function ChatPage() {
     handleMediaSelect,
     handleSendMedia,
     handleRemoveMedia,
-  } = useChatMessages({ chatId: params.chatId || "" });
+  } = useChatMessages({ chatId: params.chatId || '' });
 
   // Handle authentication redirect
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
     }
   }, [status, router]);
 
@@ -85,9 +86,8 @@ export default function ChatPage() {
 
         // If no name is set, use participant names
         if (!chatName) {
-          const participants = await messageService.getChatParticipants(
-            params.chatId
-          );
+          const participants =
+            await messageService.getChatParticipants(params.chatId);
           // Get other participants (excluding current user)
           const otherParticipants = participants.filter(
             (p) => p.userId !== session?.user?.id
@@ -95,8 +95,8 @@ export default function ChatPage() {
 
           if (otherParticipants.length > 0) {
             chatName = otherParticipants
-              .map((p) => p.User?.fullName || "Unknown")
-              .join(", ");
+              .map((p) => p.User?.fullName || 'Unknown')
+              .join(', ');
           } else {
             chatName = `Chat ${params.chatId.slice(0, 8)}`;
           }
@@ -104,7 +104,7 @@ export default function ChatPage() {
 
         setChatInfo({ name: chatName, isGroup: info.isGroup });
       } catch (error) {
-        console.error("Error fetching chat info:", error);
+        console.error('Error fetching chat info:', error);
       }
     }
   }, [params.chatId, session?.user?.id]);
@@ -123,11 +123,11 @@ export default function ChatPage() {
     [router]
   );
 
-  if (status === "loading" || loading) {
+  if (status === 'loading' || loading) {
     return (
       <Box>
         <TopNavbar
-          title={chatInfo.name || "Chat"}
+          title={chatInfo.name || 'Chat'}
           showBack
           rightSlot={
             <ActionIcon
@@ -157,7 +157,7 @@ export default function ChatPage() {
     return (
       <Box>
         <TopNavbar
-          title={chatInfo.name || "Chat"}
+          title={chatInfo.name || 'Chat'}
           showBack
           rightSlot={
             <ActionIcon
@@ -182,7 +182,7 @@ export default function ChatPage() {
               </Text>
               <Text
                 c="blue"
-                style={{ cursor: "pointer" }}
+                style={{ cursor: 'pointer' }}
                 onClick={fetchMessages}
               >
                 Try again
@@ -197,7 +197,7 @@ export default function ChatPage() {
   return (
     <Box>
       <TopNavbar
-        title={chatInfo.name || "Chat"}
+        title={chatInfo.name || 'Chat'}
         showBack
         rightSlot={
           <ActionIcon
@@ -210,12 +210,23 @@ export default function ChatPage() {
         }
       />
 
-      <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)} pb={rem(90)}>
+      <Container
+        size="xs"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        pb={rem(90)}
+      >
         <ScrollArea
           ref={messagesContainerRef}
-          h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(90)})`}
+          h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(
+            90
+          )})`}
           onScrollPositionChange={(position) => {
-            if (position.y < 100 && hasOlderMessages && !loadingOlderMessages) {
+            if (
+              position.y < 100 &&
+              hasOlderMessages &&
+              !loadingOlderMessages
+            ) {
               loadOlderMessages();
             }
           }}
@@ -236,11 +247,13 @@ export default function ChatPage() {
               </Center>
             ) : (
               messages.map((m, index) => {
-                const prevMessage = index > 0 ? messages[index - 1] : null;
+                const prevMessage =
+                  index > 0 ? messages[index - 1] : null;
                 const showAvatar =
                   chatInfo.isGroup &&
-                  m.author === "other" &&
-                  (!prevMessage || prevMessage.senderId !== m.senderId);
+                  m.author === 'other' &&
+                  (!prevMessage ||
+                    prevMessage.senderId !== m.senderId);
                 const showTimestamp =
                   !prevMessage ||
                   new Date(m.createdAt).getTime() -
@@ -253,7 +266,7 @@ export default function ChatPage() {
                     message={m}
                     showAvatar={showAvatar}
                     showTimestamp={showTimestamp}
-                    isOwnMessage={m.author === "me"}
+                    isOwnMessage={m.author === 'me'}
                     onEdit={handleEditMessage}
                     onDelete={handleDeleteMessage}
                     formatMessageTime={formatMessageTime}
@@ -294,10 +307,10 @@ export default function ChatPage() {
       <GroupInfoModal
         opened={groupInfoModalOpened}
         onClose={() => setGroupInfoModalOpened(false)}
-        chatId={params.chatId || ""}
+        chatId={params.chatId || ''}
         chatName={chatInfo.name}
         isGroup={chatInfo.isGroup}
-        onNameUpdated={(_newName: string) => {
+        onNameUpdated={() => {
           fetchChatInfo();
         }}
         onViewProfile={handleViewProfile}

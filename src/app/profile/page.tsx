@@ -16,6 +16,7 @@ import {
   Group,
   Image,
   rem,
+  SimpleGrid,
   Stack,
   Text,
   ThemeIcon,
@@ -151,6 +152,43 @@ function ProfilePage() {
             <Text c="white">Logout</Text>
           </Button>
         </Stack>
+
+        {/* Profile Images Gallery */}
+        {userProfile.profileImages && userProfile.profileImages.length > 0 && (
+          <Box
+            px="md"
+            py="md"
+            style={{
+              backgroundColor: 'var(--mantine-color-dark-8)',
+              borderTop: '1px solid var(--mantine-color-dark-4)',
+            }}
+          >
+            <Text fw={600} fz="lg" mb="sm" c="white">
+              Photos
+            </Text>
+            <SimpleGrid cols={3} spacing="sm">
+              {userProfile.profileImages.map((img) => (
+                <Box
+                  key={img.id}
+                  style={{
+                    aspectRatio: '1',
+                    borderRadius: rem(8),
+                    overflow: 'hidden',
+                    border: '1px solid var(--mantine-color-dark-4)',
+                  }}
+                >
+                  <Image
+                    src={img.imageUrl}
+                    alt="Profile image"
+                    fit="cover"
+                    w="100%"
+                    h="100%"
+                  />
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Box>
+        )}
 
         {/* <Stack gap="xs" pb={rem(80)}>
           <Group align="center" gap="sm">

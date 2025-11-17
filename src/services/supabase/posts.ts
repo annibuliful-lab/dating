@@ -24,7 +24,8 @@ export const postService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType
+          verificationType,
+          verifiedBy
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
@@ -35,7 +36,42 @@ export const postService = {
       .range(offset, offset + limit - 1);
 
     if (error) throw new Error(error.message);
-    return data;
+    
+    // Fetch verifiedBy usernames for all posts
+    const verifiedByUserIds = data
+      ?.map((post: any) => post.User?.verifiedBy)
+      .filter((id: string | null | undefined): id is string => !!id) || [];
+    
+    const verifiedByUsernames: Record<string, string> = {};
+    if (verifiedByUserIds.length > 0) {
+      const { data: verifiedByUsers } = await supabase
+        .from('User')
+        .select('id, username')
+        .in('id', verifiedByUserIds);
+      
+      if (verifiedByUsers) {
+        verifiedByUsers.forEach((user: { id: string; username: string }) => {
+          verifiedByUsernames[user.id] = user.username;
+        });
+      }
+    }
+    
+    // Transform data to add verifiedByUsername
+    const transformedData = data?.map((post: any) => {
+      const verifiedByUsername = post.User?.verifiedBy 
+        ? verifiedByUsernames[post.User.verifiedBy] || null
+        : null;
+      
+      return {
+        ...post,
+        User: {
+          ...post.User,
+          verifiedByUsername,
+        },
+      };
+    });
+    
+    return transformedData || data;
   },
 
   // Fetch posts by specific user

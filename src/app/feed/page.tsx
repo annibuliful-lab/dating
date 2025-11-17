@@ -13,7 +13,6 @@ import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
 import {
   Avatar,
-  Badge,
   Box,
   Container,
   Divider,
@@ -46,6 +45,7 @@ type Post = {
     profileImageUrl?: string | null;
     isVerified?: boolean;
     verificationType?: "ADMIN" | "USER" | null;
+    verifiedByUsername?: string | null;
   };
 };
 
@@ -320,22 +320,24 @@ function FeedPage() {
                           <Text c="yellow">ทักแชท</Text>
                         </Box>
                         {post.User.isVerified && (
-                          <Badge
-                            color={
-                              post.User.verificationType === "ADMIN"
-                                ? "blue"
-                                : "teal"
-                            }
-                            radius="xl"
-                            variant="light"
-                            title={
-                              post.User.verificationType === "ADMIN"
-                                ? "Verified by Admin"
-                                : "Verified by User"
-                            }
+                          <Text
+                            fz="xs"
+                            fw={500}
+                            c={post.User.verificationType === "ADMIN" ? "blue" : "teal"}
+                            style={{
+                              backgroundColor:
+                                post.User.verificationType === "ADMIN"
+                                  ? "rgba(37, 99, 235, 0.2)"
+                                  : "rgba(20, 184, 166, 0.2)",
+                              padding: "2px 8px",
+                              borderRadius: "12px",
+                              border: `1px solid ${
+                                post.User.verificationType === "ADMIN" ? "#2563eb" : "#14b8a6"
+                              }`,
+                            }}
                           >
-                            Verified
-                          </Badge>
+                            verify by {post.User.verifiedByUsername || "unknown"}
+                          </Text>
                         )}
                       </Group>
                     </Stack>

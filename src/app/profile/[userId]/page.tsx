@@ -26,6 +26,7 @@ import {
   Image,
   Loader,
   rem,
+  SimpleGrid,
   Stack,
   Text,
   ThemeIcon,
@@ -179,20 +180,22 @@ function ProfileViewPage() {
   return (
     <Box>
       <TopNavbar title="Profile" showBack />
-      <Container
-        size="xs"
-        px={0}
-        mx="auto"
-        h={`calc(100dvh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(
-          BOTTOM_NAVBAR_HEIGHT_PX
-        )} - env(safe-area-inset-bottom) - env(safe-area-inset-top))`}
+      <Box
         style={{
+          height: `calc(100dvh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(
+            BOTTOM_NAVBAR_HEIGHT_PX
+          )} - env(safe-area-inset-bottom) - env(safe-area-inset-top))`,
           marginTop: `calc(${rem(
             TOP_NAVBAR_HEIGHT_PX
           )} + env(safe-area-inset-top))`,
+          overflowY: 'auto',
         }}
       >
-        <Box h="100%" style={{ position: 'relative' }}>
+        <Container size="xs" px={0} mx="auto">
+          <Box
+            h="70vh"
+            style={{ position: 'relative', minHeight: rem(500) }}
+          >
           <Image
             src={
               profile.avatarUrl ||
@@ -327,7 +330,45 @@ function ProfileViewPage() {
             </Stack>
           </Group>
         </Box>
-      </Container>
+
+        {/* Profile Images Gallery */}
+        {profile.profileImages && profile.profileImages.length > 0 && (
+          <Box
+            px="md"
+            py="md"
+            style={{
+              backgroundColor: 'var(--mantine-color-dark-8)',
+              borderTop: '1px solid var(--mantine-color-dark-4)',
+            }}
+          >
+            <Text fw={600} fz="lg" mb="sm" c="white">
+              Photos
+            </Text>
+            <SimpleGrid cols={3} spacing="sm">
+              {profile.profileImages.map((img) => (
+                <Box
+                  key={img.id}
+                  style={{
+                    aspectRatio: '1',
+                    borderRadius: rem(8),
+                    overflow: 'hidden',
+                    border: '1px solid var(--mantine-color-dark-4)',
+                  }}
+                >
+                  <Image
+                    src={img.imageUrl}
+                    alt="Profile image"
+                    fit="cover"
+                    w="100%"
+                    h="100%"
+                  />
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Box>
+        )}
+        </Container>
+      </Box>
 
       <BottomNavbar />
     </Box>

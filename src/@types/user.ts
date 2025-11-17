@@ -1,3 +1,10 @@
+export type ProfileImage = {
+  id: string;
+  imageKey: string;
+  imageUrl: string;
+  order: number;
+};
+
 export type UserProfile = {
   id: string;
   username: string;
@@ -19,4 +26,5 @@ export type UserProfile = {
   verificationType?: "ADMIN" | "USER" | null;
   verifiedAt?: string | null;
   isAdmin?: boolean;
+  profileImages?: ProfileImage[];
 };

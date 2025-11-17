@@ -1,19 +1,23 @@
 "use client";
 
+import { ProfileImage } from "@/@types/user";
 import { supabase } from "@/client/supabase";
 import { TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
 import { CalendarIcon } from "@/components/icons/CalendarIcon";
 import { CameraIcon } from "@/components/icons/CameraIcon";
 import { getUserProfile } from "@/services/profile/get";
+import { saveProfileImages } from "@/services/profile/images";
 import { updateUserProfile } from "@/services/profile/update";
 import {
   Box,
   Button,
   Container,
   Group,
+  Image,
   LoadingOverlay,
   Modal,
   Select,
+  SimpleGrid,
   Stack,
   Text,
   TextInput,
@@ -54,10 +58,19 @@ function EditProfilePage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Profile images states
+  const [profileImages, setProfileImages] = useState<
+    Array<ProfileImage & { tempId?: string }>
+  >([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const profileImagesInputRef = useRef<HTMLInputElement | null>(null);
+
   const userId = data?.user?.id;
   const BUCKET = "dating";
 
   const openFilePicker = () => fileInputRef.current?.click();
+  const openProfileImagesPicker = () =>
+    profileImagesInputRef.current?.click();
 
   useEffect(() => {
     if (!userId) {
@@ -89,6 +102,7 @@ function EditProfilePage() {
         setHeight(profile.height != null ? String(profile.height) : "");
         setWeight(profile.weight != null ? String(profile.weight) : "");
         setAvatarUrl(profile.avatarUrl ?? null);
+        setProfileImages(profile.profileImages || []);
       } catch (err) {
         console.error(err);
         notifications.show({
@@ -147,6 +161,96 @@ function EditProfilePage() {
     }
   };
 
+  const handleProfileImagesChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Check if adding these files would exceed the limit
+    if (profileImages.length + files.length > 5) {
+      notifications.show({
+        color: "red",
+        title: "Error",
+        message: "Maximum 5 images allowed",
+      });
+      return;
+    }
+
+    // Validate files
+    const validTypes = ["image/png", "image/jpeg", "image/webp"];
+    const invalidFiles = files.filter(
+      (file) => !validTypes.includes(file.type) || file.size > 5 * 1024 * 1024
+    );
+
+    if (invalidFiles.length > 0) {
+      notifications.show({
+        color: "red",
+        title: "Error",
+        message: "Only PNG, JPG, or WEBP allowed. Max 5MB per file.",
+      });
+      return;
+    }
+
+    setUploadingImages(true);
+    try {
+      const newImages: Array<ProfileImage & { tempId?: string }> = [];
+
+      for (const file of files) {
+        const ext = file.name.split(".").pop() || "jpg";
+        const key = `users/${userId || "anon"}/profile-images/${userId}-${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+
+        // Upload file
+        const { error: uploadErr } = await supabase.storage
+          .from(BUCKET)
+          .upload(key, file, {
+            upsert: false,
+            contentType: file.type,
+            cacheControl: "3600",
+          });
+
+        if (uploadErr) throw uploadErr;
+
+        // Get public URL
+        const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(key);
+
+        newImages.push({
+          id: `temp-${Date.now()}-${Math.random()}`,
+          imageKey: key,
+          imageUrl: pub.publicUrl,
+          order: profileImages.length + newImages.length,
+          tempId: `temp-${Date.now()}-${Math.random()}`,
+        });
+      }
+
+      setProfileImages([...profileImages, ...newImages]);
+    } catch (err) {
+      console.error(err);
+      notifications.show({
+        color: "red",
+        title: "Upload failed",
+        message: (err as Error).message ?? "Could not upload images",
+      });
+    } finally {
+      setUploadingImages(false);
+      if (profileImagesInputRef.current)
+        profileImagesInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteProfileImage = (index: number) => {
+    const image = profileImages[index];
+    setProfileImages(profileImages.filter((_, i) => i !== index));
+
+    // If it's a temporary image (not saved yet), delete from storage
+    if (image.tempId && userId) {
+      supabase.storage
+        .from(BUCKET)
+        .remove([image.imageKey])
+        .catch((err) => console.error("Error deleting temp image:", err));
+    }
+  };
+
   const handleSaveClick = () => {
     setShowConfirmModal(true);
   };
@@ -194,6 +298,18 @@ function EditProfilePage() {
         ...profileData,
         profileImageKey: avatarKey,
       } as never);
+
+      // Save profile images
+      if (profileImages.length > 0) {
+        await saveProfileImages(
+          data.user.id,
+          profileImages.map((img, index) => ({
+            id: img.id,
+            imageKey: img.imageKey,
+            order: index,
+          }))
+        );
+      }
 
       notifications.show({
         color: "green",
@@ -400,6 +516,87 @@ function EditProfilePage() {
               value={weight}
               onChange={(e) => setWeight(e.currentTarget.value)}
             />
+          </Stack>
+
+          {/* Image upload section */}
+          <Stack gap="sm">
+            <Text fw={700} c="red">
+              เพิ่มรูปภาพ สูงสุด 5 ภาพ
+            </Text>
+            <SimpleGrid cols={3} spacing="sm">
+              {profileImages.map((img, index) => (
+                <Box
+                  key={img.id || img.tempId}
+                  style={{
+                    position: "relative",
+                    aspectRatio: "1",
+                    borderRadius: rem(8),
+                    overflow: "hidden",
+                    border: "1px solid var(--mantine-color-dark-4)",
+                  }}
+                >
+                  <Image
+                    src={img.imageUrl}
+                    alt={`Profile image ${index + 1}`}
+                    fit="cover"
+                    w="100%"
+                    h="100%"
+                  />
+                  <Box
+                    style={{
+                      position: "absolute",
+                      top: rem(4),
+                      right: rem(4),
+                      backgroundColor: "rgba(0, 0, 0, 0.7)",
+                      borderRadius: "50%",
+                      width: rem(24),
+                      height: rem(24),
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleDeleteProfileImage(index)}
+                  >
+                    <Text c="white" fz="xs" fw={700}>
+                      ×
+                    </Text>
+                  </Box>
+                </Box>
+              ))}
+              {profileImages.length < 5 && (
+                <Box
+                  style={{
+                    aspectRatio: "1",
+                    borderRadius: rem(8),
+                    border: "2px dashed var(--mantine-color-red-6)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    backgroundColor: "var(--mantine-color-dark-7)",
+                  }}
+                  onClick={openProfileImagesPicker}
+                >
+                  <Text c="red" fz="xl" fw={700}>
+                    +
+                  </Text>
+                </Box>
+              )}
+            </SimpleGrid>
+            <input
+              ref={profileImagesInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              onChange={handleProfileImagesChange}
+              style={{ display: "none" }}
+            />
+            {uploadingImages && (
+              <Text c="dimmed" fz="xs" ta="center">
+                Uploading images...
+              </Text>
+            )}
           </Stack>
         </Stack>
       </Container>

@@ -1,4 +1,4 @@
-import { UserProfile } from '@/@types/user';
+import { ProfileImage, UserProfile } from '@/@types/user';
 import { BUCKET_NAME, supabase } from '@/client/supabase';
 
 export async function getUserProfile(
@@ -34,6 +34,28 @@ export async function getUserProfile(
 
   const userProfile = _userProfile as unknown as UserProfile;
 
+  // Get profile images
+  const { data: profileImagesData, error: imagesError } = await supabase
+    .from('ProfileImage')
+    .select('id, imageKey, order')
+    .eq('userId', userId)
+    .order('order', { ascending: true });
+
+  let profileImages: ProfileImage[] | undefined;
+  if (!imagesError && profileImagesData) {
+    profileImages = profileImagesData.map((img) => {
+      const { data: imageUrlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(img.imageKey);
+      return {
+        id: img.id,
+        imageKey: img.imageKey,
+        imageUrl: imageUrlData.publicUrl,
+        order: img.order,
+      };
+    });
+  }
+
   if (userProfile.profileImageKey) {
     const { data: profileUrl } = supabase.storage
       .from(BUCKET_NAME)
@@ -42,8 +64,12 @@ export async function getUserProfile(
     return {
       ...userProfile,
       avatarUrl: profileUrl.publicUrl as string,
+      profileImages,
     };
   }
 
-  return userProfile;
+  return {
+    ...userProfile,
+    profileImages,
+  };
 }

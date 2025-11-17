@@ -62,6 +62,7 @@ model User {
   PostSave           PostSave[]
   OAuthAccount       OAuthAccount[]
   Session            Session[]
+  ProfileImage       ProfileImage[]
 }
 
 model OAuthAccount {
@@ -169,4 +170,16 @@ model Ad {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
+}
+
+model ProfileImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageKey  String   @db.Text
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([userId])
 }

@@ -1,47 +1,47 @@
-'use client';
+"use client";
 
-import { supabase } from '@/client/supabase';
-import { GoogleSignIn } from '@/components/social-button/GoogleSignIn';
-import { LineSignIn } from '@/components/social-button/LineSignIn';
+import { supabase } from "@/client/supabase";
+import { GoogleSignIn } from "@/components/social-button/GoogleSignIn";
+import { LineSignIn } from "@/components/social-button/LineSignIn";
 import {
   Button,
-  PasswordInput,
-  TextInput,
-  Stack,
-  Divider,
-  Text,
-  Group,
-  Box,
   Container,
+  Divider,
+  Group,
+  Image,
+  PasswordInput,
   rem,
-} from '@mantine/core';
-import { signIn } from 'next-auth/react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+  Stack,
+  Text,
+  TextInput,
+} from "@mantine/core";
+import { signIn } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const handleClickSignIn = async () => {
     try {
-      await signIn('credentials', {
+      await signIn("credentials", {
         email,
         password,
         redirect: false,
       });
-      await router.push('/');
+      await router.push("/");
     } catch (err) {
-      console.error('[signin-error]: ', err);
+      console.error("[signin-error]: ", err);
       throw err;
     }
   };
 
   useEffect(() => {
     supabase.auth.getSession().then((data) => {
-      console.log('[supabase-session]', data);
+      console.log("[supabase-session]", data);
     });
   }, []);
 
@@ -49,15 +49,22 @@ export default function LoginPage() {
     <Container
       px="md"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
+        display: "flex",
+        flexDirection: "column",
         height: rem(812),
         maxWidth: rem(375),
-        justifyContent: 'center',
+        justifyContent: "center",
       }}
     >
       <Stack gap="md">
-        <Box bg="#3A3A3A" p="sm" w={rem(48)} h={rem(48)} />
+        <Image
+          alt="logo"
+          src="https://wcjxna7kg9rqnf7r.public.blob.vercel-storage.com/IMG_9165.PNG"
+          fit="contain"
+          w={rem(48)}
+          h={rem(48)}
+          style={{ display: "block" }}
+        />
 
         <Text size="xl" fw={700}>
           Log in for Amorisloki
@@ -84,10 +91,10 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           styles={{
             input: {
-              backgroundColor: '#131313',
-              borderColor: '#333',
-              color: 'white',
-              height: '50px',
+              backgroundColor: "#131313",
+              borderColor: "#333",
+              color: "white",
+              height: "50px",
             },
           }}
         />
@@ -101,37 +108,27 @@ export default function LoginPage() {
           onVisibilityChange={setShowPassword}
           styles={{
             input: {
-              backgroundColor: '#131313',
-              borderColor: '#333',
-              color: 'white',
-              height: '50px',
+              backgroundColor: "#131313",
+              borderColor: "#333",
+              color: "white",
+              height: "50px",
             },
           }}
         />
 
-        <Button
-          fullWidth
-          variant="primary"
-          onClick={handleClickSignIn}
-        >
+        <Button fullWidth variant="primary" onClick={handleClickSignIn}>
           Log in
         </Button>
 
         <Text size="sm" ta="center" mt="xs" fw={500}>
-          <a
-            href="#"
-            style={{ color: 'white', textDecoration: 'none' }}
-          >
+          <a href="#" style={{ color: "white", textDecoration: "none" }}>
             Forgot password
           </a>
         </Text>
 
         <Text size="sm" ta="center" c="dimmed">
-          Don’t have an account?{' '}
-          <Link
-            href="/signup"
-            style={{ color: 'white', fontWeight: 500 }}
-          >
+          Don’t have an account?{" "}
+          <Link href="/signup" style={{ color: "white", fontWeight: 500 }}>
             Create one
           </Link>
         </Text>

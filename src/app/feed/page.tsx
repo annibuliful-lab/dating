@@ -349,6 +349,17 @@ function FeedPage() {
           title: {
             color: "white",
             fontWeight: 600,
+            textAlign: "center",
+            width: "100%",
+            margin: 0,
+          },
+          header: {
+            justifyContent: "center",
+            position: "relative",
+          },
+          close: {
+            position: "absolute",
+            right: "var(--mantine-spacing-md)",
           },
         }}
       >

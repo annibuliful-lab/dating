@@ -11,7 +11,6 @@ import {
   TopNavbar,
 } from "@/components/element/TopNavbar";
 import { AgeIcon } from "@/components/icons/AgeIcon";
-import { CheckCircle } from "@/components/icons/CheckCircle";
 import { GenderIcon } from "@/components/icons/GenderIcon";
 import { RulerIcon } from "@/components/icons/RulerIcon";
 import { SingleIcon } from "@/components/icons/SingleIcon";
@@ -29,7 +28,6 @@ import {
   rem,
   Stack,
   Text,
-  ThemeIcon,
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
@@ -333,19 +331,26 @@ function ProfileViewPage() {
                 {profile.username || "User"}
               </Text>
               {profile.isVerified && (
-                <ThemeIcon
-                  size={20}
-                  radius="xl"
-                  color={profile.verificationType === "ADMIN" ? "blue" : "teal"}
-                  variant="light"
-                  title={
-                    profile.verificationType === "ADMIN"
-                      ? "Verified by Admin"
-                      : "Verified by User"
-                  }
+                <Text
+                  fz="xs"
+                  fw={500}
+                  c={profile.verificationType === "ADMIN" ? "blue" : "teal"}
+                  style={{
+                    backgroundColor:
+                      profile.verificationType === "ADMIN"
+                        ? "rgba(37, 99, 235, 0.2)"
+                        : "rgba(20, 184, 166, 0.2)",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    border: `1px solid ${
+                      profile.verificationType === "ADMIN"
+                        ? "#2563eb"
+                        : "#14b8a6"
+                    }`,
+                  }}
                 >
-                  <CheckCircle />
-                </ThemeIcon>
+                  verify by {profile.verifiedByUsername || "unknown"}
+                </Text>
               )}
             </Group>
             <Text c="dimmed" fz="sm">

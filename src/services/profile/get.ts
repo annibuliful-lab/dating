@@ -1,45 +1,58 @@
-import { ProfileImage, UserProfile } from '@/@types/user';
-import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { ProfileImage, UserProfile } from "@/@types/user";
+import { BUCKET_NAME, supabase } from "@/client/supabase";
 
-export async function getUserProfile(
-  userId: string
-): Promise<UserProfile> {
+export async function getUserProfile(userId: string): Promise<UserProfile> {
   const { data: _userProfile, error } = await supabase
-    .from('User')
+    .from("User")
     .select(
       [
-        'id',
-        'username',
-        'fullName',
-        'gender',
-        'birthday',
-        'bio',
-        'phone',
-        'lineId',
-        'height',
-        'weight',
-        'profileImageKey',
-        'lastname',
-        'relationShipStatus',
-        'isVerified',
-        'verificationType',
-        'verifiedAt',
-        'isAdmin',
-      ].join(',')
+        "id",
+        "username",
+        "fullName",
+        "gender",
+        "birthday",
+        "bio",
+        "phone",
+        "lineId",
+        "height",
+        "weight",
+        "profileImageKey",
+        "lastname",
+        "relationShipStatus",
+        "isVerified",
+        "verificationType",
+        "verifiedAt",
+        "verifiedBy",
+        "isAdmin",
+      ].join(",")
     )
-    .eq('id', userId)
+    .eq("id", userId)
     .single();
 
   if (error) throw error;
 
   const userProfile = _userProfile as unknown as UserProfile;
 
+  // Get verifiedBy username if exists
+  let verifiedByUsername: string | null = null;
+  if (userProfile.verifiedBy) {
+    const { data: verifiedByUser } = await supabase
+      .from("User")
+      .select("username")
+      .eq("id", userProfile.verifiedBy)
+      .single();
+
+    if (verifiedByUser) {
+      verifiedByUsername = verifiedByUser.username;
+    }
+  }
+
   // Get profile images
   const { data: profileImagesData, error: imagesError } = await supabase
-    .from('ProfileImage')
-    .select('id, imageKey, order')
-    .eq('userId', userId)
-    .order('order', { ascending: true });
+    .from("ProfileImage")
+    .select("id, imageKey, order")
+    .eq("userId", userId)
+    .order("order", { ascending: true });
 
   let profileImages: ProfileImage[] | undefined;
   if (!imagesError && profileImagesData) {
@@ -65,11 +78,13 @@ export async function getUserProfile(
       ...userProfile,
       avatarUrl: profileUrl.publicUrl as string,
       profileImages,
+      verifiedByUsername,
     };
   }
 
   return {
     ...userProfile,
     profileImages,
+    verifiedByUsername,
   };
 }

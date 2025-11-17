@@ -5,7 +5,6 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from '@/components/element/TopNavbar';
-import { CheckCircle } from '@/components/icons/CheckCircle';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
@@ -19,7 +18,6 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  ThemeIcon,
 } from '@mantine/core';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -91,19 +89,24 @@ function ProfilePage() {
                 {userProfile.username}
               </Text>
               {userProfile.isVerified && (
-                <ThemeIcon
-                  size={22}
-                  radius="xl"
-                  color={userProfile.verificationType === "ADMIN" ? "blue" : "teal"}
-                  variant="light"
-                  title={
-                    userProfile.verificationType === "ADMIN"
-                      ? "Verified by Admin"
-                      : "Verified by User"
-                  }
+                <Text
+                  fz="xs"
+                  fw={500}
+                  c={userProfile.verificationType === "ADMIN" ? "blue" : "teal"}
+                  style={{
+                    backgroundColor:
+                      userProfile.verificationType === "ADMIN"
+                        ? "rgba(37, 99, 235, 0.2)"
+                        : "rgba(20, 184, 166, 0.2)",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    border: `1px solid ${
+                      userProfile.verificationType === "ADMIN" ? "#2563eb" : "#14b8a6"
+                    }`,
+                  }}
                 >
-                  <CheckCircle />
-                </ThemeIcon>
+                  verify by {userProfile.verifiedByUsername || "unknown"}
+                </Text>
               )}
             </Group>
             <Text c="#979797">

@@ -25,6 +25,7 @@ export type UserProfile = {
   isVerified?: boolean;
   verificationType?: "ADMIN" | "USER" | null;
   verifiedAt?: string | null;
+  verifiedBy?: string | null;
   verifiedByUsername?: string | null;
   isAdmin?: boolean;
   profileImages?: ProfileImage[];

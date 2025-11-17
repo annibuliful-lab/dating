@@ -47,16 +47,27 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
     }
   }
 
-  // Get profile images
+  // Get profile images using the type-safe helper
+  // Import the helper function (we'll need to export it or create a shared utility)
   const { data: profileImagesData, error: imagesError } = await supabase
-    .from("ProfileImage")
+    .from("ProfileImage" as never)
     .select("id, imageKey, order")
     .eq("userId", userId)
     .order("order", { ascending: true });
 
   let profileImages: ProfileImage[] | undefined;
   if (!imagesError && profileImagesData) {
-    profileImages = profileImagesData.map((img) => {
+    type ProfileImageRow = {
+      id: string;
+      userId: string;
+      imageKey: string;
+      order: number;
+    };
+    profileImages = (
+      profileImagesData as Array<
+        Pick<ProfileImageRow, "id" | "imageKey" | "order">
+      >
+    ).map((img) => {
       const { data: imageUrlData } = supabase.storage
         .from(BUCKET_NAME)
         .getPublicUrl(img.imageKey);

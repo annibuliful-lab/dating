@@ -10,6 +10,29 @@ type PostInsert = {
   updatedAt?: string;
 };
 
+type PostUser = {
+  id: string;
+  fullName: string;
+  username: string;
+  profileImageKey: string | null;
+  isVerified: boolean;
+  verificationType: string | null;
+  verifiedBy: string | null;
+};
+
+type PostWithUser = {
+  id: string;
+  authorId: string;
+  content: { text: string };
+  visibility: 'PUBLIC' | 'PRIVATE';
+  imageUrl?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  User: PostUser | null;
+  PostLike?: Array<{ count?: number }>;
+  PostSave?: Array<{ count?: number }>;
+};
+
 export const postService = {
   // Fetch all public posts with author information
   async getPublicPosts(limit = 20, offset = 0) {
@@ -38,8 +61,8 @@ export const postService = {
     if (error) throw new Error(error.message);
     
     // Fetch verifiedBy usernames for all posts
-    const verifiedByUserIds = data
-      ?.map((post: any) => post.User?.verifiedBy)
+    const verifiedByUserIds = (data as PostWithUser[] | null)
+      ?.map((post) => post.User?.verifiedBy)
       .filter((id: string | null | undefined): id is string => !!id) || [];
     
     const verifiedByUsernames: Record<string, string> = {};
@@ -57,7 +80,7 @@ export const postService = {
     }
     
     // Transform data to add verifiedByUsername
-    const transformedData = data?.map((post: any) => {
+    const transformedData = (data as PostWithUser[] | null)?.map((post) => {
       const verifiedByUsername = post.User?.verifiedBy 
         ? verifiedByUsernames[post.User.verifiedBy] || null
         : null;

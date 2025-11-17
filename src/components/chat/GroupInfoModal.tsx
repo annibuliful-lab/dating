@@ -21,7 +21,7 @@ import {
 import { useDebouncedValue } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface User {
   id: string;
@@ -85,14 +85,7 @@ export function GroupInfoModal({
     setNewName(chatName || "");
   }, [chatName]);
 
-  // Fetch participants
-  useEffect(() => {
-    if (opened) {
-      fetchParticipants();
-    }
-  }, [opened, chatId]);
-
-  const fetchParticipants = async () => {
+  const fetchParticipants = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/chat/${chatId}/participants`);
@@ -109,7 +102,14 @@ export function GroupInfoModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [chatId]);
+
+  // Fetch participants
+  useEffect(() => {
+    if (opened) {
+      fetchParticipants();
+    }
+  }, [opened, fetchParticipants]);
 
   // Search for users to invite
   useEffect(() => {
@@ -383,7 +383,9 @@ export function GroupInfoModal({
                         border: "1px solid #e0e0e0",
                         cursor: onViewProfile ? "pointer" : "default",
                       }}
-                      onClick={() => onViewProfile && onViewProfile(participant.userId)}
+                      onClick={() =>
+                        onViewProfile && onViewProfile(participant.userId)
+                      }
                     >
                       <Group justify="space-between" wrap="nowrap">
                         <Group gap="sm" wrap="nowrap">

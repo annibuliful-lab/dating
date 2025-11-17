@@ -48,6 +48,7 @@ export function TopNavbar({
         px="md"
         justify="space-between"
         wrap="nowrap"
+        style={{ position: "relative" }}
       >
         <Box
           w={84}
@@ -62,7 +63,16 @@ export function TopNavbar({
           )}
         </Box>
 
-        <Text fz="lg" fw={600} c="white">
+        <Text
+          fz="lg"
+          fw={600}
+          c="white"
+          style={{
+            position: "absolute",
+            left: "50%",
+            transform: "translateX(-50%)",
+          }}
+        >
           {title}
         </Text>
 

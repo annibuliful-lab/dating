@@ -185,7 +185,13 @@ function FeedPage() {
     return (
       <Box>
         <TopNavbar title="Feed and Contents" />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+          style={{ marginLeft: "auto", marginRight: "auto" }}
+        >
           <Text>Loading posts...</Text>
         </Container>
       </Box>
@@ -196,7 +202,13 @@ function FeedPage() {
     return (
       <Box>
         <TopNavbar title="Feed and Contents" />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+          style={{ marginLeft: "auto", marginRight: "auto" }}
+        >
           <Text c="red">Error loading posts: {error.message}</Text>
         </Container>
       </Box>
@@ -206,7 +218,13 @@ function FeedPage() {
   return (
     <Box>
       <TopNavbar title="Feed and Contents" />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        style={{ marginLeft: "auto", marginRight: "auto" }}
+      >
         <ScrollArea
           ref={scrollAreaRef}
           h={`calc(100vh - ${

@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { BUCKET_NAME, supabase } from "@/client/supabase";
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
-} from '@/components/element/BottomNavbar';
+} from "@/components/element/BottomNavbar";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from '@/components/element/TopNavbar';
-import { messageService } from '@/services/supabase/messages';
-import { postService } from '@/services/supabase/posts';
+} from "@/components/element/TopNavbar";
+import { messageService } from "@/services/supabase/messages";
+import { postService } from "@/services/supabase/posts";
 import {
   Avatar,
   Badge,
@@ -19,15 +19,16 @@ import {
   Divider,
   Group,
   Image,
+  Modal,
   rem,
   ScrollArea,
   Stack,
   Text,
   Transition,
-} from '@mantine/core';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+} from "@mantine/core";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Post = {
   id: string;
@@ -44,7 +45,7 @@ type Post = {
     profileImageKey: string | null;
     profileImageUrl?: string | null;
     isVerified?: boolean;
-    verificationType?: 'ADMIN' | 'USER' | null;
+    verificationType?: "ADMIN" | "USER" | null;
   };
 };
 
@@ -57,13 +58,14 @@ function FeedPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [chatLoading, setChatLoading] = useState<string | null>(null);
+  const [infographicModalOpened, setInfographicModalOpened] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/');
+    if (status === "unauthenticated") {
+      router.push("/");
     }
   }, [router, status]);
 
@@ -98,11 +100,7 @@ function FeedPage() {
       });
       setPosts(postsWithImageUrls as Post[]);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err
-          : new Error('Failed to fetch posts')
-      );
+      setError(err instanceof Error ? err : new Error("Failed to fetch posts"));
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -110,22 +108,24 @@ function FeedPage() {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === "authenticated") {
       fetchPosts();
+      // Show infographic modal when entering feed page
+      setInfographicModalOpened(true);
     }
   }, [status, fetchPosts]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
     });
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const scrollElement = scrollAreaRef.current?.querySelector(
-      '[data-radix-scroll-area-viewport]'
+      "[data-radix-scroll-area-viewport]"
     );
     if (scrollElement && scrollElement.scrollTop === 0) {
       startY.current = e.touches[0].clientY;
@@ -170,7 +170,7 @@ function FeedPage() {
       // Navigate to the chat page
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
-      console.error('Error creating/finding chat:', err);
+      console.error("Error creating/finding chat:", err);
       // You could show a toast notification here
     } finally {
       setChatLoading(null);
@@ -185,12 +185,7 @@ function FeedPage() {
     return (
       <Box>
         <TopNavbar title="Feed and Contents" />
-        <Container
-          size="xs"
-          pt="md"
-          px="md"
-          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-        >
+        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Text>Loading posts...</Text>
         </Container>
       </Box>
@@ -201,12 +196,7 @@ function FeedPage() {
     return (
       <Box>
         <TopNavbar title="Feed and Contents" />
-        <Container
-          size="xs"
-          pt="md"
-          px="md"
-          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-        >
+        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Text c="red">Error loading posts: {error.message}</Text>
         </Container>
       </Box>
@@ -216,12 +206,7 @@ function FeedPage() {
   return (
     <Box>
       <TopNavbar title="Feed and Contents" />
-      <Container
-        size="xs"
-        pt="md"
-        px="md"
-        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-      >
+      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <ScrollArea
           ref={scrollAreaRef}
           h={`calc(100vh - ${
@@ -234,8 +219,7 @@ function FeedPage() {
           <Box
             style={{
               transform: `translateY(${pullDistance}px)`,
-              transition:
-                pullDistance === 0 ? 'transform 0.3s ease' : 'none',
+              transition: pullDistance === 0 ? "transform 0.3s ease" : "none",
             }}
           >
             <Transition
@@ -247,17 +231,15 @@ function FeedPage() {
                 <Box
                   style={{
                     ...styles,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '16px',
-                    color: 'var(--mantine-color-dimmed)',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "16px",
+                    color: "var(--mantine-color-dimmed)",
                   }}
                 >
                   <Text size="sm">
-                    {isRefreshing
-                      ? 'Refreshing...'
-                      : 'Pull to refresh'}
+                    {isRefreshing ? "Refreshing..." : "Pull to refresh"}
                   </Text>
                 </Box>
               )}
@@ -273,19 +255,15 @@ function FeedPage() {
                           radius="xl"
                           color="gray"
                           src={post.User.profileImageUrl || undefined}
-                          style={{ cursor: 'pointer' }}
-                          onClick={() =>
-                            handleViewProfile(post.User.id)
-                          }
+                          style={{ cursor: "pointer" }}
+                          onClick={() => handleViewProfile(post.User.id)}
                         >
-                          {post.User.fullName?.charAt(0) || '?'}
+                          {post.User.fullName?.charAt(0) || "?"}
                         </Avatar>
                         <Text
                           fw={600}
-                          style={{ cursor: 'pointer' }}
-                          onClick={() =>
-                            handleViewProfile(post.User.id)
-                          }
+                          style={{ cursor: "pointer" }}
+                          onClick={() => handleViewProfile(post.User.id)}
                         >
                           {post.User.fullName}
                         </Text>
@@ -312,16 +290,13 @@ function FeedPage() {
 
                       <Group justify="space-between" mt="xs">
                         <Box
-                          onClick={() =>
-                            handleSendClick(post.User.id)
-                          }
+                          onClick={() => handleSendClick(post.User.id)}
                           style={{
                             cursor:
                               chatLoading === post.User.id
-                                ? 'not-allowed'
-                                : 'pointer',
-                            opacity:
-                              chatLoading === post.User.id ? 0.6 : 1,
+                                ? "not-allowed"
+                                : "pointer",
+                            opacity: chatLoading === post.User.id ? 0.6 : 1,
                           }}
                         >
                           <Text c="yellow">ทักแชท</Text>
@@ -329,16 +304,16 @@ function FeedPage() {
                         {post.User.isVerified && (
                           <Badge
                             color={
-                              post.User.verificationType === 'ADMIN'
-                                ? 'blue'
-                                : 'teal'
+                              post.User.verificationType === "ADMIN"
+                                ? "blue"
+                                : "teal"
                             }
                             radius="xl"
                             variant="light"
                             title={
-                              post.User.verificationType === 'ADMIN'
-                                ? 'Verified by Admin'
-                                : 'Verified by User'
+                              post.User.verificationType === "ADMIN"
+                                ? "Verified by Admin"
+                                : "Verified by User"
                             }
                           >
                             Verified
@@ -362,6 +337,30 @@ function FeedPage() {
       </Container>
 
       <BottomNavbar />
+
+      {/* Infographic Modal */}
+      <Modal
+        opened={infographicModalOpened}
+        onClose={() => setInfographicModalOpened(false)}
+        title="Infographic"
+        size="lg"
+        centered
+        styles={{
+          title: {
+            color: "white",
+            fontWeight: 600,
+          },
+        }}
+      >
+        <Box>
+          <Image
+            src="/infographic/LINE_20251114_235452.jpg"
+            alt="Infographic"
+            fit="contain"
+            radius="md"
+          />
+        </Box>
+      </Modal>
     </Box>
   );
 }

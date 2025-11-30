@@ -15,6 +15,7 @@ import { postService } from "@/services/supabase/posts";
 import {
   Avatar,
   Box,
+  Button,
   Container,
   Divider,
   Group,
@@ -30,6 +31,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { notifications } from "@mantine/notifications";
 
 type Post = {
   id: string;
@@ -61,6 +63,10 @@ function FeedPage() {
   const [pullDistance, setPullDistance] = useState(0);
   const [chatLoading, setChatLoading] = useState<string | null>(null);
   const [infographicModalOpened, setInfographicModalOpened] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<Post | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
@@ -70,6 +76,23 @@ function FeedPage() {
       router.push("/");
     }
   }, [router, status]);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (status === "authenticated" && session?.user?.id) {
+        try {
+          const response = await fetch("/api/admin/check");
+          if (response.ok) {
+            const data = await response.json();
+            setIsAdmin(data.isAdmin);
+          }
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+        }
+      }
+    };
+    checkAdminStatus();
+  }, [status, session]);
 
   const fetchPosts = useCallback(async (isRefresh = false) => {
     try {
@@ -195,6 +218,41 @@ function FeedPage() {
     router.push(`/profile/${userId}`);
   };
 
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+
+    try {
+      setDeleting(true);
+      const response = await fetch(`/api/admin/posts/${postToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete post");
+      }
+
+      notifications.show({
+        title: "สำเร็จ",
+        message: "ลบโพสต์แล้ว",
+        color: "green",
+      });
+
+      // Remove post from local state
+      setPosts(posts.filter((p) => p.id !== postToDelete.id));
+      setDeleteModalOpened(false);
+      setPostToDelete(null);
+    } catch (error: any) {
+      notifications.show({
+        title: "เกิดข้อผิดพลาด",
+        message: error.message || "ไม่สามารถลบโพสต์ได้",
+        color: "red",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box>
@@ -283,33 +341,51 @@ function FeedPage() {
                 posts.map((post: Post, index: number) => (
                   <Box key={post.id}>
                     <Stack gap={10}>
-                      <Group gap="sm" align="center">
-                        <Avatar
-                          radius="xl"
-                          color="gray"
-                          src={post.User.profileImageUrl || undefined}
-                          style={{ cursor: "pointer" }}
-                          onClick={() => handleViewProfile(post.User.id)}
-                        >
-                          {post.User.fullName?.charAt(0) || "?"}
-                        </Avatar>
-                        <Group gap={4} align="center">
-                          <Text
-                            fw={600}
+                      <Group gap="sm" align="center" justify="space-between">
+                        <Group gap="sm" align="center">
+                          <Avatar
+                            radius="xl"
+                            color="gray"
+                            src={post.User.profileImageUrl || undefined}
                             style={{ cursor: "pointer" }}
                             onClick={() => handleViewProfile(post.User.id)}
                           >
-                            {post.User.username}
-                          </Text>
-                          {post.User.isVerified && (
-                            <Text fz="sm" c="blue" fw={600}>
-                              ✅
+                            {post.User.fullName?.charAt(0) || "?"}
+                          </Avatar>
+                          <Group gap={4} align="center">
+                            <Text
+                              fw={600}
+                              style={{ cursor: "pointer" }}
+                              onClick={() => handleViewProfile(post.User.id)}
+                            >
+                              {post.User.username}
                             </Text>
-                          )}
+                            {post.User.isVerified && (
+                              <Text fz="sm" c="blue" fw={600}>
+                                ✅
+                              </Text>
+                            )}
+                          </Group>
+                          <Text c="dimmed" size="sm">
+                            {formatDate(post.createdAt)}
+                          </Text>
                         </Group>
-                        <Text c="dimmed" size="sm">
-                          {formatDate(post.createdAt)}
-                        </Text>
+                        {isAdmin && (
+                          <Button
+                            size="xs"
+                            color="red"
+                            variant="light"
+                            onClick={() => {
+                              setPostToDelete(post);
+                              setDeleteModalOpened(true);
+                            }}
+                            style={{
+                              border: "1px solid red",
+                            }}
+                          >
+                            X ลบโพส
+                          </Button>
+                        )}
                       </Group>
 
                       {post.content?.text && (
@@ -401,6 +477,48 @@ function FeedPage() {
             radius="md"
           />
         </Box>
+      </Modal>
+
+      {/* Delete Post Confirmation Modal */}
+      <Modal
+        opened={deleteModalOpened}
+        onClose={() => {
+          setDeleteModalOpened(false);
+          setPostToDelete(null);
+        }}
+        title="ยืนยันการลบโพสต์"
+        centered
+        styles={{
+          content: { backgroundColor: "#0F0F0F" },
+          header: { backgroundColor: "#0F0F0F" },
+          body: { backgroundColor: "#0F0F0F" },
+          title: { color: "white" },
+        }}
+      >
+        <Stack gap="md">
+          <Text c="white">
+            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้? การกระทำนี้ไม่สามารถยกเลิกได้
+          </Text>
+          <Group justify="flex-end">
+            <Button
+              variant="subtle"
+              onClick={() => {
+                setDeleteModalOpened(false);
+                setPostToDelete(null);
+              }}
+              disabled={deleting}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              color="red"
+              onClick={handleDeletePost}
+              loading={deleting}
+            >
+              ลบ
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </Box>
   );

@@ -144,12 +144,34 @@ export default function AdminUsersPage() {
       ];
     } else if (statusType === "usage") {
       return [
-        { value: "ACTIVE", label: "ใช้งานปกติ" },
+        { value: "ACTIVE", label: "การใช้งานปกติ" },
         { value: "INACTIVE", label: "ไม่มีการใช้งาน" },
         { value: "SUSPENDED", label: "พักการใช้งานชั่วคราว" },
       ];
     }
     return [];
+  };
+
+  const getStatusTitle = () => {
+    if (statusType === "verification") {
+      return "ยืนยันตัวตน";
+    } else if (statusType === "usage") {
+      return "สถานะการใช้งานบัญชี";
+    } else if (statusType === "account") {
+      return "บัญชี";
+    }
+    return "";
+  };
+
+  const getStatusLabel = (value: string) => {
+    if (statusType === "verification") {
+      return value === "verified" ? "ยืนยันตัวตนแล้ว" : "รอยืนยันตัวตน";
+    } else if (statusType === "usage") {
+      if (value === "ACTIVE") return "การใช้งานปกติ";
+      if (value === "INACTIVE") return "ไม่มีการใช้งาน";
+      if (value === "SUSPENDED") return "พักการใช้งานชั่วคราว";
+    }
+    return value;
   };
 
   const getCurrentStatusValue = (user: User) => {
@@ -241,7 +263,7 @@ export default function AdminUsersPage() {
                   },
                 }}
               >
-                สถานะการใช้งาน
+                สถานะการใช้งานบัญชี
               </Button>
               <Button
                 variant={statusType === "account" ? "filled" : "subtle"}
@@ -265,21 +287,26 @@ export default function AdminUsersPage() {
 
           {/* Main Content */}
           <Box style={{ flex: 1 }}>
-            {/* Search Bar */}
-            <TextInput
-              placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              leftSection={<IconSearch size={16} />}
-              mb="md"
-              styles={{
-                input: {
-                  backgroundColor: "#131313",
-                  borderColor: "#333",
-                  color: "white",
-                },
-              }}
-            />
+            {/* Title and Search Bar */}
+            <Group justify="space-between" mb="md" align="center">
+              <Text fw={600} size="lg" c="white">
+                {getStatusTitle()}
+              </Text>
+              <TextInput
+                placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                leftSection={<IconSearch size={16} />}
+                style={{ flex: 1, maxWidth: rem(300) }}
+                styles={{
+                  input: {
+                    backgroundColor: "#131313",
+                    borderColor: "#333",
+                    color: "white",
+                  },
+                }}
+              />
+            </Group>
 
             {/* Table */}
             <ScrollArea h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + BOTTOM_NAVBAR_HEIGHT_PX + 200)})`}>
@@ -343,7 +370,8 @@ export default function AdminUsersPage() {
                                 backgroundColor: "#131313",
                                 borderColor: "#333",
                                 color: "white",
-                                minWidth: rem(180),
+                                minWidth: rem(200),
+                                border: "1px solid #FFD700",
                               },
                               option: {
                                 backgroundColor: "#1a1a1a",

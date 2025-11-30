@@ -13,20 +13,11 @@ export async function POST(
     }
 
     const { userId } = await params;
-    const body = await req.json();
-    const { verificationType } = body;
-
-    if (!verificationType || (verificationType !== "ADMIN" && verificationType !== "USER")) {
-      return NextResponse.json(
-        { error: "Invalid verification type. Must be 'ADMIN' or 'USER'" },
-        { status: 400 }
-      );
-    }
 
     // Get current user to check if they are admin
     const { data: currentUser, error: currentUserError } = await supabase
       .from("User")
-      .select("role, isAdmin")
+      .select("role")
       .eq("id", session.user.id)
       .single();
 
@@ -37,22 +28,14 @@ export async function POST(
       );
     }
 
-    // Only admins can verify with ADMIN type
-    // Users can verify themselves with USER type
+    // Only admins can verify other users
+    // Users can verify themselves
     const isSelfVerification = userId === session.user.id;
-    const isAdminVerification = verificationType === "ADMIN";
-    const isUserAdmin = currentUser.role === "ADMIN" || currentUser.isAdmin === true;
+    const isUserAdmin = currentUser.role === "ADMIN";
 
-    if (isAdminVerification && !isUserAdmin) {
+    if (!isSelfVerification && !isUserAdmin) {
       return NextResponse.json(
-        { error: "Only admins can verify users with ADMIN type" },
-        { status: 403 }
-      );
-    }
-
-    if (!isSelfVerification && verificationType === "USER") {
-      return NextResponse.json(
-        { error: "Users can only verify themselves with USER type" },
+        { error: "Only admins can verify other users" },
         { status: 403 }
       );
     }
@@ -62,9 +45,8 @@ export async function POST(
       .from("User")
       .update({
         isVerified: true,
-        verificationType: verificationType,
         verifiedAt: new Date().toISOString(),
-        verifiedBy: isAdminVerification ? session.user.id : userId,
+        verifiedBy: isUserAdmin ? session.user.id : userId,
       })
       .eq("id", userId)
       .select()

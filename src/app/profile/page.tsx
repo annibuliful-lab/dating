@@ -40,7 +40,7 @@ function ProfilePage() {
     
     try {
       setIsVerifying(true);
-      await verifyMutation.mutate({ verificationType: "USER" });
+      await verifyMutation.mutate({});
       // Refresh profile after verification
       window.location.reload();
     } catch (error) {
@@ -92,17 +92,12 @@ function ProfilePage() {
                 <Text
                   fz="xs"
                   fw={500}
-                  c={userProfile.verificationType === "ADMIN" ? "blue" : "teal"}
+                  c="blue"
                   style={{
-                    backgroundColor:
-                      userProfile.verificationType === "ADMIN"
-                        ? "rgba(37, 99, 235, 0.2)"
-                        : "rgba(20, 184, 166, 0.2)",
+                    backgroundColor: "rgba(37, 99, 235, 0.2)",
                     padding: "2px 8px",
                     borderRadius: "12px",
-                    border: `1px solid ${
-                      userProfile.verificationType === "ADMIN" ? "#2563eb" : "#14b8a6"
-                    }`,
+                    border: "1px solid #2563eb",
                   }}
                 >
                   verify by {userProfile.verifiedByUsername || "unknown"}

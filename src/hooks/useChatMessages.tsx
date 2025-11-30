@@ -129,7 +129,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             senderName: msg.User?.fullName || "Unknown",
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
-            senderVerificationType: msg.User?.verificationType || null,
+            senderRole: msg.User?.role || "USER",
             createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
             createdAt: msg.createdAt,
           };
@@ -195,7 +195,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             senderName: msg.User?.fullName || "Unknown",
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
-            senderVerificationType: msg.User?.verificationType || null,
+            senderRole: msg.User?.role || "USER",
             createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
             createdAt: msg.createdAt,
           };

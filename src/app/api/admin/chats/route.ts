@@ -31,7 +31,8 @@ export async function GET(req: NextRequest) {
             fullName,
             username,
             profileImageKey,
-            status
+            status,
+            role
           )
         ),
         Message (
@@ -62,7 +63,8 @@ export async function GET(req: NextRequest) {
               id,
               fullName,
               username,
-              profileImageKey
+              profileImageKey,
+              role
             )
           `
           )

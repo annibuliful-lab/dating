@@ -21,11 +21,6 @@ enum UserStatus {
   SUSPENDED
 }
 
-enum VerificationType {
-  ADMIN
-  USER
-}
-
 enum UserRole {
   USER
   ADMIN
@@ -51,9 +46,7 @@ model User {
   weight             Float?
   status             UserStatus        @default(ACTIVE)
   role               UserRole          @default(USER)
-  isAdmin            Boolean           @default(false) // @deprecated - use role instead
   isVerified         Boolean           @default(false)
-  verificationType   VerificationType?
   verifiedAt         DateTime?         @db.Timestamptz(6)
   verifiedBy         String?           @db.Uuid
   verifiedByUser     User?             @relation("UserVerification", fields: [verifiedBy], references: [id])

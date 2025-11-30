@@ -28,10 +28,10 @@ import {
   Text,
   Transition,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { notifications } from "@mantine/notifications";
 
 type Post = {
   id: string;
@@ -48,8 +48,8 @@ type Post = {
     profileImageKey: string | null;
     profileImageUrl?: string | null;
     isVerified?: boolean;
-    verificationType?: "ADMIN" | "USER" | null;
     verifiedByUsername?: string | null;
+    role?: "USER" | "ADMIN";
   };
 };
 
@@ -84,7 +84,7 @@ function FeedPage() {
           const response = await fetch("/api/admin/check");
           if (response.ok) {
             const data = await response.json();
-            setIsAdmin(data.isAdmin);
+            setIsAdmin(data.isAdmin || data.role === "ADMIN");
           }
         } catch (error) {
           console.error("Error checking admin status:", error);
@@ -103,7 +103,7 @@ function FeedPage() {
       }
       const data = await postService.getPublicPosts();
       // Convert profileImageKey to URL for each post
-      const postsWithImageUrls = (data || []).map((post) => {
+      const postsWithImageUrls = (data || []).map((post: any) => {
         let profileImageUrl = null;
         if (post.User?.profileImageKey) {
           const { data: imageData } = supabase.storage
@@ -510,11 +510,7 @@ function FeedPage() {
             >
               ยกเลิก
             </Button>
-            <Button
-              color="red"
-              onClick={handleDeletePost}
-              loading={deleting}
-            >
+            <Button color="red" onClick={handleDeletePost} loading={deleting}>
               ลบ
             </Button>
           </Group>

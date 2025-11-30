@@ -16,8 +16,8 @@ type PostUser = {
   username: string;
   profileImageKey: string | null;
   isVerified: boolean;
-  verificationType: string | null;
   verifiedBy: string | null;
+  role: string;
 };
 
 type PostWithUser = {
@@ -47,8 +47,8 @@ export const postService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType,
-          verifiedBy
+          verifiedBy,
+          role
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
@@ -110,7 +110,7 @@ export const postService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType
+          role
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
@@ -131,7 +131,7 @@ export const postService = {
       .select(
         `
         *,
-        User!Post_authorId_fkey (
+          User!Post_authorId_fkey (
           id,
           fullName,
           username,
@@ -139,7 +139,7 @@ export const postService = {
           age,
           gender,
           isVerified,
-          verificationType
+          role
         ),
         PostLike!PostLike_postId_fkey (
           id,
@@ -173,7 +173,7 @@ export const postService = {
             username,
             profileImageKey,
             isVerified,
-            verificationType
+            role
           )
         )
       `

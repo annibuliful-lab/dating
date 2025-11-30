@@ -1,7 +1,13 @@
 "use client";
 
-import { TopNavbar, TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
-import { BottomNavbar, BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
+import {
+  BOTTOM_NAVBAR_HEIGHT_PX,
+  BottomNavbar,
+} from "@/components/element/BottomNavbar";
+import {
+  TOP_NAVBAR_HEIGHT_PX,
+  TopNavbar,
+} from "@/components/element/TopNavbar";
 import {
   Box,
   Button,
@@ -16,11 +22,10 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { notifications } from "@mantine/notifications";
-import { IconSearch } from "@tabler/icons-react";
 
 type User = {
   id: string;
@@ -31,8 +36,8 @@ type User = {
   phone: string | null;
   email: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  role: "USER" | "ADMIN";
   isVerified: boolean;
-  verificationType: "ADMIN" | "USER" | null;
   verifiedAt: string | null;
   verifiedBy: string | null;
   createdAt: string;
@@ -242,8 +247,7 @@ export default function AdminUsersPage() {
                   root: {
                     backgroundColor:
                       statusType === "verification" ? "#FFD700" : "transparent",
-                    color:
-                      statusType === "verification" ? "#000" : "#fff",
+                    color: statusType === "verification" ? "#000" : "#fff",
                   },
                 }}
               >
@@ -296,7 +300,11 @@ export default function AdminUsersPage() {
                 placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                leftSection={<IconSearch size={16} />}
+                leftSection={
+                  <Text size="sm" c="dimmed">
+                    🔍
+                  </Text>
+                }
                 style={{ flex: 1, maxWidth: rem(300) }}
                 styles={{
                   input: {
@@ -309,82 +317,89 @@ export default function AdminUsersPage() {
             </Group>
 
             {/* Table */}
-            <ScrollArea h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + BOTTOM_NAVBAR_HEIGHT_PX + 200)})`}>
-              <Table
-                striped
-                highlightOnHover
-                styles={{
-                  root: {
-                    backgroundColor: "#1a1a1a",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                  },
-                  thead: {
-                    backgroundColor: "#0F0F0F",
-                  },
-                  th: {
-                    color: "white",
-                    borderBottom: "1px solid #333",
-                  },
-                  td: {
-                    color: "white",
-                    borderBottom: "1px solid #333",
-                  },
+            <ScrollArea
+              h={`calc(100vh - ${rem(
+                TOP_NAVBAR_HEIGHT_PX + BOTTOM_NAVBAR_HEIGHT_PX + 200
+              )})`}
+            >
+              <Box
+                style={{
+                  backgroundColor: "#1a1a1a",
+                  borderRadius: "8px",
+                  overflow: "hidden",
                 }}
               >
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>ชื่อผู้ใช้</Table.Th>
-                    <Table.Th>ชื่อ</Table.Th>
-                    <Table.Th>นามสกุล</Table.Th>
-                    <Table.Th>เบอร์โทร</Table.Th>
-                    <Table.Th>สถานะ</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {users.length === 0 ? (
+                <Table
+                  striped
+                  highlightOnHover
+                  styles={{
+                    thead: {
+                      backgroundColor: "#0F0F0F",
+                    },
+                    th: {
+                      color: "white",
+                      borderBottom: "1px solid #333",
+                    },
+                    td: {
+                      color: "white",
+                      borderBottom: "1px solid #333",
+                    },
+                  }}
+                >
+                  <Table.Thead>
                     <Table.Tr>
-                      <Table.Td colSpan={5} style={{ textAlign: "center" }}>
-                        <Text c="dimmed" py="xl">
-                          ไม่พบผู้ใช้
-                        </Text>
-                      </Table.Td>
+                      <Table.Th>ชื่อผู้ใช้</Table.Th>
+                      <Table.Th>ชื่อ</Table.Th>
+                      <Table.Th>นามสกุล</Table.Th>
+                      <Table.Th>เบอร์โทร</Table.Th>
+                      <Table.Th>สถานะ</Table.Th>
                     </Table.Tr>
-                  ) : (
-                    users.map((user) => (
-                      <Table.Tr key={user.id}>
-                        <Table.Td>{user.username}</Table.Td>
-                        <Table.Td>{user.name || "-"}</Table.Td>
-                        <Table.Td>{user.lastname || "-"}</Table.Td>
-                        <Table.Td>{user.phone || "-"}</Table.Td>
-                        <Table.Td>
-                          <Select
-                            value={getCurrentStatusValue(user)}
-                            onChange={(value) =>
-                              value && handleStatusChange(user.id, value)
-                            }
-                            data={getStatusOptions()}
-                            disabled={updatingUsers.has(user.id)}
-                            styles={{
-                              input: {
-                                backgroundColor: "#131313",
-                                borderColor: "#333",
-                                color: "white",
-                                minWidth: rem(200),
-                                border: "1px solid #FFD700",
-                              },
-                              option: {
-                                backgroundColor: "#1a1a1a",
-                                color: "white",
-                              },
-                            }}
-                          />
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {users.length === 0 ? (
+                      <Table.Tr>
+                        <Table.Td colSpan={5} style={{ textAlign: "center" }}>
+                          <Text c="dimmed" py="xl">
+                            ไม่พบผู้ใช้
+                          </Text>
                         </Table.Td>
                       </Table.Tr>
-                    ))
-                  )}
-                </Table.Tbody>
-              </Table>
+                    ) : (
+                      users.map((user) => (
+                        <Table.Tr key={user.id}>
+                          <Table.Td>{user.username}</Table.Td>
+                          <Table.Td>{user.name || "-"}</Table.Td>
+                          <Table.Td>{user.lastname || "-"}</Table.Td>
+                          <Table.Td>{user.phone || "-"}</Table.Td>
+                          <Table.Td>
+                            <Select
+                              value={getCurrentStatusValue(user)}
+                              onChange={(value) =>
+                                value && handleStatusChange(user.id, value)
+                              }
+                              data={getStatusOptions()}
+                              disabled={updatingUsers.has(user.id)}
+                              styles={{
+                                input: {
+                                  backgroundColor: "#131313",
+                                  borderColor: "#333",
+                                  color: "white",
+                                  minWidth: rem(200),
+                                  border: "1px solid #FFD700",
+                                },
+                                option: {
+                                  backgroundColor: "#1a1a1a",
+                                  color: "white",
+                                },
+                              }}
+                            />
+                          </Table.Td>
+                        </Table.Tr>
+                      ))
+                    )}
+                  </Table.Tbody>
+                </Table>
+              </Box>
             </ScrollArea>
           </Box>
         </Group>

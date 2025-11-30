@@ -55,7 +55,6 @@ function EditProfilePage() {
   const [bio, setBio] = useState("");
   const [userStatus, setUserStatus] = useState<"ACTIVE" | "INACTIVE" | "SUSPENDED">("ACTIVE");
   const [isVerified, setIsVerified] = useState(false);
-  const [verificationType, setVerificationType] = useState<"ADMIN" | "USER" | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -150,7 +149,6 @@ function EditProfilePage() {
         setProfileImages(profile.profileImages || []);
         setUserStatus(profile.userStatus ?? "ACTIVE");
         setIsVerified(profile.isVerified ?? false);
-        setVerificationType(profile.verificationType ?? null);
         setUpdatedAt(profile.updatedAt ?? null);
       } catch (err) {
         console.error(err);

@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
           username,
           profileImageKey,
           isVerified,
-          status
+          status,
+          role
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)

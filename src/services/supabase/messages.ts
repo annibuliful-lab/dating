@@ -27,7 +27,7 @@ export const messageService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType
+          role
         )
       `
       )
@@ -68,7 +68,7 @@ export const messageService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType
+          role
         )
       `
       )
@@ -102,7 +102,7 @@ export const messageService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType
+          role
         )
       `
       )
@@ -139,7 +139,8 @@ export const messageService = {
             User!ChatParticipant_userId_fkey (
               id,
               fullName,
-              profileImageKey
+              profileImageKey,
+              role
             )
           )
         )
@@ -164,7 +165,7 @@ export const messageService = {
               username,
               profileImageKey,
               isVerified,
-              verificationType
+              role
             )
           `
           )
@@ -275,7 +276,8 @@ export const messageService = {
           fullName,
           username,
           profileImageKey,
-          status
+          status,
+          role
         )
       `
       )
@@ -388,7 +390,8 @@ export const messageService = {
                   id,
                   fullName,
                   username,
-                  profileImageKey
+                  profileImageKey,
+                  role
                 )
               `
               )
@@ -542,11 +545,11 @@ export const messageService = {
 
   // Create a group chat
   async createGroupChat(createdById: string, name: string, userIds: string[]) {
-    // Get admin user ID (check role first, fallback to isAdmin for backward compatibility)
+    // Get admin user ID
     const { data: adminUser } = await supabase
       .from("User")
       .select("id")
-      .or("role.eq.ADMIN,isAdmin.eq.true")
+      .eq("role", "ADMIN")
       .limit(1)
       .single();
 
@@ -601,7 +604,7 @@ export const messageService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType
+          role
         )
       `
       )
@@ -636,7 +639,7 @@ export const messageService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType
+          role
         )
       `
       )

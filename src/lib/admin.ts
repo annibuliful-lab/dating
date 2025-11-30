@@ -16,7 +16,7 @@ export async function isAdmin(userId?: string): Promise<boolean> {
 
     const { data, error } = await supabase
       .from("User")
-      .select("role, isAdmin")
+      .select("role")
       .eq("id", id)
       .single();
 
@@ -24,9 +24,8 @@ export async function isAdmin(userId?: string): Promise<boolean> {
       return false;
     }
 
-    // Check role first (new way), fallback to isAdmin (backward compatibility)
-    const userData = data as { role?: string; isAdmin?: boolean };
-    return userData.role === "ADMIN" || userData.isAdmin === true;
+    const userData = data as { role?: string };
+    return userData.role === "ADMIN";
   } catch (error) {
     console.error("Error checking admin status:", error);
     return false;
@@ -61,7 +60,7 @@ export async function getAdminUserId(): Promise<string | null> {
     const { data, error } = await supabase
       .from("User")
       .select("id")
-      .or("role.eq.ADMIN,isAdmin.eq.true")
+      .eq("role", "ADMIN")
       .limit(1)
       .single();
 

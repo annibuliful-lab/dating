@@ -43,8 +43,8 @@ export default function AdminDashboardPage() {
         throw new Error("Failed to check admin status");
       }
       const data = await response.json();
-      setIsUserAdmin(data.isAdmin);
-      if (!data.isAdmin) {
+      setIsUserAdmin(data.isAdmin || data.role === "ADMIN");
+      if (!data.isAdmin && data.role !== "ADMIN") {
         router.push("/feed");
       }
     } catch (error) {

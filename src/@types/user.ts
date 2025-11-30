@@ -24,12 +24,11 @@ export type UserProfile = {
   relationShipStatus: string;
   email?: string | null;
   userStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  role?: "USER" | "ADMIN";
   isVerified?: boolean;
-  verificationType?: "ADMIN" | "USER" | null;
   verifiedAt?: string | null;
   verifiedBy?: string | null;
   verifiedByUsername?: string | null;
-  isAdmin?: boolean;
   profileImages?: ProfileImage[];
   updatedAt?: string;
   age?: number | null;

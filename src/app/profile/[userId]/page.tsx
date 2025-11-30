@@ -42,7 +42,7 @@ function ProfileViewPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{
-    isAdmin: boolean;
+    role: string;
   } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isUnverifying, setIsUnverifying] = useState(false);
@@ -72,7 +72,7 @@ function ProfileViewPage() {
         if (session?.user?.id) {
           const { data: currentUserData } = await supabase
             .from("User")
-            .select("isAdmin")
+            .select("role")
             .eq("id", session.user.id)
             .single();
           setCurrentUser(currentUserData);
@@ -93,7 +93,7 @@ function ProfileViewPage() {
 
     try {
       setIsVerifying(true);
-      await verifyMutation.mutate({ verificationType: "ADMIN" });
+      await verifyMutation.mutate({});
       // Refresh profile after verification
       window.location.reload();
     } catch (error) {
@@ -124,7 +124,7 @@ function ProfileViewPage() {
     }
   };
 
-  const isAdmin = currentUser?.isAdmin === true;
+  const isAdmin = currentUser?.role === "ADMIN";
   const isOwnProfile = session?.user?.id === params.userId;
 
   const handleStartChat = async () => {

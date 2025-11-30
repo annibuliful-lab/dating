@@ -26,7 +26,7 @@ export async function POST(
     // Get current user to check if they are admin
     const { data: currentUser, error: currentUserError } = await supabase
       .from("User")
-      .select("isAdmin")
+      .select("role, isAdmin")
       .eq("id", session.user.id)
       .single();
 
@@ -41,8 +41,9 @@ export async function POST(
     // Users can verify themselves with USER type
     const isSelfVerification = userId === session.user.id;
     const isAdminVerification = verificationType === "ADMIN";
+    const isUserAdmin = currentUser.role === "ADMIN" || currentUser.isAdmin === true;
 
-    if (isAdminVerification && !currentUser.isAdmin) {
+    if (isAdminVerification && !isUserAdmin) {
       return NextResponse.json(
         { error: "Only admins can verify users with ADMIN type" },
         { status: 403 }

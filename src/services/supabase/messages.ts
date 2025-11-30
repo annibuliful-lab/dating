@@ -542,11 +542,11 @@ export const messageService = {
 
   // Create a group chat
   async createGroupChat(createdById: string, name: string, userIds: string[]) {
-    // Get admin user ID
+    // Get admin user ID (check role first, fallback to isAdmin for backward compatibility)
     const { data: adminUser } = await supabase
       .from("User")
       .select("id")
-      .eq("isAdmin", true)
+      .or("role.eq.ADMIN,isAdmin.eq.true")
       .limit(1)
       .single();
 

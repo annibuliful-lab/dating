@@ -73,7 +73,7 @@ export async function POST(
       const { data: adminUser } = await supabase
         .from("User")
         .select("id")
-        .eq("isAdmin", true)
+        .or("role.eq.ADMIN,isAdmin.eq.true")
         .limit(1)
         .single();
 

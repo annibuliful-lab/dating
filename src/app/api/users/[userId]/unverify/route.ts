@@ -17,7 +17,7 @@ export async function POST(
     // Get current user to check if they are admin
     const { data: currentUser, error: currentUserError } = await supabase
       .from("User")
-      .select("isAdmin")
+      .select("role, isAdmin")
       .eq("id", session.user.id)
       .single();
 
@@ -29,7 +29,8 @@ export async function POST(
     }
 
     // Only admins can unverify users
-    if (!currentUser.isAdmin) {
+    const isUserAdmin = currentUser.role === "ADMIN" || currentUser.isAdmin === true;
+    if (!isUserAdmin) {
       return NextResponse.json(
         { error: "Only admins can unverify users" },
         { status: 403 }

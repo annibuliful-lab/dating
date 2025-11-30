@@ -24,6 +24,10 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
         "verifiedAt",
         "verifiedBy",
         "isAdmin",
+        "email",
+        "status",
+        "updatedAt",
+        "age",
       ].join(",")
     )
     .eq("id", userId)
@@ -90,6 +94,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
       avatarUrl: profileUrl.publicUrl as string,
       profileImages,
       verifiedByUsername,
+      userStatus: userProfile.status as "ACTIVE" | "INACTIVE" | "SUSPENDED",
     };
   }
 
@@ -97,5 +102,6 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
     ...userProfile,
     profileImages,
     verifiedByUsername,
+    userStatus: userProfile.status as "ACTIVE" | "INACTIVE" | "SUSPENDED",
   };
 }

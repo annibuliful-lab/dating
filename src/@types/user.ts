@@ -22,6 +22,8 @@ export type UserProfile = {
   profileImageKey: string;
   avatarUrl: string | null;
   relationShipStatus: string;
+  email?: string | null;
+  userStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   isVerified?: boolean;
   verificationType?: "ADMIN" | "USER" | null;
   verifiedAt?: string | null;
@@ -29,4 +31,6 @@ export type UserProfile = {
   verifiedByUsername?: string | null;
   isAdmin?: boolean;
   profileImages?: ProfileImage[];
+  updatedAt?: string;
+  age?: number | null;
 };

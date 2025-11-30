@@ -5,10 +5,12 @@ import { supabase } from "@/client/supabase";
 import { TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
 import { CalendarIcon } from "@/components/icons/CalendarIcon";
 import { CameraIcon } from "@/components/icons/CameraIcon";
+import { compressImage } from "@/lib/image-compression";
 import { getUserProfile } from "@/services/profile/get";
 import { saveProfileImages } from "@/services/profile/images";
 import { updateUserProfile } from "@/services/profile/update";
 import {
+  Badge,
   Box,
   Button,
   Container,
@@ -16,6 +18,7 @@ import {
   Image,
   LoadingOverlay,
   Modal,
+  PasswordInput,
   Select,
   SimpleGrid,
   Stack,
@@ -30,31 +33,37 @@ import { notifications } from "@mantine/notifications";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { format } from "date-fns";
 
 function EditProfilePage() {
   const { data } = useSession();
   const router = useRouter();
 
-  // Public profile states
+  // Profile states
   const [username, setUsername] = useState("");
-  const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [lastname, setLastname] = useState("");
-  const [gender, setGender] = useState<string | null>(null);
-  const [birthday, setBirthday] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [bio, setBio] = useState("");
-  const BIO_LIMIT = 150;
-
-  // Private details states
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [lineId, setLineId] = useState("");
+  const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState<string | null>(null);
+  const [birthday, setBirthday] = useState<Date | null>(null);
+  const [age, setAge] = useState<number | null>(null);
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
+  const [bio, setBio] = useState("");
+  const [userStatus, setUserStatus] = useState<"ACTIVE" | "INACTIVE" | "SUSPENDED">("ACTIVE");
+  const [isVerified, setIsVerified] = useState(false);
+  const [verificationType, setVerificationType] = useState<"ADMIN" | "USER" | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarKey, setAvatarKey] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -72,6 +81,51 @@ function EditProfilePage() {
   const openProfileImagesPicker = () =>
     profileImagesInputRef.current?.click();
 
+  // Calculate age from birthday
+  const calculateAge = (birthDate: Date | null): number | null => {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  // Check username uniqueness
+  const checkUsername = async (usernameToCheck: string) => {
+    if (!usernameToCheck.trim() || !userId) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    setCheckingUsername(true);
+    try {
+      const response = await fetch("/api/users/check-username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: usernameToCheck, excludeUserId: userId }),
+      });
+
+      const data = await response.json();
+      setUsernameAvailable(data.available);
+      
+      if (!data.available) {
+        notifications.show({
+          color: "red",
+          title: "Username taken",
+          message: "This username is already in use",
+        });
+      }
+    } catch (error) {
+      console.error("Error checking username:", error);
+    } finally {
+      setCheckingUsername(false);
+    }
+  };
+
   useEffect(() => {
     if (!userId) {
       return;
@@ -80,29 +134,24 @@ function EditProfilePage() {
     (async () => {
       try {
         const profile = await getUserProfile(userId);
-        console.log("profile", profile);
         setUsername(profile.username ?? "");
-        // If you only have fullName in the DB, split it loosely for display
-        // const fullName = (profile.fullName as string | null) ?? '';
-        // if (fullName && !name && !lastname) {
-        //   const [first, ...rest] = fullName.split(' ');
-        //   setName(first ?? '');
-        //   setLastname(rest.join(' ') ?? '');
-        // }
-
-        setName(profile.fullName ?? "");
-        setLastname(profile.lastname);
-
-        setGender(profile.gender ?? null);
-        setBirthday(profile.birthday ? profile.birthday : null);
-        setStatus(profile.relationShipStatus ?? null);
-        setBio(profile.bio ?? "");
-        setPhone(profile.phone ?? "");
+        setFullName(profile.fullName ?? "");
+        setLastname(profile.lastname ?? "");
+        setEmail(profile.email ?? "");
         setLineId(profile.lineId ?? "");
+        setPhone(profile.phone ?? "");
+        setGender(profile.gender ?? null);
+        setBirthday(profile.birthday ? new Date(profile.birthday) : null);
+        setAge(profile.age ?? calculateAge(profile.birthday ? new Date(profile.birthday) : null));
         setHeight(profile.height != null ? String(profile.height) : "");
         setWeight(profile.weight != null ? String(profile.weight) : "");
+        setBio(profile.bio ?? "");
         setAvatarUrl(profile.avatarUrl ?? null);
         setProfileImages(profile.profileImages || []);
+        setUserStatus(profile.userStatus ?? "ACTIVE");
+        setIsVerified(profile.isVerified ?? false);
+        setVerificationType(profile.verificationType ?? null);
+        setUpdatedAt(profile.updatedAt ?? null);
       } catch (err) {
         console.error(err);
         notifications.show({
@@ -114,47 +163,86 @@ function EditProfilePage() {
     })();
   }, [userId]);
 
+  // Update age when birthday changes
+  useEffect(() => {
+    if (birthday) {
+      const calculatedAge = calculateAge(birthday);
+      setAge(calculatedAge);
+    } else {
+      setAge(null);
+    }
+  }, [birthday]);
+
+  // Check username when it changes (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (username && username.trim() && userId) {
+        checkUsername(username);
+      } else {
+        setUsernameAvailable(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username, userId]);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // basic validation
+    // Basic validation
     const validTypes = ["image/png", "image/jpeg", "image/webp"];
     if (!validTypes.includes(file.type)) {
-      alert("Only PNG, JPG, or WEBP allowed.");
+      notifications.show({
+        color: "red",
+        title: "Invalid file type",
+        message: "Only PNG, JPG, or WEBP allowed.",
+      });
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert("Max 5MB.");
+      notifications.show({
+        color: "red",
+        title: "File too large",
+        message: "Max 5MB.",
+      });
       return;
     }
 
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
+      // Compress image before upload
+      const compressedFile = await compressImage(file, 1920, 1920, 0.8);
+      
+      const ext = compressedFile.name.split(".").pop() || "jpg";
       const key = `users/${
         userId || "anon"
       }/avatar-${userId}-${new Date().toISOString()}.${ext}`;
 
-      // upload (upsert true lets you replace on re-upload)
+      // Upload compressed file
       const { error: uploadErr } = await supabase.storage
         .from(BUCKET)
-        .upload(key, file, {
+        .upload(key, compressedFile, {
           upsert: true,
-          contentType: file.type,
+          contentType: compressedFile.type,
           cacheControl: "3600",
         });
 
       if (uploadErr) throw uploadErr;
 
-      // get a public URL (or use createSignedUrl if your bucket is private)
+      // Get public URL
       const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(key);
 
       setAvatarUrl(pub.publicUrl);
       setAvatarKey(key);
     } catch (err) {
       console.error(err);
-      alert((err as Error).message ?? "Upload failed");
+      notifications.show({
+        color: "red",
+        title: "Upload failed",
+        message: (err as Error).message ?? "Upload failed",
+      });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -197,15 +285,18 @@ function EditProfilePage() {
       const newImages: Array<ProfileImage & { tempId?: string }> = [];
 
       for (const file of files) {
-        const ext = file.name.split(".").pop() || "jpg";
+        // Compress image before upload
+        const compressedFile = await compressImage(file, 1920, 1920, 0.8);
+        
+        const ext = compressedFile.name.split(".").pop() || "jpg";
         const key = `users/${userId || "anon"}/profile-images/${userId}-${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
 
-        // Upload file
+        // Upload compressed file
         const { error: uploadErr } = await supabase.storage
           .from(BUCKET)
-          .upload(key, file, {
+          .upload(key, compressedFile, {
             upsert: false,
-            contentType: file.type,
+            contentType: compressedFile.type,
             cacheControl: "3600",
           });
 
@@ -259,19 +350,42 @@ function EditProfilePage() {
     if (!data?.user.id) return;
 
     // Validate required fields
-    if (
-      !username.trim() ||
-      !name.trim() ||
-      !lastname.trim() ||
-      !gender ||
-      !birthday ||
-      !status
-    ) {
+    if (!username.trim()) {
       setShowConfirmModal(false);
       notifications.show({
         color: "red",
         title: "Error",
-        message: "Please complete all data",
+        message: "Username is required",
+      });
+      return;
+    }
+
+    if (usernameAvailable === false) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: "red",
+        title: "Error",
+        message: "Username is already taken. Please choose another.",
+      });
+      return;
+    }
+
+    if (!gender) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: "red",
+        title: "Error",
+        message: "Gender is required",
+      });
+      return;
+    }
+
+    if (!birthday) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: "red",
+        title: "Error",
+        message: "Date of birth is required",
       });
       return;
     }
@@ -282,16 +396,16 @@ function EditProfilePage() {
     try {
       const profileData = {
         username,
-        name,
+        name: fullName,
         lastname,
         gender,
         birthday,
-        relationShipStatus: status,
-        bio,
-        phone,
-        lineId,
-        height,
-        weight,
+        bio: bio || null,
+        lineId: lineId || null,
+        height: height || null,
+        weight: weight || null,
+        email: email || null,
+        password: password || null,
       };
 
       await updateUserProfile(data.user.id, {
@@ -316,16 +430,36 @@ function EditProfilePage() {
         title: "Success",
         message: "Profile saved successfully",
       });
+
+      // Refresh profile data
+      const updatedProfile = await getUserProfile(data.user.id);
+      setUpdatedAt(updatedProfile.updatedAt ?? null);
     } catch (err) {
       console.error("Error saving profile:", err);
       notifications.show({
         color: "red",
         title: "Error",
-        message: "Please complete all data",
+        message: (err as Error).message ?? "Failed to save profile",
       });
     } finally {
       setSaving(false);
     }
+  };
+
+  const getStatusLabel = (status: "ACTIVE" | "INACTIVE" | "SUSPENDED") => {
+    const labels = {
+      ACTIVE: "การใช้งานปกติ",
+      INACTIVE: "ไม่มีการใช้งาน",
+      SUSPENDED: "พักการใช้งานชั่วคราว",
+    };
+    return labels[status];
+  };
+
+  const getVerificationStatusLabel = () => {
+    if (isVerified) {
+      return "ยืนยันตัวตนแล้ว";
+    }
+    return "รอยืนยันตัวตน";
   };
 
   return (
@@ -347,11 +481,11 @@ function EditProfilePage() {
         }}
       >
         <Group h={rem(TOP_NAVBAR_HEIGHT_PX)} px="md" justify="space-between">
-          <Text c="white" onClick={() => router.back()}>
+          <Text c="white" onClick={() => router.back()} style={{ cursor: "pointer" }}>
             ← Back
           </Text>
           <Text c="white" fw={600}>
-            Edit Profile
+            แก้ไขข้อมูลส่วนตัว
           </Text>
           <Text
             c="gold.5"
@@ -359,13 +493,14 @@ function EditProfilePage() {
             onClick={handleSaveClick}
             style={{ cursor: "pointer" }}
           >
-            Save
+            บันทึก
           </Text>
         </Group>
       </Box>
 
       <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <Stack gap="lg" pb="xl">
+          {/* Profile Image */}
           <Box style={{ display: "grid", placeItems: "center" }}>
             <Box
               style={{
@@ -417,7 +552,6 @@ function EditProfilePage() {
                 <CameraIcon />
               </ThemeIcon>
 
-              {/* Hidden file input */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -428,26 +562,120 @@ function EditProfilePage() {
             </Box>
           </Box>
 
+          {/* Status Display */}
+          <Group gap="sm" justify="center">
+            <Badge
+              color={
+                userStatus === "ACTIVE"
+                  ? "green"
+                  : userStatus === "SUSPENDED"
+                  ? "red"
+                  : "gray"
+              }
+              variant="light"
+            >
+              {getStatusLabel(userStatus)}
+            </Badge>
+            <Badge
+              color={isVerified ? "blue" : "yellow"}
+              variant="light"
+            >
+              {getVerificationStatusLabel()}
+            </Badge>
+          </Group>
+
+          {/* Last Updated */}
+          {updatedAt && (
+            <Text c="dimmed" fz="xs" ta="center">
+              แก้ไขล่าสุด: {format(new Date(updatedAt), "dd/MM/yyyy HH:mm")}
+            </Text>
+          )}
+
+          {/* Required Fields Section */}
           <Stack gap="sm">
-            <Text fw={700}>Public profile</Text>
+            <Text fw={700}>ข้อมูลส่วนตัว *</Text>
+            
+            {/* Full Name - Read Only */}
             <TextInput
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.currentTarget.value)}
-            />
-            <TextInput
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.currentTarget.value)}
-            />
-            <TextInput
-              placeholder="Lastname"
-              value={lastname}
-              onChange={(e) => setLastname(e.currentTarget.value)}
+              label="ชื่อ-นามสกุล"
+              placeholder="ชื่อ-นามสกุล"
+              value={`${fullName} ${lastname || ""}`.trim()}
+              readOnly
+              disabled
+              styles={{
+                input: {
+                  backgroundColor: "var(--mantine-color-dark-7)",
+                  cursor: "not-allowed",
+                },
+              }}
             />
 
+            {/* Username - Editable */}
+            <TextInput
+              label="ชื่อผู้ใช้ *"
+              placeholder="ชื่อผู้ใช้"
+              value={username}
+              onChange={(e) => setUsername(e.currentTarget.value)}
+              error={
+                usernameAvailable === false
+                  ? "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว"
+                  : checkingUsername
+                  ? "กำลังตรวจสอบ..."
+                  : null
+              }
+              rightSection={
+                usernameAvailable === true ? (
+                  <Text c="green" fz="xs">✓</Text>
+                ) : usernameAvailable === false ? (
+                  <Text c="red" fz="xs">✗</Text>
+                ) : null
+              }
+            />
+
+            {/* Phone - Read Only */}
+            <TextInput
+              label="เบอร์ *"
+              placeholder="เบอร์"
+              value={phone}
+              readOnly
+              disabled
+              styles={{
+                input: {
+                  backgroundColor: "var(--mantine-color-dark-7)",
+                  cursor: "not-allowed",
+                },
+              }}
+            />
+
+            {/* Email - Editable */}
+            <TextInput
+              label="Email"
+              placeholder="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.currentTarget.value)}
+            />
+
+            {/* Password - Editable */}
+            <PasswordInput
+              label="Password"
+              placeholder="Leave blank to keep current password"
+              value={password}
+              onChange={(e) => setPassword(e.currentTarget.value)}
+            />
+
+            {/* Line ID - Editable */}
+            <TextInput
+              label="Line ID"
+              placeholder="Line ID"
+              value={lineId}
+              onChange={(e) => setLineId(e.currentTarget.value)}
+            />
+
+            {/* Gender - Dropdown */}
             <Select
-              placeholder="Gender"
+              label="เพศ *"
+              placeholder="เลือกเพศ"
               data={["Male", "Female", "Other"]}
               value={gender}
               onChange={setGender}
@@ -455,70 +683,57 @@ function EditProfilePage() {
               comboboxProps={{ withinPortal: true }}
             />
 
-            <DateInput
-              placeholder="Birthday"
-              valueFormat="MMM DD, YYYY"
-              variant="filled"
-              value={birthday}
-              onChange={setBirthday}
-              rightSection={<CalendarIcon />}
-            />
-
-            <Select
-              placeholder="Status"
-              data={["Single", "In a relationship", "Married"]}
-              value={status}
-              onChange={setStatus}
-              rightSection={<Text>›</Text>}
-              comboboxProps={{ withinPortal: true }}
-            />
-
+            {/* Date of Birth with Age Display */}
             <Box>
-              <Textarea
-                placeholder="Bio"
-                autosize
-                minRows={5}
-                maxRows={6}
-                value={bio}
-                onChange={(e) =>
-                  setBio(e.currentTarget.value.slice(0, BIO_LIMIT))
-                }
+              <DateInput
+                label="วันเกิด *"
+                placeholder="เลือกวันเกิด"
+                valueFormat="DD/MM/YYYY"
+                variant="filled"
+                value={birthday}
+                onChange={(value) => setBirthday(value)}
+                rightSection={<CalendarIcon />}
               />
-              <Text fz="xs" c="dimmed" ta="right">
-                {bio.length}/{BIO_LIMIT}
-              </Text>
+              {age !== null && (
+                <Text fz="xs" c="dimmed" mt="xs">
+                  อายุ: {age} ปี
+                </Text>
+              )}
             </Box>
-          </Stack>
 
-          {/* Private details section */}
-          <Stack gap="sm">
-            <Text fw={700}>Private details</Text>
+            {/* Height */}
             <TextInput
-              placeholder="Phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.currentTarget.value)}
-            />
-            <TextInput
-              placeholder="Line ID"
-              value={lineId}
-              onChange={(e) => setLineId(e.currentTarget.value)}
-            />
-            <TextInput
-              placeholder="Height"
+              label="ส่วนสูง"
+              placeholder="ส่วนสูง"
               rightSection={<Text c="dimmed">cm</Text>}
               value={height}
               onChange={(e) => setHeight(e.currentTarget.value)}
             />
+
+            {/* Weight */}
             <TextInput
-              placeholder="Weight"
+              label="น้ำหนัก"
+              placeholder="น้ำหนัก"
               rightSection={<Text c="dimmed">kg</Text>}
               value={weight}
               onChange={(e) => setWeight(e.currentTarget.value)}
             />
+
+            {/* Bio - Long text with emoji support */}
+            <Box>
+              <Textarea
+                label="Bio"
+                placeholder="เขียนเกี่ยวกับตัวคุณ (รองรับ emoji)"
+                autosize
+                minRows={5}
+                maxRows={10}
+                value={bio}
+                onChange={(e) => setBio(e.currentTarget.value)}
+              />
+            </Box>
           </Stack>
 
-          {/* Image upload section */}
+          {/* Profile Images Section */}
           <Stack gap="sm">
             <Text fw={700} c="red">
               เพิ่มรูปภาพ สูงสุด 5 ภาพ
@@ -605,21 +820,21 @@ function EditProfilePage() {
       <Modal
         opened={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
-        title="Confirm Save"
+        title="ยืนยันการบันทึก"
         centered
       >
         <Stack gap="md">
-          <Text>Are you sure you want to save these changes?</Text>
+          <Text>คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่?</Text>
           <Group justify="flex-end" gap="sm">
             <Button
               variant="subtle"
               onClick={() => setShowConfirmModal(false)}
               disabled={saving}
             >
-              Cancel
+              ยกเลิก
             </Button>
             <Button onClick={handleConfirmSave} loading={saving}>
-              Save
+              บันทึก
             </Button>
           </Group>
         </Stack>

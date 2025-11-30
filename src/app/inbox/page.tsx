@@ -11,6 +11,7 @@ import {
 } from "@/components/element/TopNavbar";
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
 // Using a simple refresh icon from Mantine
+import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
 import { messageService } from "@/services/supabase/messages";
 import { userService } from "@/services/supabase/users";
 import {
@@ -438,6 +439,7 @@ function InboxPage() {
 
   return (
     <Box>
+      <SuspendedUserRedirect />
       <TopNavbar
         title="Inbox"
         rightSlot={

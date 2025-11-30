@@ -10,6 +10,7 @@ import {
   TopNavbar,
 } from '@/components/element/TopNavbar';
 import { MoreOptionsIcon } from '@/components/icons/MoreOptionsIcon';
+import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { messageService } from '@/services/supabase/messages';
 import {
@@ -135,6 +136,7 @@ export default function ChatPage() {
   if (status === 'loading' || loading) {
     return (
       <Box>
+        <SuspendedUserRedirect />
         <TopNavbar
           title={chatInfo.name || 'Chat'}
           showBack
@@ -165,6 +167,7 @@ export default function ChatPage() {
   if (error) {
     return (
       <Box>
+        <SuspendedUserRedirect />
         <TopNavbar
           title={chatInfo.name || 'Chat'}
           showBack
@@ -205,6 +208,7 @@ export default function ChatPage() {
 
   return (
     <Box>
+      <SuspendedUserRedirect />
       <TopNavbar
         title={chatInfo.name || 'Chat'}
         showBack

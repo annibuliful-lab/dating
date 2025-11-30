@@ -9,6 +9,7 @@ import {
   TopNavbar,
 } from "@/components/element/TopNavbar";
 import { CameraIcon } from "@/components/icons/CameraIcon";
+import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
 import { compressImage } from "@/lib/image-compression";
 import { mediaService } from "@/services/supabase/media";
 import { postService } from "@/services/supabase/posts";
@@ -189,6 +190,7 @@ function CreatePostPage() {
   if (status === "loading") {
     return (
       <Box>
+        <SuspendedUserRedirect />
         <TopNavbar title="Create post" showBack />
         <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Text>Loading...</Text>
@@ -204,6 +206,7 @@ function CreatePostPage() {
 
   return (
     <Box>
+      <SuspendedUserRedirect />
       <TopNavbar
         title="Create post"
         showBack

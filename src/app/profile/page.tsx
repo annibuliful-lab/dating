@@ -5,6 +5,7 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from '@/components/element/TopNavbar';
+import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
@@ -57,6 +58,7 @@ function ProfilePage() {
 
   return (
     <Box>
+      <SuspendedUserRedirect />
       <TopNavbar title="Profile" />
       <Container
         size="xs"

@@ -60,19 +60,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async redirect({ baseUrl }) {
-      return baseUrl;
+    async redirect({ url, baseUrl }) {
+      // Redirect to feed page after login
+      if (url.startsWith(baseUrl)) {
+        // If it's a callback URL, redirect to feed (new users will be handled in session callback)
+        if (url.includes('/api/auth/callback')) {
+          return `${baseUrl}/feed`;
+        }
+        return url;
+      }
+      return `${baseUrl}/feed`;
     },
     async signIn({ account, user }) {
       console.log('aaaaa', account, user);
       try {
-        await upsertUserAccount({
+        const result = await upsertUserAccount({
           type: 'oauth',
           provider: account?.provider as string,
           providerAccountId: account?.providerAccountId as string,
           email: user.email as string,
           idToken: account?.access_token as string,
         });
+
+        // Store isNewUser flag in account for JWT callback
+        if (account && result.isNewUser) {
+          (account as any).isNewUser = true;
+          (account as any).userId = result.userId;
+        }
 
         return true;
       } catch (err) {
@@ -93,6 +107,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (userId) {
         session.user.id = userId;
       }
+      
+      // Store isNewUser in session for redirect logic
+      if (token.isNewUser) {
+        (session as any).isNewUser = true;
+        (session as any).newUserId = token.newUserId;
+      }
 
       return session;
     },
@@ -111,6 +131,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (trigger === 'signIn' && account) {
         token.provider = account.provider;
         token.providerAccountId = account.providerAccountId;
+        
+        // Store if this is a new user for redirect logic
+        if ((account as any).isNewUser) {
+          token.isNewUser = true;
+          token.newUserId = (account as any).userId;
+        }
 
         // Provider-specific handling
         if (account.provider === 'google') {
@@ -136,7 +162,7 @@ type UpsertUserAccountParams = {
   idToken: string;
 };
 
-async function upsertUserAccount(params: UpsertUserAccountParams) {
+async function upsertUserAccount(params: UpsertUserAccountParams): Promise<{ userId: string; isNewUser: boolean } | null> {
   const { data: oAuthAccount, error: oAuthAccountError } =
     await supabase
       .from('OAuthAccount')
@@ -150,15 +176,20 @@ async function upsertUserAccount(params: UpsertUserAccountParams) {
     error: oAuthAccountError,
   });
 
+  // If user already exists, return their userId (not a new user)
   if (oAuthAccount !== null) {
-    return oAuthAccount.userId;
+    return { userId: oAuthAccount.userId, isNewUser: false };
   }
 
+  // Create new user with proper status
+  const userId = v7();
   const { data: user, error: insertedUserError } = await supabase
     .from('User')
-    .upsert({
-      id: v7(),
+    .insert({
+      id: userId,
       fullName: '',
+      status: 'ACTIVE', // User status: Active (ปกติใช้งาน)
+      isVerified: false, // Verify status: Under review (รอยืนยันตัวตน)
       updatedAt: new Date().toUTCString(),
       username: v7(),
     })
@@ -170,8 +201,9 @@ async function upsertUserAccount(params: UpsertUserAccountParams) {
     error: insertedUserError,
   });
 
-  if (user === null) {
-    return;
+  if (user === null || insertedUserError) {
+    console.error('Failed to create user:', insertedUserError);
+    return null;
   }
 
   const {
@@ -190,7 +222,7 @@ async function upsertUserAccount(params: UpsertUserAccountParams) {
     error: insertedOAuthAccountError,
   });
 
-  return user.id;
+  return { userId: user.id, isNewUser: true };
 }
 
 async function getUserIdByProviderAccountId(

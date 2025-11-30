@@ -2,7 +2,6 @@
 
 import { PasswordChecklist } from '@/components/element/PasswordChecklist';
 import { ActiveCheckCircle } from '@/components/icons/CheckCircle';
-import { GoogleSignIn } from '@/components/social-button/GoogleSignIn';
 import { LineSignIn } from '@/components/social-button/LineSignIn';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { isValidEmail } from '@/shared/validation';
@@ -17,6 +16,7 @@ import {
   Box,
   Container,
   rem,
+  SegmentedControl,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import Link from 'next/link';
@@ -42,21 +42,25 @@ const passwordValidations = [
   },
 ];
 
+type RegistrationMethod = 'email' | 'line';
+
 export default function SignupPage() {
   const router = useRouter();
+  const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>('email');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const { mutate, loading } = useApiMutation('/api/auth/register', {
-    onCompleted: async () => {
+    onCompleted: async (data) => {
       notifications.show({
         title: 'Sign up',
         message: 'Sign up successfully',
         autoClose: 5000,
       });
 
-      await router.push('/signin');
+      // Redirect to post-registration screen
+      await router.push(`/signup/verify?userId=${data?.data?.user?.[0]?.id || ''}`);
     },
     onError: () => {
       notifications.show({
@@ -96,72 +100,87 @@ export default function SignupPage() {
           Sign up for Amorisloki
         </Text>
         <Text size="sm" c="dimmed">
-          Lorem
+          เลือกช่องทางสมัครสมาชิก
         </Text>
 
-        <LineSignIn />
-
-        <GoogleSignIn />
-
-        <Group justify="center" gap="xs">
-          <Divider w="40%" color="gray" />
-          <Text size="xs" c="dimmed">
-            or
-          </Text>
-          <Divider w="40%" color="gray" />
-        </Group>
-
-        <TextInput
-          placeholder="Email"
-          radius="md"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="off"
-          rightSection={isEmailValid && <ActiveCheckCircle />}
-          styles={{
-            input: {
-              backgroundColor: '#131313',
-              borderColor: '#333',
-              color: 'white',
-              height: '50px',
-            },
-          }}
-        />
-
-        <PasswordInput
-          placeholder="Password"
-          radius="md"
-          visible={showPassword}
-          onVisibilityChange={setShowPassword}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="off"
-          styles={{
-            input: {
-              backgroundColor: '#131313',
-              borderColor: '#333',
-              color: 'white',
-              height: '50px',
-            },
-          }}
-        />
-
-        {isEmailValid && (
-          <PasswordChecklist
-            password={password}
-            validations={passwordValidations}
-          />
-        )}
-
-        <Button
+        <SegmentedControl
+          value={registrationMethod}
+          onChange={(value) => setRegistrationMethod(value as RegistrationMethod)}
+          data={[
+            { label: 'Email/Password', value: 'email' },
+            { label: 'Line', value: 'line' },
+          ]}
           fullWidth
-          variant="primary"
-          onClick={handleSignup}
-          loading={loading}
-          disabled={!isPasswordValid}
-        >
-          Create account
-        </Button>
+          styles={{
+            root: {
+              backgroundColor: '#131313',
+            },
+            indicator: {
+              backgroundColor: '#FFD400',
+            },
+            label: {
+              color: 'white',
+            },
+          }}
+        />
+
+        {registrationMethod === 'line' ? (
+          <LineSignIn />
+        ) : (
+          <>
+            <TextInput
+              placeholder="Email"
+              radius="md"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="off"
+              rightSection={isEmailValid && <ActiveCheckCircle />}
+              styles={{
+                input: {
+                  backgroundColor: '#131313',
+                  borderColor: '#333',
+                  color: 'white',
+                  height: '50px',
+                },
+              }}
+            />
+
+            <PasswordInput
+              placeholder="Password"
+              radius="md"
+              visible={showPassword}
+              onVisibilityChange={setShowPassword}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="off"
+              styles={{
+                input: {
+                  backgroundColor: '#131313',
+                  borderColor: '#333',
+                  color: 'white',
+                  height: '50px',
+                },
+              }}
+            />
+
+            {isEmailValid && (
+              <PasswordChecklist
+                password={password}
+                validations={passwordValidations}
+              />
+            )}
+
+            <Button
+              fullWidth
+              variant="primary"
+              onClick={handleSignup}
+              loading={loading}
+              disabled={!isPasswordValid}
+            >
+              Create account
+            </Button>
+          </>
+        )}
 
         <Text size="sm" ta="center" c="dimmed">
           Already have an account?{' '}

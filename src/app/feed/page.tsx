@@ -28,6 +28,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
 
 type Post = {
   id: string;
@@ -217,6 +218,7 @@ function FeedPage() {
 
   return (
     <Box>
+      <NewUserRedirect />
       <TopNavbar title="Feed and Contents" />
       <Container
         size="xs"

@@ -1,7 +1,6 @@
 "use client";
 
 import { supabase } from "@/client/supabase";
-import { GoogleSignIn } from "@/components/social-button/GoogleSignIn";
 import { LineSignIn } from "@/components/social-button/LineSignIn";
 import {
   Button,
@@ -15,6 +14,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,15 +27,31 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const handleClickSignIn = async () => {
     try {
-      await signIn("credentials", {
+      const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       });
-      await router.push("/");
+
+      if (result?.error) {
+        notifications.show({
+          title: "Login failed",
+          message: "Invalid email or password",
+          color: "red",
+          autoClose: 5000,
+        });
+        return;
+      }
+
+      await router.push("/feed");
     } catch (err) {
       console.error("[signin-error]: ", err);
-      throw err;
+      notifications.show({
+        title: "Login failed",
+        message: "An error occurred. Please try again.",
+        color: "red",
+        autoClose: 5000,
+      });
     }
   };
 
@@ -70,11 +86,10 @@ export default function LoginPage() {
           Log in for Amorisloki
         </Text>
         <Text size="sm" c="dimmed">
-          Lorem
+          เข้าสู่ระบบด้วยช่องทางที่สมัครมาเท่านั้น
         </Text>
 
         <LineSignIn />
-        <GoogleSignIn />
 
         <Group justify="center" gap="xs">
           <Divider w="40%" color="gray" />

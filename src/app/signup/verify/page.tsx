@@ -3,15 +3,30 @@
 import {
   Button,
   Container,
-  Image,
   Stack,
   Text,
+  Box,
   rem,
+  Image,
 } from '@mantine/core';
-import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { LineIcon } from '@/components/icons/LineIcon';
 
 export default function VerifyPage() {
-  const email = 'Saiparnbrave@gmail.com'; // You can make this dynamic via props or query param
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const userId = searchParams.get('userId');
+
+  const handleSkip = () => {
+    // Redirect to feed page
+    router.push('/feed');
+  };
+
+  const handleAddLineOA = () => {
+    // TODO: Implement Line OA verification flow
+    // For now, redirect to feed
+    router.push('/feed');
+  };
 
   return (
     <Container
@@ -19,75 +34,65 @@ export default function VerifyPage() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: rem(812), // iPhone 11
+        height: rem(812),
         maxWidth: rem(375),
         justifyContent: 'center',
-        alignItems: 'center',
       }}
     >
-      <Stack align="center" gap="md" style={{ textAlign: 'center' }}>
-        <Image
-          alt="logo"
-          src="https://wcjxna7kg9rqnf7r.public.blob.vercel-storage.com/logo-2x-6vUw1zeoJsGT5rwcsDrOx81nk6NtHm.png"
-          fit="contain"
-          w={rem(250)}
-          style={{ display: 'block', margin: 'auto' }}
-        />
-
-        <Text size="xl" fw={700} mt="md">
-          Check your email
-        </Text>
-
-        <Text size="sm" c="dimmed" px="sm">
-          We’ve sent a reset link to{' '}
-          <Text component="span" c="yellow" fw={600}>
-            {email}
-          </Text>{' '}
-          (if it’s linked to an account).
-        </Text>
-
-        <Text size="sm" c="dimmed">
-          Check spam or{' '}
-          <Text
-            component="button"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'white',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              padding: 0,
-              fontSize: rem(14),
-            }}
-            onClick={() => {
-              // TODO: handle resend logic
-              alert('Resend link');
-            }}
-          >
-            Click to resend
-          </Text>
-        </Text>
-
-        <Button
-          mt="md"
-          radius="md"
-          fullWidth
-          component={Link}
-          href="/signin"
-          styles={{
-            root: {
-              backgroundColor: '#2B2B2B',
-              color: 'white',
-              justifyContent: 'center',
-              border: `${rem(1)} solid #3A3A3A`,
-              '&:hover': {
-                backgroundColor: '#3A3A3A',
-              },
-            },
+      <Stack gap="xl" align="center">
+        <Box
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: rem(120),
+            height: rem(120),
+            borderRadius: '50%',
+            backgroundColor: '#131313',
+            border: '2px solid #FFD400',
           }}
         >
-          Back to login
-        </Button>
+          <LineIcon />
+        </Box>
+
+        <Stack gap="md" align="center">
+          <Text size="xl" fw={700} ta="center">
+            เพิ่ม Line OA เพื่อยืนยันตัวตน
+          </Text>
+          <Text size="sm" c="dimmed" ta="center">
+            เพื่อความปลอดภัยและความน่าเชื่อถือ กรุณาเพิ่ม Line OA
+            เพื่อยืนยันตัวตนของคุณ
+          </Text>
+        </Stack>
+
+        <Stack gap="md" w="100%">
+          <Button
+            fullWidth
+            variant="primary"
+            leftSection={<LineIcon />}
+            onClick={handleAddLineOA}
+          >
+            เพิ่ม Line OA
+          </Button>
+
+          <Button
+            fullWidth
+            variant="subtle"
+            onClick={handleSkip}
+            styles={{
+              root: {
+                color: 'white',
+              },
+            }}
+          >
+            ข้าม
+          </Button>
+        </Stack>
+
+        <Text size="xs" c="dimmed" ta="center">
+          หากข้าม คุณสามารถใช้งานได้ แต่จะไม่มีเครื่องหมาย verify
+          และสถานะจะยังเป็นรอยืนยันตัวตน
+        </Text>
       </Stack>
     </Container>
   );

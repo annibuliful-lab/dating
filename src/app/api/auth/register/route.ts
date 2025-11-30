@@ -14,6 +14,8 @@ export async function POST(request: Request) {
       username,
       passwordHash: password,
       fullName: v7(),
+      status: 'ACTIVE', // User status: Active (ปกติใช้งาน)
+      isVerified: false, // Verify status: Under review (รอยืนยันตัวตน)
       updatedAt: new Date().toUTCString(),
     })
     .select('*');

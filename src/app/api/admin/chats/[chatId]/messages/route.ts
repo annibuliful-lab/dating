@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * GET /api/admin/chats/[chatId]/messages
- * Get all messages in a group chat (admin can always see group chat messages)
+ * Get all messages in any chat (admin can see all chat messages)
  */
 export async function GET(
   req: NextRequest,
@@ -16,15 +16,7 @@ export async function GET(
 
     const { chatId } = await params;
 
-    // Verify it's a group chat
-    const chatInfo = await messageService.getChatInfo(chatId);
-    if (!chatInfo.isGroup) {
-      return NextResponse.json(
-        { error: "This endpoint is only for group chats" },
-        { status: 400 }
-      );
-    }
-
+    // Admin can see messages in all chats (both direct and group)
     // Get all messages
     const messages = await messageService.getChatMessages(chatId, 100, 0);
 

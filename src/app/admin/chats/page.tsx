@@ -15,6 +15,7 @@ import {
   Modal,
   rem,
   ScrollArea,
+  SegmentedControl,
   Stack,
   Text,
   TextInput,
@@ -37,7 +38,7 @@ type ChatParticipant = {
   };
 };
 
-type GroupChat = {
+type Chat = {
   id: string;
   name: string | null;
   isGroup: boolean;
@@ -62,9 +63,10 @@ type GroupChat = {
 export default function AdminChatsPage() {
   const router = useRouter();
   const { status } = useSession();
-  const [chats, setChats] = useState<GroupChat[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedChat, setSelectedChat] = useState<GroupChat | null>(null);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [filterType, setFilterType] = useState<"all" | "group" | "direct">("all");
   const [modalOpened, setModalOpened] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -259,14 +261,54 @@ export default function AdminChatsPage() {
     <Box>
       <TopNavbar title="จัดการแชท" showBack />
       <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
-        <ScrollArea h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + 100)})`}>
+        <Stack gap="md" mb="md">
+          <SegmentedControl
+            value={filterType}
+            onChange={(value) => setFilterType(value as "all" | "group" | "direct")}
+            data={[
+              { label: "ทั้งหมด", value: "all" },
+              { label: "แชทกลุ่ม", value: "group" },
+              { label: "แชทเดี่ยว", value: "direct" },
+            ]}
+            fullWidth
+            styles={{
+              root: { backgroundColor: "#1a1a1a" },
+            }}
+          />
+        </Stack>
+        <ScrollArea h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + 160)})`}>
           <Stack gap="md" pb="xl">
-            {chats.length === 0 ? (
-              <Text c="dimmed" ta="center" py="xl">
-                ไม่มีแชทกลุ่ม
-              </Text>
-            ) : (
-              chats.map((chat) => (
+            {(() => {
+              const filteredChats = chats.filter((chat) => {
+                if (filterType === "all") return true;
+                if (filterType === "group") return chat.isGroup;
+                if (filterType === "direct") return !chat.isGroup;
+                return true;
+              });
+
+              if (filteredChats.length === 0) {
+                return (
+                  <Text c="dimmed" ta="center" py="xl">
+                    {filterType === "all"
+                      ? "ไม่มีแชท"
+                      : filterType === "group"
+                      ? "ไม่มีแชทกลุ่ม"
+                      : "ไม่มีแชทเดี่ยว"}
+                  </Text>
+                );
+              }
+
+              return filteredChats.map((chat) => {
+                // For direct chats, show participant names
+                let chatDisplayName = chat.name;
+                if (!chat.isGroup && !chat.name) {
+                  const participantNames = chat.ChatParticipant.map(
+                    (p) => p.User.fullName || p.User.username
+                  ).join(", ");
+                  chatDisplayName = participantNames || "แชทเดี่ยว";
+                }
+
+                return (
                 <Card
                   key={chat.id}
                   padding="md"
@@ -280,9 +322,18 @@ export default function AdminChatsPage() {
                 >
                   <Stack gap="xs">
                     <Group justify="space-between">
-                      <Text fw={600} size="lg" c="white">
-                        {chat.name || "ไม่มีชื่อ"}
-                      </Text>
+                      <Group gap="xs">
+                        <Text fw={600} size="lg" c="white">
+                          {chatDisplayName}
+                        </Text>
+                        <Badge
+                          size="sm"
+                          color={chat.isGroup ? "blue" : "gray"}
+                          variant="light"
+                        >
+                          {chat.isGroup ? "แชทกลุ่ม" : "แชทเดี่ยว"}
+                        </Badge>
+                      </Group>
                       <Badge color="blue" variant="light">
                         {chat.ChatParticipant.length} คน
                       </Badge>
@@ -296,10 +347,11 @@ export default function AdminChatsPage() {
                     <Text size="xs" c="dimmed">
                       สร้างเมื่อ: {formatDate(chat.createdAt)}
                     </Text>
-                  </Stack>
+                    </Stack>
                 </Card>
-              ))
-            )}
+                );
+              });
+            })()}
           </Stack>
         </ScrollArea>
       </Container>
@@ -325,23 +377,25 @@ export default function AdminChatsPage() {
             <Text fw={600} c="white">
               สมาชิก ({selectedChat?.ChatParticipant.length || 0} คน)
             </Text>
-            <Group gap="xs">
-              <Button
-                size="xs"
-                variant="light"
-                onClick={() => setAddUserModalOpened(true)}
-              >
-                เพิ่มผู้ใช้
-              </Button>
-              <Button
-                size="xs"
-                variant="light"
-                color="red"
-                onClick={() => setRemoveUserModalOpened(true)}
-              >
-                ลบผู้ใช้
-              </Button>
-            </Group>
+            {selectedChat?.isGroup && (
+              <Group gap="xs">
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={() => setAddUserModalOpened(true)}
+                >
+                  เพิ่มผู้ใช้
+                </Button>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="red"
+                  onClick={() => setRemoveUserModalOpened(true)}
+                >
+                  ลบผู้ใช้
+                </Button>
+              </Group>
+            )}
           </Group>
 
           <ScrollArea h={300}>

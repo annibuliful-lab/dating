@@ -25,11 +25,11 @@ export async function POST(
       );
     }
 
-    // Verify it's a group chat
+    // Verify it's a group chat (can only add members to group chats)
     const chatInfo = await messageService.getChatInfo(chatId);
     if (!chatInfo.isGroup) {
       return NextResponse.json(
-        { error: "This endpoint is only for group chats" },
+        { error: "Can only add members to group chats" },
         { status: 400 }
       );
     }

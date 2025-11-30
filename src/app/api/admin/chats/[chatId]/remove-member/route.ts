@@ -25,11 +25,11 @@ export async function DELETE(
       );
     }
 
-    // Verify it's a group chat
+    // Verify it's a group chat (can only remove members from group chats)
     const chatInfo = await messageService.getChatInfo(chatId);
     if (!chatInfo.isGroup) {
       return NextResponse.json(
-        { error: "This endpoint is only for group chats" },
+        { error: "Can only remove members from group chats" },
         { status: 400 }
       );
     }

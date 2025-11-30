@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * GET /api/admin/chats
- * Get all group chats for admin management
+ * Get all chats (both direct and group chats) for admin management
  */
 export async function GET(req: NextRequest) {
   try {
@@ -40,7 +40,6 @@ export async function GET(req: NextRequest) {
         )
       `
       )
-      .eq("isGroup", true)
       .order("createdAt", { ascending: false });
 
     if (error) {

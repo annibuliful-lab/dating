@@ -1,7 +1,7 @@
-import { auth } from '@/auth';
-import { supabase } from '@/client/supabase';
-import { messageService } from '@/services/supabase/messages';
-import { NextRequest, NextResponse } from 'next/server';
+import { auth } from "@/auth";
+import { supabase } from "@/client/supabase";
+import { messageService } from "@/services/supabase/messages";
+import { NextRequest, NextResponse } from "next/server";
 
 type RouteParams = { chatId: string };
 
@@ -13,17 +13,14 @@ export async function POST(
     const session = await auth();
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { userId } = await request.json();
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: "User ID is required" },
         { status: 400 }
       );
     }
@@ -37,7 +34,7 @@ export async function POST(
 
     if (!isParticipant) {
       return NextResponse.json(
-        { error: 'You are not a participant in this chat' },
+        { error: "You are not a participant in this chat" },
         { status: 403 }
       );
     }
@@ -50,25 +47,43 @@ export async function POST(
 
     if (isAlreadyParticipant) {
       return NextResponse.json(
-        { error: 'User is already in this chat' },
+        { error: "User is already in this chat" },
         { status: 400 }
       );
     }
 
     // Get current participants count
-    const currentParticipants =
-      await messageService.getChatParticipants(chatId);
+    const currentParticipants = await messageService.getChatParticipants(
+      chatId
+    );
 
     // If there are 2 participants and we're adding a third, convert to group chat
     if (currentParticipants.length === 2) {
       const { error: updateError } = await supabase
-        .from('Chat')
+        .from("Chat")
         .update({ isGroup: true })
-        .eq('id', chatId);
+        .eq("id", chatId);
 
       if (updateError) {
-        console.error('Error converting chat to group:', updateError);
+        console.error("Error converting chat to group:", updateError);
         // Continue anyway, as this is not critical
+      }
+
+      // When converting to group chat, ensure admin is added
+      const { data: adminUser } = await supabase
+        .from("User")
+        .select("id")
+        .eq("isAdmin", true)
+        .limit(1)
+        .single();
+
+      if (adminUser) {
+        const isAdminInChat = currentParticipants.some(
+          (p) => p.userId === adminUser.id
+        );
+        if (!isAdminInChat) {
+          await messageService.addChatParticipant(chatId, adminUser.id, true);
+        }
       }
     }
 
@@ -79,14 +94,11 @@ export async function POST(
       false
     );
 
-    return NextResponse.json(
-      { success: true, participant },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true, participant }, { status: 200 });
   } catch (error) {
-    console.error('Error inviting user to chat:', error);
+    console.error("Error inviting user to chat:", error);
     return NextResponse.json(
-      { error: 'Failed to invite user' },
+      { error: "Failed to invite user" },
       { status: 500 }
     );
   }

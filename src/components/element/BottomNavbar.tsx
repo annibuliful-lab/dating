@@ -1,16 +1,36 @@
+"use client";
+
 import { HomeIcon } from "@/components/icons/HomeIcon";
 import { InboxIcon } from "@/components/icons/InboxIcon";
 import { ProfileIcon } from "@/components/icons/ProfileIcon";
+import { UserStatusIcon } from "@/components/icons/UserStatusIcon";
 import { ActionIcon, Box, Group, Text, rem } from "@mantine/core";
 import { usePathname, useRouter } from "next/navigation";
 import { CreatePostIcon } from "../icons/CreatePostIcon";
+import { useEffect, useState } from "react";
 
 export const BOTTOM_NAVBAR_HEIGHT_PX = 72;
 
 export function BottomNavbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
   const isActive = (href: string) => pathname === href;
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const response = await fetch("/api/admin/check");
+        if (response.ok) {
+          const data = await response.json();
+          setIsAdmin(data.isAdmin);
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+      }
+    };
+    checkAdminStatus();
+  }, []);
 
   const navItems = [
     {
@@ -30,6 +50,21 @@ export function BottomNavbar() {
       icon: <InboxIcon color={isActive("/inbox") ? "#FFFFFF" : "#989898"} />,
       href: "/inbox",
     },
+    ...(isAdmin
+      ? [
+          {
+            label: "User Status",
+            icon: (
+              <UserStatusIcon
+                color={
+                  isActive("/admin/users") ? "#FFFFFF" : "#989898"
+                }
+              />
+            ),
+            href: "/admin/users",
+          },
+        ]
+      : []),
     {
       label: "Profile",
       icon: (

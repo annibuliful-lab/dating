@@ -1,21 +1,18 @@
 "use client";
 
 import { TopNavbar, TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
-import { BUCKET_NAME, supabase } from "@/client/supabase";
+import { BottomNavbar, BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import {
-  Avatar,
-  Badge,
   Box,
   Button,
-  Card,
   Container,
   Group,
   Loader,
-  Modal,
   rem,
   ScrollArea,
   Select,
   Stack,
+  Table,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -23,6 +20,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { notifications } from "@mantine/notifications";
+import { IconSearch } from "@tabler/icons-react";
 
 type User = {
   id: string;
@@ -41,22 +39,16 @@ type User = {
   updatedAt: string;
 };
 
+type StatusType = "verification" | "usage" | "account";
+
 export default function AdminUsersPage() {
   const router = useRouter();
   const { status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [verificationFilter, setVerificationFilter] = useState<string | null>(
-    null
-  );
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [modalOpened, setModalOpened] = useState(false);
-  const [newStatus, setNewStatus] = useState<string>("");
-  const [newVerificationStatus, setNewVerificationStatus] = useState<boolean>(
-    false
-  );
+  const [statusType, setStatusType] = useState<StatusType>("verification");
+  const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -66,16 +58,13 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, [searchQuery, statusFilter, verificationFilter]);
+  }, [searchQuery]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
-      if (statusFilter) params.append("status", statusFilter);
-      if (verificationFilter !== null)
-        params.append("isVerified", verificationFilter);
 
       const response = await fetch(`/api/admin/users?${params.toString()}`);
       if (!response.ok) {
@@ -99,23 +88,26 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleUpdateStatus = async () => {
-    if (!selectedUser) return;
+  const handleStatusChange = async (userId: string, newValue: string) => {
+    setUpdatingUsers((prev) => new Set(prev).add(userId));
 
     try {
-      const updateData: { status?: string; isVerified?: boolean } = {};
-      if (newStatus) updateData.status = newStatus;
-      if (newVerificationStatus !== selectedUser.isVerified)
-        updateData.isVerified = newVerificationStatus;
+      const user = users.find((u) => u.id === userId);
+      if (!user) return;
 
-      const response = await fetch(
-        `/api/admin/users/${selectedUser.id}/status`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updateData),
-        }
-      );
+      const updateData: { status?: string; isVerified?: boolean } = {};
+
+      if (statusType === "verification") {
+        updateData.isVerified = newValue === "verified";
+      } else if (statusType === "usage") {
+        updateData.status = newValue as "ACTIVE" | "INACTIVE" | "SUSPENDED";
+      }
+
+      const response = await fetch(`/api/admin/users/${userId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
 
       if (!response.ok) {
         const error = await response.json();
@@ -128,8 +120,6 @@ export default function AdminUsersPage() {
         color: "green",
       });
 
-      setModalOpened(false);
-      setSelectedUser(null);
       fetchUsers();
     } catch (error: any) {
       notifications.show({
@@ -137,50 +127,55 @@ export default function AdminUsersPage() {
         message: error.message || "ไม่สามารถอัปเดตสถานะได้",
         color: "red",
       });
+    } finally {
+      setUpdatingUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
     }
   };
 
-  const handleOpenModal = (user: User) => {
-    setSelectedUser(user);
-    setNewStatus(user.status);
-    setNewVerificationStatus(user.isVerified);
-    setModalOpened(true);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "green";
-      case "SUSPENDED":
-        return "red";
-      case "INACTIVE":
-        return "gray";
-      default:
-        return "gray";
+  const getStatusOptions = () => {
+    if (statusType === "verification") {
+      return [
+        { value: "pending", label: "รอยืนยันตัวตน" },
+        { value: "verified", label: "ยืนยันตัวตนแล้ว" },
+      ];
+    } else if (statusType === "usage") {
+      return [
+        { value: "ACTIVE", label: "ใช้งานปกติ" },
+        { value: "INACTIVE", label: "ไม่มีการใช้งาน" },
+        { value: "SUSPENDED", label: "พักการใช้งานชั่วคราว" },
+      ];
     }
+    return [];
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "ใช้งานปกติ";
-      case "SUSPENDED":
-        return "พักการใช้งานชั่วคราว";
-      case "INACTIVE":
-        return "ไม่มีการใช้งาน";
-      default:
-        return status;
+  const getCurrentStatusValue = (user: User) => {
+    if (statusType === "verification") {
+      return user.isVerified ? "verified" : "pending";
+    } else if (statusType === "usage") {
+      return user.status;
     }
+    return "";
   };
 
-  const getVerificationLabel = (isVerified: boolean) => {
-    return isVerified ? "ยืนยันตัวตนแล้ว" : "รอยืนยันตัวตน";
+  const getStatusColor = (value: string) => {
+    if (statusType === "verification") {
+      return value === "verified" ? "green" : "yellow";
+    } else if (statusType === "usage") {
+      if (value === "ACTIVE") return "green";
+      if (value === "SUSPENDED") return "red";
+      return "gray";
+    }
+    return "gray";
   };
 
   if (loading) {
     return (
       <Box>
-        <TopNavbar title="จัดการผู้ใช้" showBack />
+        <TopNavbar title="User Status" showBack />
         <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Group justify="center" py="xl">
             <Loader size="lg" />
@@ -192,182 +187,181 @@ export default function AdminUsersPage() {
 
   return (
     <Box>
-      <TopNavbar title="จัดการผู้ใช้" showBack />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
-        <Stack gap="md" pb="xl">
-          {/* Search and Filters */}
-          <Stack gap="xs">
-            <TextInput
-              placeholder="ค้นหาจากชื่อผู้ใช้, ชื่อ, นามสกุล, เบอร์"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              styles={{
-                input: { backgroundColor: "#131313", borderColor: "#333" },
-              }}
-            />
-            <Group gap="xs">
-              <Select
-                placeholder="สถานะการใช้งาน"
-                value={statusFilter}
-                onChange={setStatusFilter}
-                data={[
-                  { value: "ACTIVE", label: "ใช้งานปกติ" },
-                  { value: "INACTIVE", label: "ไม่มีการใช้งาน" },
-                  { value: "SUSPENDED", label: "พักการใช้งานชั่วคราว" },
-                ]}
-                clearable
-                style={{ flex: 1 }}
-                styles={{
-                  input: { backgroundColor: "#131313", borderColor: "#333" },
-                }}
-              />
-              <Select
-                placeholder="สถานะการยืนยัน"
-                value={verificationFilter}
-                onChange={setVerificationFilter}
-                data={[
-                  { value: "true", label: "ยืนยันตัวตนแล้ว" },
-                  { value: "false", label: "รอยืนยันตัวตน" },
-                ]}
-                clearable
-                style={{ flex: 1 }}
-                styles={{
-                  input: { backgroundColor: "#131313", borderColor: "#333" },
-                }}
-              />
-            </Group>
-          </Stack>
-
-          {/* Users List */}
-          <ScrollArea h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + 200)})`}>
-            <Stack gap="md">
-              {users.length === 0 ? (
-                <Text c="dimmed" ta="center" py="xl">
-                  ไม่พบผู้ใช้
-                </Text>
-              ) : (
-                users.map((user) => (
-                  <Card
-                    key={user.id}
-                    padding="md"
-                    radius="md"
-                    style={{
-                      backgroundColor: "#1a1a1a",
-                      border: "1px solid #333",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => handleOpenModal(user)}
-                  >
-                    <Stack gap="xs">
-                      <Group justify="space-between">
-                        <Text fw={600} size="lg" c="white">
-                          {user.fullName}
-                        </Text>
-                        <Badge
-                          color={getStatusColor(user.status)}
-                          variant="light"
-                        >
-                          {getStatusLabel(user.status)}
-                        </Badge>
-                      </Group>
-                      <Text size="sm" c="dimmed">
-                        @{user.username}
-                      </Text>
-                      {user.phone && (
-                        <Text size="sm" c="dimmed">
-                          เบอร์: {user.phone}
-                        </Text>
-                      )}
-                      <Group gap="xs">
-                        <Badge
-                          color={user.isVerified ? "green" : "yellow"}
-                          variant="light"
-                          size="sm"
-                        >
-                          {getVerificationLabel(user.isVerified)}
-                        </Badge>
-                        {user.verificationType && (
-                          <Badge size="sm" variant="light">
-                            {user.verificationType === "ADMIN"
-                              ? "ยืนยันโดยแอดมิน"
-                              : "ยืนยันเอง"}
-                          </Badge>
-                        )}
-                      </Group>
-                    </Stack>
-                  </Card>
-                ))
-              )}
-            </Stack>
-          </ScrollArea>
-        </Stack>
-      </Container>
-
-      {/* Update Status Modal */}
-      <Modal
-        opened={modalOpened}
-        onClose={() => {
-          setModalOpened(false);
-          setSelectedUser(null);
-        }}
-        title="ปรับสถานะผู้ใช้"
-        styles={{
-          content: { backgroundColor: "#0F0F0F" },
-          header: { backgroundColor: "#0F0F0F" },
-          body: { backgroundColor: "#0F0F0F" },
-        }}
+      <TopNavbar title="User Status" showBack />
+      <Container
+        size="xl"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        pb={rem(BOTTOM_NAVBAR_HEIGHT_PX + 20)}
       >
-        {selectedUser && (
-          <Stack gap="md">
-            <Text size="sm" c="white">
-              ผู้ใช้: {selectedUser.fullName} (@{selectedUser.username})
+        <Group align="flex-start" gap="md">
+          {/* Side Menu */}
+          <Box
+            style={{
+              width: rem(200),
+              backgroundColor: "#1a1a1a",
+              border: "1px solid #333",
+              borderRadius: "8px",
+              padding: rem(16),
+            }}
+          >
+            <Text fw={600} size="lg" c="white" mb="md">
+              ปรับสถานะ
             </Text>
-
-            <Select
-              label="สถานะการใช้งาน"
-              value={newStatus}
-              onChange={(value) => setNewStatus(value || "")}
-              data={[
-                { value: "ACTIVE", label: "ใช้งานปกติ" },
-                { value: "INACTIVE", label: "ไม่มีการใช้งาน" },
-                { value: "SUSPENDED", label: "พักการใช้งานชั่วคราว" },
-              ]}
-              styles={{
-                input: { backgroundColor: "#131313", borderColor: "#333" },
-              }}
-            />
-
-            <Select
-              label="สถานะการยืนยันตัวตน"
-              value={newVerificationStatus ? "true" : "false"}
-              onChange={(value) =>
-                setNewVerificationStatus(value === "true")
-              }
-              data={[
-                { value: "false", label: "รอยืนยันตัวตน" },
-                { value: "true", label: "ยืนยันตัวตนแล้ว" },
-              ]}
-              styles={{
-                input: { backgroundColor: "#131313", borderColor: "#333" },
-              }}
-            />
-
-            <Group justify="flex-end">
+            <Stack gap="xs">
               <Button
-                variant="subtle"
-                onClick={() => {
-                  setModalOpened(false);
-                  setSelectedUser(null);
+                variant={statusType === "verification" ? "filled" : "subtle"}
+                color={statusType === "verification" ? "yellow" : "gray"}
+                fullWidth
+                justify="flex-start"
+                onClick={() => setStatusType("verification")}
+                styles={{
+                  root: {
+                    backgroundColor:
+                      statusType === "verification" ? "#FFD700" : "transparent",
+                    color:
+                      statusType === "verification" ? "#000" : "#fff",
+                  },
                 }}
               >
-                ยกเลิก
+                ยืนยันตัวตน
               </Button>
-              <Button onClick={handleUpdateStatus}>บันทึก</Button>
-            </Group>
-          </Stack>
-        )}
-      </Modal>
+              <Button
+                variant={statusType === "usage" ? "filled" : "subtle"}
+                color={statusType === "usage" ? "yellow" : "gray"}
+                fullWidth
+                justify="flex-start"
+                onClick={() => setStatusType("usage")}
+                styles={{
+                  root: {
+                    backgroundColor:
+                      statusType === "usage" ? "#FFD700" : "transparent",
+                    color: statusType === "usage" ? "#000" : "#fff",
+                  },
+                }}
+              >
+                สถานะการใช้งาน
+              </Button>
+              <Button
+                variant={statusType === "account" ? "filled" : "subtle"}
+                color={statusType === "account" ? "yellow" : "gray"}
+                fullWidth
+                justify="flex-start"
+                onClick={() => setStatusType("account")}
+                disabled
+                styles={{
+                  root: {
+                    backgroundColor:
+                      statusType === "account" ? "#FFD700" : "transparent",
+                    color: statusType === "account" ? "#000" : "#fff",
+                  },
+                }}
+              >
+                บัญชี
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* Main Content */}
+          <Box style={{ flex: 1 }}>
+            {/* Search Bar */}
+            <TextInput
+              placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              leftSection={<IconSearch size={16} />}
+              mb="md"
+              styles={{
+                input: {
+                  backgroundColor: "#131313",
+                  borderColor: "#333",
+                  color: "white",
+                },
+              }}
+            />
+
+            {/* Table */}
+            <ScrollArea h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + BOTTOM_NAVBAR_HEIGHT_PX + 200)})`}>
+              <Table
+                striped
+                highlightOnHover
+                styles={{
+                  root: {
+                    backgroundColor: "#1a1a1a",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                  },
+                  thead: {
+                    backgroundColor: "#0F0F0F",
+                  },
+                  th: {
+                    color: "white",
+                    borderBottom: "1px solid #333",
+                  },
+                  td: {
+                    color: "white",
+                    borderBottom: "1px solid #333",
+                  },
+                }}
+              >
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>ชื่อผู้ใช้</Table.Th>
+                    <Table.Th>ชื่อ</Table.Th>
+                    <Table.Th>นามสกุล</Table.Th>
+                    <Table.Th>เบอร์โทร</Table.Th>
+                    <Table.Th>สถานะ</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {users.length === 0 ? (
+                    <Table.Tr>
+                      <Table.Td colSpan={5} style={{ textAlign: "center" }}>
+                        <Text c="dimmed" py="xl">
+                          ไม่พบผู้ใช้
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ) : (
+                    users.map((user) => (
+                      <Table.Tr key={user.id}>
+                        <Table.Td>{user.username}</Table.Td>
+                        <Table.Td>{user.name || "-"}</Table.Td>
+                        <Table.Td>{user.lastname || "-"}</Table.Td>
+                        <Table.Td>{user.phone || "-"}</Table.Td>
+                        <Table.Td>
+                          <Select
+                            value={getCurrentStatusValue(user)}
+                            onChange={(value) =>
+                              value && handleStatusChange(user.id, value)
+                            }
+                            data={getStatusOptions()}
+                            disabled={updatingUsers.has(user.id)}
+                            styles={{
+                              input: {
+                                backgroundColor: "#131313",
+                                borderColor: "#333",
+                                color: "white",
+                                minWidth: rem(180),
+                              },
+                              option: {
+                                backgroundColor: "#1a1a1a",
+                                color: "white",
+                              },
+                            }}
+                          />
+                        </Table.Td>
+                      </Table.Tr>
+                    ))
+                  )}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
+          </Box>
+        </Group>
+      </Container>
+      <BottomNavbar />
     </Box>
   );
 }
-

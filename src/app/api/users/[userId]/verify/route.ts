@@ -41,22 +41,21 @@ export async function POST(
     }
 
     // Update user verification
+    // For self-verification: verifiedBy is null (user verified themselves)
+    // For admin verification: verifiedBy is the admin's userId
     const { data: updatedUser, error: updateError } = await supabase
       .from("User")
       .update({
         isVerified: true,
         verifiedAt: new Date().toISOString(),
-        verifiedBy: isUserAdmin ? session.user.id : userId,
+        verifiedBy: isSelfVerification ? null : session.user.id,
       })
       .eq("id", userId)
       .select()
       .single();
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -67,11 +66,9 @@ export async function POST(
     console.error("Error verifying user:", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to verify user",
+        error: error instanceof Error ? error.message : "Failed to verify user",
       },
       { status: 500 }
     );
   }
 }
-

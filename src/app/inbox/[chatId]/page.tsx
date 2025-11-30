@@ -116,6 +116,15 @@ export default function ChatPage() {
     }
   }, [session?.user?.id, fetchChatInfo]);
 
+  // Mark messages as read when chat is opened
+  useEffect(() => {
+    if (params.chatId && session?.user?.id && !loading) {
+      messageService.markMessagesAsRead(params.chatId, session.user.id).catch((err) => {
+        console.error("Error marking messages as read:", err);
+      });
+    }
+  }, [params.chatId, session?.user?.id, loading]);
+
   const handleViewProfile = useCallback(
     (userId: string) => {
       router.push(`/profile/${userId}`);

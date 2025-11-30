@@ -92,6 +92,7 @@ export interface ChatWithLatestMessage {
       profileImageKey: string | null;
     };
     latestMessage?: MessageWithUser;
+    hasUnread?: boolean;
   };
 }
 

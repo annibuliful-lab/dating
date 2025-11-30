@@ -179,11 +179,18 @@ export const messageService = {
           .limit(1)
           .single();
 
+        // Check if there are unread messages
+        const hasUnread = await this.hasUnreadMessages(
+          participant.Chat.id,
+          userId
+        );
+
         return {
           ...participant,
           Chat: {
             ...participant.Chat,
             latestMessage: latestMessage || undefined,
+            hasUnread,
           },
         };
       })
@@ -518,11 +525,79 @@ export const messageService = {
 
   // Mark messages as read
   async markMessagesAsRead(chatId: string, userId: string) {
-    // This would require a MessageRead table in your database
-    // For now, we'll just log it
-    console.log(
-      `Marking messages as read for user ${userId} in chat ${chatId}`
+    const { error } = await supabase
+      .from('ChatParticipant')
+      .update({ lastReadAt: new Date().toISOString() })
+      .eq('chatId', chatId)
+      .eq('userId', userId);
+
+    if (error) throw new Error(error.message);
+    return true;
+  },
+
+  // Check if chat has unread messages
+  async hasUnreadMessages(chatId: string, userId: string): Promise<boolean> {
+    // Get participant's lastReadAt
+    const { data: participant } = await supabase
+      .from('ChatParticipant')
+      .select('lastReadAt')
+      .eq('chatId', chatId)
+      .eq('userId', userId)
+      .single();
+
+    if (!participant) return false;
+
+    const lastReadAt = participant.lastReadAt;
+
+    // If never read, check if there are any messages
+    if (!lastReadAt) {
+      const { data: messages } = await supabase
+        .from('Message')
+        .select('id')
+        .eq('chatId', chatId)
+        .limit(1);
+
+      return (messages?.length || 0) > 0;
+    }
+
+    // Check if there are messages after lastReadAt
+    const { data: unreadMessages } = await supabase
+      .from('Message')
+      .select('id')
+      .eq('chatId', chatId)
+      .gt('createdAt', lastReadAt)
+      .neq('senderId', userId) // Don't count own messages
+      .limit(1);
+
+    return (unreadMessages?.length || 0) > 0;
+  },
+
+  // Create a group chat
+  async createGroupChat(
+    createdById: string,
+    name: string,
+    userIds: string[]
+  ) {
+    // Create the chat
+    const chat = await this.createChat({
+      id: crypto.randomUUID(),
+      createdById,
+      isGroup: true,
+      name,
+      isAdminVisible: true,
+    });
+
+    // Add creator as admin participant
+    await this.addChatParticipant(chat.id, createdById, true);
+
+    // Add all other participants
+    await Promise.all(
+      userIds.map((userId) =>
+        this.addChatParticipant(chat.id, userId, false)
+      )
     );
+
+    return chat;
   },
 
   // Edit a message

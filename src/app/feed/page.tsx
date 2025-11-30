@@ -1,6 +1,7 @@
 "use client";
 
 import { BUCKET_NAME, supabase } from "@/client/supabase";
+import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
@@ -21,6 +22,7 @@ import {
   Modal,
   rem,
   ScrollArea,
+  SimpleGrid,
   Stack,
   Text,
   Transition,
@@ -28,7 +30,6 @@ import {
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
 
 type Post = {
   id: string;
@@ -36,7 +37,7 @@ type Post = {
     text?: string;
     [key: string]: unknown;
   } | null;
-  imageUrl?: string | null;
+  imageUrl?: string[] | null;
   createdAt: string;
   User: {
     id: string;
@@ -87,12 +88,24 @@ function FeedPage() {
             .getPublicUrl(post.User.profileImageKey);
           profileImageUrl = imageData.publicUrl;
         }
+
+        // Handle backward compatibility: convert string imageUrl to array
+        let imageUrlArray: string[] | null = null;
+        if (post.imageUrl) {
+          if (typeof post.imageUrl === "string") {
+            imageUrlArray = [post.imageUrl];
+          } else if (Array.isArray(post.imageUrl)) {
+            imageUrlArray = post.imageUrl;
+          }
+        }
+
         return {
           ...post,
           content: post.content as {
             text?: string;
             [key: string]: unknown;
           } | null,
+          imageUrl: imageUrlArray,
           User: {
             ...post.User,
             profileImageUrl,
@@ -280,13 +293,20 @@ function FeedPage() {
                         >
                           {post.User.fullName?.charAt(0) || "?"}
                         </Avatar>
-                        <Text
-                          fw={600}
-                          style={{ cursor: "pointer" }}
-                          onClick={() => handleViewProfile(post.User.id)}
-                        >
-                          {post.User.fullName}
-                        </Text>
+                        <Group gap={4} align="center">
+                          <Text
+                            fw={600}
+                            style={{ cursor: "pointer" }}
+                            onClick={() => handleViewProfile(post.User.id)}
+                          >
+                            {post.User.username}
+                          </Text>
+                          {post.User.isVerified && (
+                            <Text fz="sm" c="blue" fw={600}>
+                              ✅
+                            </Text>
+                          )}
+                        </Group>
                         <Text c="dimmed" size="sm">
                           {formatDate(post.createdAt)}
                         </Text>
@@ -298,17 +318,25 @@ function FeedPage() {
                         </Text>
                       )}
 
-                      {post.imageUrl && (
-                        <Image
-                          src={post.imageUrl}
-                          alt="Post image"
-                          radius="md"
-                          fit="contain"
-                          mah={500}
-                        />
+                      {post.imageUrl && post.imageUrl.length > 0 && (
+                        <SimpleGrid
+                          cols={post.imageUrl.length === 1 ? 1 : 2}
+                          spacing="sm"
+                        >
+                          {post.imageUrl.map((url, imgIndex) => (
+                            <Image
+                              key={imgIndex}
+                              src={url}
+                              alt={`Post image ${imgIndex + 1}`}
+                              radius="md"
+                              fit="cover"
+                              mah={500}
+                            />
+                          ))}
+                        </SimpleGrid>
                       )}
 
-                      <Group justify="space-between" mt="xs">
+                      <Group justify="flex-start" mt="xs">
                         <Box
                           onClick={() => handleSendClick(post.User.id)}
                           style={{
@@ -319,28 +347,8 @@ function FeedPage() {
                             opacity: chatLoading === post.User.id ? 0.6 : 1,
                           }}
                         >
-                          <Text c="yellow">ทักแชท</Text>
+                          <Text c="yellow">Message</Text>
                         </Box>
-                        {post.User.isVerified && (
-                          <Text
-                            fz="xs"
-                            fw={500}
-                            c={post.User.verificationType === "ADMIN" ? "blue" : "teal"}
-                            style={{
-                              backgroundColor:
-                                post.User.verificationType === "ADMIN"
-                                  ? "rgba(37, 99, 235, 0.2)"
-                                  : "rgba(20, 184, 166, 0.2)",
-                              padding: "2px 8px",
-                              borderRadius: "12px",
-                              border: `1px solid ${
-                                post.User.verificationType === "ADMIN" ? "#2563eb" : "#14b8a6"
-                              }`,
-                            }}
-                          >
-                            verify by {post.User.verifiedByUsername || "unknown"}
-                          </Text>
-                        )}
                       </Group>
                     </Stack>
                     {index < posts.length - 1 && (

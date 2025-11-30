@@ -16,6 +16,7 @@ import { RulerIcon } from "@/components/icons/RulerIcon";
 import { SingleIcon } from "@/components/icons/SingleIcon";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { getUserProfile } from "@/services/profile/get";
+import { messageService } from "@/services/supabase/messages";
 import { Carousel } from "@mantine/carousel";
 import {
   Box,
@@ -30,11 +31,12 @@ import {
   Text,
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 function ProfileViewPage() {
   const params = useParams<{ userId: string }>();
+  const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -44,6 +46,7 @@ function ProfileViewPage() {
   } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isUnverifying, setIsUnverifying] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
 
   const verifyMutation = useApiMutation<{ success: boolean }>(
     `/api/users/${params.userId}/verify`
@@ -123,6 +126,26 @@ function ProfileViewPage() {
 
   const isAdmin = currentUser?.isAdmin === true;
   const isOwnProfile = session?.user?.id === params.userId;
+
+  const handleStartChat = async () => {
+    if (!session?.user?.id || !params.userId || isStartingChat) return;
+
+    try {
+      setIsStartingChat(true);
+      // Get or create direct chat
+      const chat = await messageService.getOrCreateDirectChat(
+        session.user.id,
+        params.userId
+      );
+      // Navigate to the chat page
+      router.push(`/inbox/${chat.id}`);
+    } catch (err) {
+      console.error("Error creating/finding chat:", err);
+      alert("Failed to start chat. Please try again.");
+    } finally {
+      setIsStartingChat(false);
+    }
+  };
 
   const calculateAge = (birthday: string | null): number | null => {
     if (!birthday) return null;
@@ -331,25 +354,8 @@ function ProfileViewPage() {
                 {profile.username || "User"}
               </Text>
               {profile.isVerified && (
-                <Text
-                  fz="xs"
-                  fw={500}
-                  c={profile.verificationType === "ADMIN" ? "blue" : "teal"}
-                  style={{
-                    backgroundColor:
-                      profile.verificationType === "ADMIN"
-                        ? "rgba(37, 99, 235, 0.2)"
-                        : "rgba(20, 184, 166, 0.2)",
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                    border: `1px solid ${
-                      profile.verificationType === "ADMIN"
-                        ? "#2563eb"
-                        : "#14b8a6"
-                    }`,
-                  }}
-                >
-                  verify by {profile.verifiedByUsername || "unknown"}
+                <Text fz="sm" c="blue" fw={600}>
+                  ✅
                 </Text>
               )}
             </Group>
@@ -361,43 +367,59 @@ function ProfileViewPage() {
             </Text>
           </Stack>
 
-          {isAdmin && !isOwnProfile && (
-            <Stack
-              gap="xs"
-              style={{
-                position: "absolute",
-                bottom: `calc(${rem(140)} + env(safe-area-inset-bottom))`,
-                left: rem(16),
-                right: rem(16),
-                zIndex: 2,
-                pointerEvents: "auto",
-              }}
-            >
-              {profile.isVerified ? (
-                <Button
-                  variant="filled"
-                  color="red"
-                  radius="md"
-                  onClick={handleUnverify}
-                  loading={isUnverifying}
-                  fullWidth
-                >
-                  Unverify User
-                </Button>
-              ) : (
-                <Button
-                  variant="filled"
-                  color="blue"
-                  radius="md"
-                  onClick={handleVerify}
-                  loading={isVerifying}
-                  fullWidth
-                >
-                  Verify User (Admin)
-                </Button>
-              )}
-            </Stack>
-          )}
+          <Stack
+            gap="xs"
+            style={{
+              position: "absolute",
+              bottom: isAdmin && !isOwnProfile
+                ? `calc(${rem(140)} + env(safe-area-inset-bottom))`
+                : `calc(${rem(16)} + env(safe-area-inset-bottom))`,
+              left: rem(16),
+              right: rem(16),
+              zIndex: 2,
+              pointerEvents: "auto",
+            }}
+          >
+            {!isOwnProfile && (
+              <Button
+                variant="filled"
+                color="yellow"
+                radius="md"
+                onClick={handleStartChat}
+                loading={isStartingChat}
+                fullWidth
+              >
+                Message
+              </Button>
+            )}
+            {isAdmin && !isOwnProfile && (
+              <>
+                {profile.isVerified ? (
+                  <Button
+                    variant="filled"
+                    color="red"
+                    radius="md"
+                    onClick={handleUnverify}
+                    loading={isUnverifying}
+                    fullWidth
+                  >
+                    Unverify User
+                  </Button>
+                ) : (
+                  <Button
+                    variant="filled"
+                    color="blue"
+                    radius="md"
+                    onClick={handleVerify}
+                    loading={isVerifying}
+                    fullWidth
+                  >
+                    Verify User (Admin)
+                  </Button>
+                )}
+              </>
+            )}
+          </Stack>
 
           <Group
             justify="center"
@@ -406,8 +428,10 @@ function ProfileViewPage() {
               position: "absolute",
               bottom:
                 isAdmin && !isOwnProfile
-                  ? `calc(${rem(200)} + env(safe-area-inset-bottom))`
-                  : `calc(${rem(16)} + env(safe-area-inset-bottom))`,
+                  ? `calc(${rem(280)} + env(safe-area-inset-bottom))`
+                  : isOwnProfile
+                  ? `calc(${rem(16)} + env(safe-area-inset-bottom))`
+                  : `calc(${rem(80)} + env(safe-area-inset-bottom))`,
               left: rem(16),
               right: rem(16),
               zIndex: 2,

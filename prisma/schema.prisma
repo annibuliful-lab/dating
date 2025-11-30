@@ -130,7 +130,7 @@ model Post {
   author     User           @relation(fields: [authorId], references: [id])
   authorId   String         @db.Uuid
   content    Json?          @db.JsonB
-  imageUrl   String?        @db.Text
+  imageUrl   Json?          @db.JsonB
   visibility PostVisibility @default(PUBLIC)
   likes      PostLike[]
   saves      PostSave[]

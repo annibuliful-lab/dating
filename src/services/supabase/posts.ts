@@ -5,7 +5,7 @@ type PostInsert = {
   authorId: string;
   content: { text: string };
   visibility: 'PUBLIC' | 'PRIVATE';
-  imageUrl?: string | null;
+  imageUrl?: string[] | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -25,7 +25,7 @@ type PostWithUser = {
   authorId: string;
   content: { text: string };
   visibility: 'PUBLIC' | 'PRIVATE';
-  imageUrl?: string | null;
+  imageUrl?: string[] | null;
   createdAt?: string;
   updatedAt?: string;
   User: PostUser | null;

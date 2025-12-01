@@ -1,12 +1,12 @@
 import { supabase } from "@/client/supabase";
 import { requireAdmin } from "@/lib/admin";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 /**
  * GET /api/admin/chats
  * Get all chats (both direct and group chats) for admin management
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const adminCheck = await requireAdmin();
     if (adminCheck) return adminCheck;

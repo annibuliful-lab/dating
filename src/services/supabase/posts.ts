@@ -61,7 +61,7 @@ export const postService = {
     if (error) throw new Error(error.message);
     
     // Fetch verifiedBy usernames for all posts
-    const verifiedByUserIds = (data as PostWithUser[] | null)
+    const verifiedByUserIds = (data as unknown as PostWithUser[] | null)
       ?.map((post) => post.User?.verifiedBy)
       .filter((id: string | null | undefined): id is string => !!id) || [];
     
@@ -80,7 +80,7 @@ export const postService = {
     }
     
     // Transform data to add verifiedByUsername
-    const transformedData = (data as PostWithUser[] | null)?.map((post) => {
+    const transformedData = (data as unknown as PostWithUser[] | null)?.map((post) => {
       const verifiedByUsername = post.User?.verifiedBy 
         ? verifiedByUsernames[post.User.verifiedBy] || null
         : null;

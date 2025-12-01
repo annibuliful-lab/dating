@@ -36,7 +36,7 @@ export const messageService = {
       .range(offset, offset + limit - 1);
 
     if (error) throw new Error(error.message);
-    return data || [];
+    return (data || []) as unknown as MessageWithUser[];
   },
 
   // Fetch older messages for infinite scroll (Facebook-style pagination)
@@ -81,7 +81,7 @@ export const messageService = {
     if (!data) return { messages: [], hasMore: false };
 
     const hasMore = data.length > limit;
-    const messages = hasMore ? data.slice(0, limit) : data;
+    const messages = (hasMore ? data.slice(0, limit) : data) as unknown as MessageWithUser[];
 
     return {
       messages: messages.reverse(), // Reverse to show oldest first
@@ -118,7 +118,7 @@ export const messageService = {
       payload: data,
     });
 
-    return data;
+    return data as unknown as MessageWithUser;
   },
 
   async getUserChats(userId: string): Promise<ChatWithLatestMessage[]> {
@@ -405,7 +405,7 @@ export const messageService = {
 
             if (data) {
               console.log("Calling callback with message data:", data);
-              callback(data);
+              callback(data as unknown as MessageWithUser);
             }
           } catch (err) {
             console.error("Error in message subscription callback:", err);
@@ -498,7 +498,7 @@ export const messageService = {
   async markMessagesAsRead(chatId: string, userId: string) {
     const { error } = await supabase
       .from("ChatParticipant")
-      .update({ lastReadAt: new Date().toISOString() })
+      .update({ lastReadAt: new Date().toISOString() } as Record<string, unknown>)
       .eq("chatId", chatId)
       .eq("userId", userId);
 
@@ -518,7 +518,7 @@ export const messageService = {
 
     if (!participant) return false;
 
-    const lastReadAt = participant.lastReadAt;
+    const lastReadAt = (participant as { lastReadAt?: string }).lastReadAt;
 
     // If never read, check if there are any messages
     if (!lastReadAt) {
@@ -612,7 +612,7 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error("Failed to edit message");
-    return data;
+    return data as unknown as MessageWithUser;
   },
 
   // Delete a message
@@ -648,6 +648,6 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error("Message not found");
-    return data;
+    return data as unknown as MessageWithUser;
   },
 };

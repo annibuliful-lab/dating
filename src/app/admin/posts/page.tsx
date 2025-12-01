@@ -61,6 +61,7 @@ export default function AdminPostsPage() {
 
   useEffect(() => {
     fetchPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchPosts = async () => {
@@ -111,10 +112,11 @@ export default function AdminPostsPage() {
       setDeleteModalOpened(false);
       setSelectedPost(null);
       fetchPosts();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถลบโพสต์ได้";
       notifications.show({
         title: "เกิดข้อผิดพลาด",
-        message: error.message || "ไม่สามารถลบโพสต์ได้",
+        message: errorMessage,
         color: "red",
       });
     } finally {

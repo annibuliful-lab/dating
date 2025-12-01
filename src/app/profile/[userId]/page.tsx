@@ -75,7 +75,9 @@ function ProfileViewPage() {
             .select("role")
             .eq("id", session.user.id)
             .single();
-          setCurrentUser(currentUserData);
+          if (currentUserData && !('error' in currentUserData)) {
+            setCurrentUser(currentUserData as { role: string });
+          }
         }
       } catch (err) {
         console.error("Error fetching profile:", err);

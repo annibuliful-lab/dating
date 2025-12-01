@@ -96,7 +96,10 @@ export default function ChatPage() {
 
           if (otherParticipants.length > 0) {
             chatName = otherParticipants
-              .map((p) => p.User?.fullName || 'Unknown')
+              .map((p) => {
+                const user = p.User as { fullName?: string } | undefined;
+                return user?.fullName || 'Unknown';
+              })
               .join(', ');
           } else {
             chatName = `Chat ${params.chatId.slice(0, 8)}`;

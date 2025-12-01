@@ -104,34 +104,43 @@ function FeedPage() {
       }
       const data = await postService.getPublicPosts();
       // Convert profileImageKey to URL for each post
-      const postsWithImageUrls = (data || []).map((post: any) => {
+      const postsWithImageUrls = (data || []).map((post: unknown) => {
+        const postData = post as {
+          User?: {
+            profileImageKey?: string | null;
+            [key: string]: unknown;
+          };
+          imageUrl?: string | string[] | null;
+          content?: unknown;
+          [key: string]: unknown;
+        };
         let profileImageUrl = null;
-        if (post.User?.profileImageKey) {
+        if (postData.User?.profileImageKey) {
           const { data: imageData } = supabase.storage
             .from(BUCKET_NAME)
-            .getPublicUrl(post.User.profileImageKey);
+            .getPublicUrl(postData.User.profileImageKey);
           profileImageUrl = imageData.publicUrl;
         }
 
         // Handle backward compatibility: convert string imageUrl to array
         let imageUrlArray: string[] | null = null;
-        if (post.imageUrl) {
-          if (typeof post.imageUrl === "string") {
-            imageUrlArray = [post.imageUrl];
-          } else if (Array.isArray(post.imageUrl)) {
-            imageUrlArray = post.imageUrl;
+        if (postData.imageUrl) {
+          if (typeof postData.imageUrl === "string") {
+            imageUrlArray = [postData.imageUrl];
+          } else if (Array.isArray(postData.imageUrl)) {
+            imageUrlArray = postData.imageUrl;
           }
         }
 
         return {
-          ...post,
-          content: post.content as {
+          ...postData,
+          content: postData.content as {
             text?: string;
             [key: string]: unknown;
           } | null,
           imageUrl: imageUrlArray,
           User: {
-            ...post.User,
+            ...postData.User,
             profileImageUrl,
           },
         };
@@ -243,10 +252,12 @@ function FeedPage() {
       setPosts(posts.filter((p) => p.id !== postToDelete.id));
       setDeleteModalOpened(false);
       setPostToDelete(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "ไม่สามารถลบโพสต์ได้";
       notifications.show({
         title: "เกิดข้อผิดพลาด",
-        message: error.message || "ไม่สามารถลบโพสต์ได้",
+        message: errorMessage,
         color: "red",
       });
     } finally {

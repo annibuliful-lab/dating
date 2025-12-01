@@ -68,7 +68,14 @@ export default function AdminChatsPage() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [filterType, setFilterType] = useState<"all" | "group" | "direct">("all");
   const [modalOpened, setModalOpened] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Array<{
+    id: string;
+    text: string | null;
+    createdAt: string;
+    User?: {
+      fullName: string;
+    };
+  }>>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [addUserModalOpened, setAddUserModalOpened] = useState(false);
   const [removeUserModalOpened, setRemoveUserModalOpened] = useState(false);
@@ -83,6 +90,7 @@ export default function AdminChatsPage() {
 
   useEffect(() => {
     fetchChats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchChats = async () => {
@@ -129,7 +137,7 @@ export default function AdminChatsPage() {
     }
   };
 
-  const handleViewChat = (chat: GroupChat) => {
+  const handleViewChat = (chat: Chat) => {
     setSelectedChat(chat);
     setModalOpened(true);
     fetchMessages(chat.id);
@@ -169,15 +177,11 @@ export default function AdminChatsPage() {
       setUserIdToAdd("");
       setAddUserModalOpened(false);
       fetchChats();
-      if (selectedChat) {
-        const updatedChat = { ...selectedChat };
-        // Refresh chat data
-        fetchChats();
-      }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถเพิ่มผู้ใช้ได้";
       notifications.show({
         title: "เกิดข้อผิดพลาด",
-        message: error.message || "ไม่สามารถเพิ่มผู้ใช้ได้",
+        message: errorMessage,
         color: "red",
       });
     }
@@ -217,10 +221,11 @@ export default function AdminChatsPage() {
       setUserIdToRemove("");
       setRemoveUserModalOpened(false);
       fetchChats();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถลบผู้ใช้ได้";
       notifications.show({
         title: "เกิดข้อผิดพลาด",
-        message: error.message || "ไม่สามารถลบผู้ใช้ได้",
+        message: errorMessage,
         color: "red",
       });
     }

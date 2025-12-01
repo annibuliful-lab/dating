@@ -31,7 +31,7 @@ export async function POST(
     // Only admins can verify other users
     // Users can verify themselves
     const isSelfVerification = userId === session.user.id;
-    const isUserAdmin = currentUser.role === "ADMIN";
+    const isUserAdmin = (currentUser as { role?: string }).role === "ADMIN";
 
     if (!isSelfVerification && !isUserAdmin) {
       return NextResponse.json(

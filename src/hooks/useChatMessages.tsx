@@ -273,7 +273,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           senderName: newMessage.User?.fullName || "Unknown",
           senderAvatar: senderAvatarUrl,
           senderIsVerified: newMessage.User?.isVerified || false,
-          senderVerificationType: newMessage.User?.verificationType || null,
+          senderRole: (newMessage.User?.role as "USER" | "ADMIN" | undefined) || "USER",
           createdAtLabel: formatMessageTime(new Date(newMessage.createdAt)),
           createdAt: newMessage.createdAt,
         };

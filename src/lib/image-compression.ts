@@ -12,7 +12,7 @@ export async function compressImage(
   maxHeight: number = 1920,
   quality: number = 0.8
 ): Promise<File> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Check if file is an image
     if (!file.type.startsWith('image/')) {
       resolve(file);

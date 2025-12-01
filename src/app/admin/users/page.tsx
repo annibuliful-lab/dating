@@ -63,6 +63,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const fetchUsers = async () => {
@@ -126,10 +127,12 @@ export default function AdminUsersPage() {
       });
 
       fetchUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "ไม่สามารถอัปเดตสถานะได้";
       notifications.show({
         title: "เกิดข้อผิดพลาด",
-        message: error.message || "ไม่สามารถอัปเดตสถานะได้",
+        message: errorMessage,
         color: "red",
       });
     } finally {
@@ -168,17 +171,6 @@ export default function AdminUsersPage() {
     return "";
   };
 
-  const getStatusLabel = (value: string) => {
-    if (statusType === "verification") {
-      return value === "verified" ? "ยืนยันตัวตนแล้ว" : "รอยืนยันตัวตน";
-    } else if (statusType === "usage") {
-      if (value === "ACTIVE") return "การใช้งานปกติ";
-      if (value === "INACTIVE") return "ไม่มีการใช้งาน";
-      if (value === "SUSPENDED") return "พักการใช้งานชั่วคราว";
-    }
-    return value;
-  };
-
   const getCurrentStatusValue = (user: User) => {
     if (statusType === "verification") {
       return user.isVerified ? "verified" : "pending";
@@ -186,17 +178,6 @@ export default function AdminUsersPage() {
       return user.status;
     }
     return "";
-  };
-
-  const getStatusColor = (value: string) => {
-    if (statusType === "verification") {
-      return value === "verified" ? "green" : "yellow";
-    } else if (statusType === "usage") {
-      if (value === "ACTIVE") return "green";
-      if (value === "SUSPENDED") return "red";
-      return "gray";
-    }
-    return "gray";
   };
 
   if (loading) {

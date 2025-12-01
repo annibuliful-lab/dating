@@ -3,7 +3,6 @@
 import { TopNavbar, TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
 import {
   Box,
-  Button,
   Card,
   Container,
   Group,
@@ -32,6 +31,7 @@ export default function AdminDashboardPage() {
     if (status === "authenticated" && session?.user?.id) {
       checkAdminStatus();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, session, router]);
 
   const checkAdminStatus = async () => {

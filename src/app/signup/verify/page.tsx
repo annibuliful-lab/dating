@@ -2,12 +2,10 @@
 
 import { LineIcon } from "@/components/icons/LineIcon";
 import { Box, Button, Container, rem, Stack, Text } from "@mantine/core";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function VerifyPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const userId = searchParams.get("userId");
 
   const handleSkip = () => {
     // When user skips verification:

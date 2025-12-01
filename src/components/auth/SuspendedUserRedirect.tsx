@@ -1,13 +1,11 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Box, Container, Text, Title, Stack } from '@mantine/core';
 
 export function SuspendedUserRedirect() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [isSuspended, setIsSuspended] = useState(false);
   const [checked, setChecked] = useState(false);
 

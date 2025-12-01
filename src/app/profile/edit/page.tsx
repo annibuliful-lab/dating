@@ -689,7 +689,14 @@ function EditProfilePage() {
                 valueFormat="DD/MM/YYYY"
                 variant="filled"
                 value={birthday}
-                onChange={(value) => setBirthday(value)}
+                onChange={(value) => {
+                  if (value === null) {
+                    setBirthday(null);
+                  } else {
+                    const dateValue = typeof value === 'string' ? new Date(value) : value;
+                    setBirthday(dateValue instanceof Date ? dateValue : null);
+                  }
+                }}
                 rightSection={<CalendarIcon />}
               />
               {age !== null && (

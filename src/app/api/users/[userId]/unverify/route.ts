@@ -29,7 +29,7 @@ export async function POST(
     }
 
     // Only admins can unverify users
-    const isUserAdmin = currentUser.role === "ADMIN";
+    const isUserAdmin = (currentUser as { role?: string }).role === "ADMIN";
     if (!isUserAdmin) {
       return NextResponse.json(
         { error: "Only admins can unverify users" },

@@ -102,8 +102,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Store isNewUser flag in account for JWT callback
         if (account && result) {
-          (account as any).isNewUser = result.isNewUser;
-          (account as any).userId = result.userId;
+          (account as Record<string, unknown>).isNewUser = result.isNewUser;
+          (account as Record<string, unknown>).userId = result.userId;
         }
 
         return true;
@@ -138,14 +138,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!error && userInfo && userInfo.status === "SUSPENDED") {
           // Store suspended status in session
-          (session as any).isSuspended = true;
+          (session as unknown as Record<string, unknown>).isSuspended = true;
         }
       }
 
       // Store isNewUser in session for redirect logic
       if (token.isNewUser) {
-        (session as any).isNewUser = true;
-        (session as any).newUserId = token.newUserId;
+        (session as unknown as Record<string, unknown>).isNewUser = true;
+        (session as unknown as Record<string, unknown>).newUserId =
+          token.newUserId;
       }
 
       return session;
@@ -167,9 +168,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.providerAccountId = account.providerAccountId;
 
         // Store if this is a new user for redirect logic
-        if ((account as any).isNewUser) {
+        const accountWithExtras = account as Record<string, unknown>;
+        if (accountWithExtras.isNewUser) {
           token.isNewUser = true;
-          token.newUserId = (account as any).userId;
+          token.newUserId = accountWithExtras.userId as string;
         }
 
         // Provider-specific handling

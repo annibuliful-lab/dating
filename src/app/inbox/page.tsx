@@ -11,12 +11,14 @@ import {
 } from "@/components/element/TopNavbar";
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
 // Using a simple refresh icon from Mantine
+import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
 import { messageService } from "@/services/supabase/messages";
 import { userService } from "@/services/supabase/users";
 import {
   ActionIcon,
   Avatar,
   Box,
+  Button,
   Center,
   Container,
   Divider,
@@ -74,6 +76,9 @@ function InboxPage() {
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [creatingChat, setCreatingChat] = useState(false);
+  const [isGroupChatMode, setIsGroupChatMode] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [groupChatName, setGroupChatName] = useState("");
 
   const fetchUserChats = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -122,8 +127,8 @@ function InboxPage() {
             ? formatRelativeDate(new Date(latestMessage.createdAt))
             : "New";
 
-          // Determine if unread (you can implement this logic based on your needs)
-          const unread = false; // TODO: Implement unread logic
+          // Determine if unread based on lastReadAt vs latest message
+          const unread = chat.hasUnread || false;
 
           return {
             id: chat.id,
@@ -208,7 +213,15 @@ function InboxPage() {
     }
   };
 
-  const handleChatClick = (chatId: string) => {
+  const handleChatClick = async (chatId: string) => {
+    // Mark messages as read when opening chat
+    if (session?.user?.id) {
+      try {
+        await messageService.markMessagesAsRead(chatId, session.user.id);
+      } catch (err) {
+        console.error("Error marking messages as read:", err);
+      }
+    }
     router.push(`/inbox/${chatId}`);
   };
 
@@ -284,6 +297,14 @@ function InboxPage() {
   const handleStartChat = async (userId: string) => {
     if (!session?.user?.id) return;
 
+    if (isGroupChatMode) {
+      // Add to selected users
+      if (!selectedUsers.includes(userId)) {
+        setSelectedUsers([...selectedUsers, userId]);
+      }
+      return;
+    }
+
     try {
       setCreatingChat(true);
       // Get or create direct chat
@@ -302,10 +323,55 @@ function InboxPage() {
     }
   };
 
+  const handleCreateGroupChat = async () => {
+    if (!session?.user?.id || selectedUsers.length === 0) {
+      alert("Please select at least one user to create a group chat");
+      return;
+    }
+
+    if (!groupChatName.trim()) {
+      alert("Please enter a group name");
+      return;
+    }
+
+    try {
+      setCreatingChat(true);
+      const chat = await messageService.createGroupChat(
+        session.user.id,
+        groupChatName.trim(),
+        selectedUsers
+      );
+      // Close modal and navigate to chat
+      close();
+      setIsGroupChatMode(false);
+      setSelectedUsers([]);
+      setGroupChatName("");
+      router.push(`/inbox/${chat.id}`);
+    } catch (err) {
+      console.error("Error creating group chat:", err);
+      alert("Failed to create group chat. Please try again.");
+    } finally {
+      setCreatingChat(false);
+    }
+  };
+
   const handleOpenModal = () => {
     setSearchQuery("");
     setSearchResults([]);
+    setIsGroupChatMode(false);
+    setSelectedUsers([]);
+    setGroupChatName("");
     open();
+  };
+
+  const handleToggleGroupChatMode = () => {
+    setIsGroupChatMode(!isGroupChatMode);
+    setSelectedUsers([]);
+    setGroupChatName("");
+  };
+
+  const handleRemoveSelectedUser = (userId: string) => {
+    setSelectedUsers(selectedUsers.filter((id) => id !== userId));
   };
 
   if (status === "loading" || loading) {
@@ -373,6 +439,7 @@ function InboxPage() {
 
   return (
     <Box>
+      <SuspendedUserRedirect />
       <TopNavbar
         title="Inbox"
         rightSlot={
@@ -462,7 +529,7 @@ function InboxPage() {
                             style={{
                               borderRadius: 9999,
                               background: chat.unread
-                                ? "#3B82F6"
+                                ? "#ef4444"
                                 : "transparent",
                             }}
                           />
@@ -487,11 +554,70 @@ function InboxPage() {
       <Modal
         opened={opened}
         onClose={close}
-        title="Start New Chat"
+        title={isGroupChatMode ? "Create Group Chat" : "Start New Chat"}
         size="md"
         centered
       >
         <Stack gap="md">
+          <Group justify="space-between">
+            <Text size="sm" fw={500}>
+              {isGroupChatMode ? "Group Chat" : "Direct Chat"}
+            </Text>
+            <Button
+              variant={isGroupChatMode ? "filled" : "outline"}
+              size="xs"
+              onClick={handleToggleGroupChatMode}
+            >
+              {isGroupChatMode ? "Switch to Direct" : "Create Group"}
+            </Button>
+          </Group>
+
+          {isGroupChatMode && (
+            <TextInput
+              placeholder="Enter group name..."
+              value={groupChatName}
+              onChange={(e) => setGroupChatName(e.currentTarget.value)}
+              required
+            />
+          )}
+
+          {isGroupChatMode && selectedUsers.length > 0 && (
+            <Box>
+              <Text size="sm" fw={600} mb="xs">
+                Selected Users ({selectedUsers.length})
+              </Text>
+              <Stack gap="xs">
+                {selectedUsers.map((userId) => {
+                  const user = searchResults.find((u) => u.id === userId);
+                  if (!user) return null;
+                  return (
+                    <Group key={userId} justify="space-between">
+                      <Group gap="xs">
+                        <Avatar
+                          src={user.profileImageUrl || undefined}
+                          alt={user.fullName}
+                          radius="xl"
+                          size={30}
+                        >
+                          {user.fullName?.charAt(0) || "?"}
+                        </Avatar>
+                        <Text size="sm">{user.fullName}</Text>
+                      </Group>
+                      <ActionIcon
+                        color="red"
+                        variant="subtle"
+                        size="sm"
+                        onClick={() => handleRemoveSelectedUser(userId)}
+                      >
+                        ✕
+                      </ActionIcon>
+                    </Group>
+                  );
+                })}
+              </Stack>
+            </Box>
+          )}
+
           <TextInput
             placeholder="Search users by name or username..."
             value={searchQuery}
@@ -512,60 +638,79 @@ function InboxPage() {
             </Center>
           ) : (
             <Stack gap="xs" mah={400} style={{ overflowY: "auto" }}>
-              {searchResults.map((user) => (
-                <Box
-                  key={user.id}
-                  p="sm"
-                  style={{
-                    cursor: "pointer",
-                    borderRadius: "8px",
-                    border: "1px solid #373A40",
-                    transition: "background-color 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#25262b";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                  onClick={() => handleStartChat(user.id)}
-                >
-                  <Group wrap="nowrap">
-                    <Avatar
-                      src={user.profileImageUrl || undefined}
-                      alt={user.fullName}
-                      radius="xl"
-                      size={50}
+                  {searchResults.map((user) => (
+                    <Box
+                      key={user.id}
+                      p="sm"
+                      style={{
+                        cursor: "pointer",
+                        borderRadius: "8px",
+                        border: "1px solid #373A40",
+                        transition: "background-color 0.2s",
+                        opacity: isGroupChatMode && selectedUsers.includes(user.id) ? 0.5 : 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#25262b";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
+                      onClick={() => handleStartChat(user.id)}
                     >
-                      {user.fullName?.charAt(0) || "?"}
-                    </Avatar>
-                    <Stack gap={2}>
-                      <Text fw={600}>{user.fullName}</Text>
-                      <Group gap="xs">
-                        {user.username && (
-                          <Text c="dimmed" size="sm">
-                            @{user.username}
-                          </Text>
-                        )}
-                        {user.age && (
-                          <Text c="dimmed" size="sm">
-                            • {user.age} years
-                          </Text>
-                        )}
-                        {user.gender && (
-                          <Text c="dimmed" size="sm">
-                            • {user.gender}
+                      <Group wrap="nowrap" justify="space-between">
+                        <Group wrap="nowrap">
+                          <Avatar
+                            src={user.profileImageUrl || undefined}
+                            alt={user.fullName}
+                            radius="xl"
+                            size={50}
+                          >
+                            {user.fullName?.charAt(0) || "?"}
+                          </Avatar>
+                          <Stack gap={2}>
+                            <Text fw={600}>{user.fullName}</Text>
+                            <Group gap="xs">
+                              {user.username && (
+                                <Text c="dimmed" size="sm">
+                                  @{user.username}
+                                </Text>
+                              )}
+                              {user.age && (
+                                <Text c="dimmed" size="sm">
+                                  • {user.age} years
+                                </Text>
+                              )}
+                              {user.gender && (
+                                <Text c="dimmed" size="sm">
+                                  • {user.gender}
+                                </Text>
+                              )}
+                            </Group>
+                          </Stack>
+                        </Group>
+                        {isGroupChatMode && selectedUsers.includes(user.id) && (
+                          <Text c="blue" size="sm" fw={600}>
+                            ✓
                           </Text>
                         )}
                       </Group>
-                    </Stack>
-                  </Group>
-                </Box>
-              ))}
+                    </Box>
+                  ))}
             </Stack>
           )}
 
-          {creatingChat && (
+          {isGroupChatMode && selectedUsers.length > 0 && (
+            <Button
+              onClick={handleCreateGroupChat}
+              loading={creatingChat}
+              disabled={!groupChatName.trim() || selectedUsers.length === 0}
+              fullWidth
+            >
+              Create Group Chat ({selectedUsers.length} members)
+            </Button>
+          )}
+
+          {creatingChat && !isGroupChatMode && (
             <Center>
               <Loader size="sm" />
             </Center>

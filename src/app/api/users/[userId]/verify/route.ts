@@ -13,20 +13,11 @@ export async function POST(
     }
 
     const { userId } = await params;
-    const body = await req.json();
-    const { verificationType } = body;
-
-    if (!verificationType || (verificationType !== "ADMIN" && verificationType !== "USER")) {
-      return NextResponse.json(
-        { error: "Invalid verification type. Must be 'ADMIN' or 'USER'" },
-        { status: 400 }
-      );
-    }
 
     // Get current user to check if they are admin
     const { data: currentUser, error: currentUserError } = await supabase
       .from("User")
-      .select("isAdmin")
+      .select("role")
       .eq("id", session.user.id)
       .single();
 
@@ -37,43 +28,34 @@ export async function POST(
       );
     }
 
-    // Only admins can verify with ADMIN type
-    // Users can verify themselves with USER type
+    // Only admins can verify other users
+    // Users can verify themselves
     const isSelfVerification = userId === session.user.id;
-    const isAdminVerification = verificationType === "ADMIN";
+    const isUserAdmin = (currentUser as { role?: string }).role === "ADMIN";
 
-    if (isAdminVerification && !currentUser.isAdmin) {
+    if (!isSelfVerification && !isUserAdmin) {
       return NextResponse.json(
-        { error: "Only admins can verify users with ADMIN type" },
-        { status: 403 }
-      );
-    }
-
-    if (!isSelfVerification && verificationType === "USER") {
-      return NextResponse.json(
-        { error: "Users can only verify themselves with USER type" },
+        { error: "Only admins can verify other users" },
         { status: 403 }
       );
     }
 
     // Update user verification
+    // For self-verification: verifiedBy is null (user verified themselves)
+    // For admin verification: verifiedBy is the admin's userId
     const { data: updatedUser, error: updateError } = await supabase
       .from("User")
       .update({
         isVerified: true,
-        verificationType: verificationType,
         verifiedAt: new Date().toISOString(),
-        verifiedBy: isAdminVerification ? session.user.id : userId,
+        verifiedBy: isSelfVerification ? null : session.user.id,
       })
       .eq("id", userId)
       .select()
       .single();
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -84,11 +66,9 @@ export async function POST(
     console.error("Error verifying user:", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to verify user",
+        error: error instanceof Error ? error.message : "Failed to verify user",
       },
       { status: 500 }
     );
   }
 }
-

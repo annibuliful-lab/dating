@@ -10,6 +10,7 @@ import {
   TopNavbar,
 } from '@/components/element/TopNavbar';
 import { MoreOptionsIcon } from '@/components/icons/MoreOptionsIcon';
+import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { messageService } from '@/services/supabase/messages';
 import {
@@ -95,7 +96,10 @@ export default function ChatPage() {
 
           if (otherParticipants.length > 0) {
             chatName = otherParticipants
-              .map((p) => p.User?.fullName || 'Unknown')
+              .map((p) => {
+                const user = p.User as { fullName?: string } | undefined;
+                return user?.fullName || 'Unknown';
+              })
               .join(', ');
           } else {
             chatName = `Chat ${params.chatId.slice(0, 8)}`;
@@ -116,6 +120,15 @@ export default function ChatPage() {
     }
   }, [session?.user?.id, fetchChatInfo]);
 
+  // Mark messages as read when chat is opened
+  useEffect(() => {
+    if (params.chatId && session?.user?.id && !loading) {
+      messageService.markMessagesAsRead(params.chatId, session.user.id).catch((err) => {
+        console.error("Error marking messages as read:", err);
+      });
+    }
+  }, [params.chatId, session?.user?.id, loading]);
+
   const handleViewProfile = useCallback(
     (userId: string) => {
       router.push(`/profile/${userId}`);
@@ -126,6 +139,7 @@ export default function ChatPage() {
   if (status === 'loading' || loading) {
     return (
       <Box>
+        <SuspendedUserRedirect />
         <TopNavbar
           title={chatInfo.name || 'Chat'}
           showBack
@@ -156,6 +170,7 @@ export default function ChatPage() {
   if (error) {
     return (
       <Box>
+        <SuspendedUserRedirect />
         <TopNavbar
           title={chatInfo.name || 'Chat'}
           showBack
@@ -196,6 +211,7 @@ export default function ChatPage() {
 
   return (
     <Box>
+      <SuspendedUserRedirect />
       <TopNavbar
         title={chatInfo.name || 'Chat'}
         showBack

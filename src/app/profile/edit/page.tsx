@@ -55,7 +55,6 @@ function EditProfilePage() {
   const [bio, setBio] = useState("");
   const [userStatus, setUserStatus] = useState<"ACTIVE" | "INACTIVE" | "SUSPENDED">("ACTIVE");
   const [isVerified, setIsVerified] = useState(false);
-  const [verificationType, setVerificationType] = useState<"ADMIN" | "USER" | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -150,7 +149,6 @@ function EditProfilePage() {
         setProfileImages(profile.profileImages || []);
         setUserStatus(profile.userStatus ?? "ACTIVE");
         setIsVerified(profile.isVerified ?? false);
-        setVerificationType(profile.verificationType ?? null);
         setUpdatedAt(profile.updatedAt ?? null);
       } catch (err) {
         console.error(err);
@@ -691,7 +689,14 @@ function EditProfilePage() {
                 valueFormat="DD/MM/YYYY"
                 variant="filled"
                 value={birthday}
-                onChange={(value) => setBirthday(value)}
+                onChange={(value) => {
+                  if (value === null) {
+                    setBirthday(null);
+                  } else {
+                    const dateValue = typeof value === 'string' ? new Date(value) : value;
+                    setBirthday(dateValue instanceof Date ? dateValue : null);
+                  }
+                }}
                 rightSection={<CalendarIcon />}
               />
               {age !== null && (

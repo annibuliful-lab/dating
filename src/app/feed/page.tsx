@@ -1,6 +1,8 @@
 "use client";
 
 import { BUCKET_NAME, supabase } from "@/client/supabase";
+import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
+import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
@@ -14,6 +16,7 @@ import { postService } from "@/services/supabase/posts";
 import {
   Avatar,
   Box,
+  Button,
   Container,
   Divider,
   Group,
@@ -21,14 +24,15 @@ import {
   Modal,
   rem,
   ScrollArea,
+  SimpleGrid,
   Stack,
   Text,
   Transition,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
 
 type Post = {
   id: string;
@@ -36,7 +40,7 @@ type Post = {
     text?: string;
     [key: string]: unknown;
   } | null;
-  imageUrl?: string | null;
+  imageUrl?: string[] | null;
   createdAt: string;
   User: {
     id: string;
@@ -45,8 +49,8 @@ type Post = {
     profileImageKey: string | null;
     profileImageUrl?: string | null;
     isVerified?: boolean;
-    verificationType?: "ADMIN" | "USER" | null;
     verifiedByUsername?: string | null;
+    role?: "USER" | "ADMIN";
   };
 };
 
@@ -60,6 +64,10 @@ function FeedPage() {
   const [pullDistance, setPullDistance] = useState(0);
   const [chatLoading, setChatLoading] = useState<string | null>(null);
   const [infographicModalOpened, setInfographicModalOpened] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<Post | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
@@ -70,6 +78,23 @@ function FeedPage() {
     }
   }, [router, status]);
 
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (status === "authenticated" && session?.user?.id) {
+        try {
+          const response = await fetch("/api/admin/check");
+          if (response.ok) {
+            const data = await response.json();
+            setIsAdmin(data.isAdmin || data.role === "ADMIN");
+          }
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+        }
+      }
+    };
+    checkAdminStatus();
+  }, [status, session]);
+
   const fetchPosts = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -79,22 +104,43 @@ function FeedPage() {
       }
       const data = await postService.getPublicPosts();
       // Convert profileImageKey to URL for each post
-      const postsWithImageUrls = (data || []).map((post) => {
+      const postsWithImageUrls = (data || []).map((post: unknown) => {
+        const postData = post as {
+          User?: {
+            profileImageKey?: string | null;
+            [key: string]: unknown;
+          };
+          imageUrl?: string | string[] | null;
+          content?: unknown;
+          [key: string]: unknown;
+        };
         let profileImageUrl = null;
-        if (post.User?.profileImageKey) {
+        if (postData.User?.profileImageKey) {
           const { data: imageData } = supabase.storage
             .from(BUCKET_NAME)
-            .getPublicUrl(post.User.profileImageKey);
+            .getPublicUrl(postData.User.profileImageKey);
           profileImageUrl = imageData.publicUrl;
         }
+
+        // Handle backward compatibility: convert string imageUrl to array
+        let imageUrlArray: string[] | null = null;
+        if (postData.imageUrl) {
+          if (typeof postData.imageUrl === "string") {
+            imageUrlArray = [postData.imageUrl];
+          } else if (Array.isArray(postData.imageUrl)) {
+            imageUrlArray = postData.imageUrl;
+          }
+        }
+
         return {
-          ...post,
-          content: post.content as {
+          ...postData,
+          content: postData.content as {
             text?: string;
             [key: string]: unknown;
           } | null,
+          imageUrl: imageUrlArray,
           User: {
-            ...post.User,
+            ...postData.User,
             profileImageUrl,
           },
         };
@@ -182,6 +228,43 @@ function FeedPage() {
     router.push(`/profile/${userId}`);
   };
 
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+
+    try {
+      setDeleting(true);
+      const response = await fetch(`/api/admin/posts/${postToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete post");
+      }
+
+      notifications.show({
+        title: "สำเร็จ",
+        message: "ลบโพสต์แล้ว",
+        color: "green",
+      });
+
+      // Remove post from local state
+      setPosts(posts.filter((p) => p.id !== postToDelete.id));
+      setDeleteModalOpened(false);
+      setPostToDelete(null);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "ไม่สามารถลบโพสต์ได้";
+      notifications.show({
+        title: "เกิดข้อผิดพลาด",
+        message: errorMessage,
+        color: "red",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box>
@@ -219,6 +302,7 @@ function FeedPage() {
   return (
     <Box>
       <NewUserRedirect />
+      <SuspendedUserRedirect />
       <TopNavbar title="Feed and Contents" />
       <Container
         size="xs"
@@ -270,26 +354,51 @@ function FeedPage() {
                 posts.map((post: Post, index: number) => (
                   <Box key={post.id}>
                     <Stack gap={10}>
-                      <Group gap="sm" align="center">
-                        <Avatar
-                          radius="xl"
-                          color="gray"
-                          src={post.User.profileImageUrl || undefined}
-                          style={{ cursor: "pointer" }}
-                          onClick={() => handleViewProfile(post.User.id)}
-                        >
-                          {post.User.fullName?.charAt(0) || "?"}
-                        </Avatar>
-                        <Text
-                          fw={600}
-                          style={{ cursor: "pointer" }}
-                          onClick={() => handleViewProfile(post.User.id)}
-                        >
-                          {post.User.fullName}
-                        </Text>
-                        <Text c="dimmed" size="sm">
-                          {formatDate(post.createdAt)}
-                        </Text>
+                      <Group gap="sm" align="center" justify="space-between">
+                        <Group gap="sm" align="center">
+                          <Avatar
+                            radius="xl"
+                            color="gray"
+                            src={post.User.profileImageUrl || undefined}
+                            style={{ cursor: "pointer" }}
+                            onClick={() => handleViewProfile(post.User.id)}
+                          >
+                            {post.User.fullName?.charAt(0) || "?"}
+                          </Avatar>
+                          <Group gap={4} align="center">
+                            <Text
+                              fw={600}
+                              style={{ cursor: "pointer" }}
+                              onClick={() => handleViewProfile(post.User.id)}
+                            >
+                              {post.User.username}
+                            </Text>
+                            {post.User.isVerified && (
+                              <Text fz="sm" c="blue" fw={600}>
+                                ✅
+                              </Text>
+                            )}
+                          </Group>
+                          <Text c="dimmed" size="sm">
+                            {formatDate(post.createdAt)}
+                          </Text>
+                        </Group>
+                        {isAdmin && (
+                          <Button
+                            size="xs"
+                            color="red"
+                            variant="light"
+                            onClick={() => {
+                              setPostToDelete(post);
+                              setDeleteModalOpened(true);
+                            }}
+                            style={{
+                              border: "1px solid red",
+                            }}
+                          >
+                            X ลบโพส
+                          </Button>
+                        )}
                       </Group>
 
                       {post.content?.text && (
@@ -298,17 +407,25 @@ function FeedPage() {
                         </Text>
                       )}
 
-                      {post.imageUrl && (
-                        <Image
-                          src={post.imageUrl}
-                          alt="Post image"
-                          radius="md"
-                          fit="contain"
-                          mah={500}
-                        />
+                      {post.imageUrl && post.imageUrl.length > 0 && (
+                        <SimpleGrid
+                          cols={post.imageUrl.length === 1 ? 1 : 2}
+                          spacing="sm"
+                        >
+                          {post.imageUrl.map((url, imgIndex) => (
+                            <Image
+                              key={imgIndex}
+                              src={url}
+                              alt={`Post image ${imgIndex + 1}`}
+                              radius="md"
+                              fit="cover"
+                              mah={500}
+                            />
+                          ))}
+                        </SimpleGrid>
                       )}
 
-                      <Group justify="space-between" mt="xs">
+                      <Group justify="flex-start" mt="xs">
                         <Box
                           onClick={() => handleSendClick(post.User.id)}
                           style={{
@@ -319,28 +436,8 @@ function FeedPage() {
                             opacity: chatLoading === post.User.id ? 0.6 : 1,
                           }}
                         >
-                          <Text c="yellow">ทักแชท</Text>
+                          <Text c="yellow">Message</Text>
                         </Box>
-                        {post.User.isVerified && (
-                          <Text
-                            fz="xs"
-                            fw={500}
-                            c={post.User.verificationType === "ADMIN" ? "blue" : "teal"}
-                            style={{
-                              backgroundColor:
-                                post.User.verificationType === "ADMIN"
-                                  ? "rgba(37, 99, 235, 0.2)"
-                                  : "rgba(20, 184, 166, 0.2)",
-                              padding: "2px 8px",
-                              borderRadius: "12px",
-                              border: `1px solid ${
-                                post.User.verificationType === "ADMIN" ? "#2563eb" : "#14b8a6"
-                              }`,
-                            }}
-                          >
-                            verify by {post.User.verifiedByUsername || "unknown"}
-                          </Text>
-                        )}
                       </Group>
                     </Stack>
                     {index < posts.length - 1 && (
@@ -393,6 +490,44 @@ function FeedPage() {
             radius="md"
           />
         </Box>
+      </Modal>
+
+      {/* Delete Post Confirmation Modal */}
+      <Modal
+        opened={deleteModalOpened}
+        onClose={() => {
+          setDeleteModalOpened(false);
+          setPostToDelete(null);
+        }}
+        title="ยืนยันการลบโพสต์"
+        centered
+        styles={{
+          content: { backgroundColor: "#0F0F0F" },
+          header: { backgroundColor: "#0F0F0F" },
+          body: { backgroundColor: "#0F0F0F" },
+          title: { color: "white" },
+        }}
+      >
+        <Stack gap="md">
+          <Text c="white">
+            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้? การกระทำนี้ไม่สามารถยกเลิกได้
+          </Text>
+          <Group justify="flex-end">
+            <Button
+              variant="subtle"
+              onClick={() => {
+                setDeleteModalOpened(false);
+                setPostToDelete(null);
+              }}
+              disabled={deleting}
+            >
+              ยกเลิก
+            </Button>
+            <Button color="red" onClick={handleDeletePost} loading={deleting}>
+              ลบ
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </Box>
   );

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { supabase } from '@/client/supabase';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { supabase } from "@/client/supabase";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export function NewUserRedirect() {
   const { data: session, status } = useSession();
@@ -11,18 +11,23 @@ export function NewUserRedirect() {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id && !checked) {
+    if (status === "authenticated" && session?.user?.id && !checked) {
       const checkNewUser = async () => {
         setChecked(true);
         try {
+          const userId = session.user.id;
+          if (!userId) return;
+
           // Check if user was created recently (within last 2 minutes)
-          const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-          
+          const twoMinutesAgo = new Date(
+            Date.now() - 2 * 60 * 1000
+          ).toISOString();
+
           const { data: user, error } = await supabase
-            .from('User')
-            .select('id, createdAt')
-            .eq('id', session.user.id)
-            .gte('createdAt', twoMinutesAgo)
+            .from("User")
+            .select("id, createdAt")
+            .eq("id", userId)
+            .gte("createdAt", twoMinutesAgo)
             .single();
 
           if (!error && user) {
@@ -30,7 +35,7 @@ export function NewUserRedirect() {
             router.push(`/signup/verify?userId=${session.user.id}`);
           }
         } catch (err) {
-          console.error('Error checking new user:', err);
+          console.error("Error checking new user:", err);
         }
       };
 
@@ -40,4 +45,3 @@ export function NewUserRedirect() {
 
   return null;
 }
-

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         ? 'Username is available'
         : 'Username is already taken',
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { available: false, message: 'Internal server error' },
       { status: 500 }

@@ -137,17 +137,17 @@ export function ChatMessage({
                   <Text
                   size="xs"
                   fw={700}
-                  c={message.senderVerificationType === "ADMIN" ? "blue" : "teal"}
+                  c={message.senderRole === "ADMIN" ? "blue" : "teal"}
                   style={{
-                    backgroundColor: message.senderVerificationType === "ADMIN" 
+                    backgroundColor: message.senderRole === "ADMIN" 
                       ? "rgba(37, 99, 235, 0.2)" 
                       : "rgba(20, 184, 166, 0.2)",
                     padding: "2px 8px",
                     borderRadius: "12px",
-                    border: `1px solid ${message.senderVerificationType === "ADMIN" ? "#2563eb" : "#14b8a6"}`,
+                    border: `1px solid ${message.senderRole === "ADMIN" ? "#2563eb" : "#14b8a6"}`,
                   }}
                   title={
-                    message.senderVerificationType === "ADMIN"
+                    message.senderRole === "ADMIN"
                       ? "Verified by Admin"
                       : "Verified by User"
                   }

@@ -34,7 +34,7 @@ export interface MessageWithUser {
     username: string;
     profileImageKey: string | null;
     isVerified?: boolean;
-    verificationType?: "ADMIN" | "USER" | null;
+    role?: "USER" | "ADMIN";
   };
 }
 
@@ -48,7 +48,7 @@ export interface ChatMessage {
   senderName: string;
   senderAvatar: string | null | undefined;
   senderIsVerified?: boolean;
-  senderVerificationType?: "ADMIN" | "USER" | null;
+  senderRole?: "USER" | "ADMIN";
   createdAtLabel: string;
   createdAt: string;
 }
@@ -92,6 +92,7 @@ export interface ChatWithLatestMessage {
       profileImageKey: string | null;
     };
     latestMessage?: MessageWithUser;
+    hasUnread?: boolean;
   };
 }
 

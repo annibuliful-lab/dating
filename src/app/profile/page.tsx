@@ -1,12 +1,13 @@
-'use client';
+"use client";
 
-import { BottomNavbar } from '@/components/element/BottomNavbar';
+import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
+import { BottomNavbar } from "@/components/element/BottomNavbar";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from '@/components/element/TopNavbar';
-import { useApiMutation } from '@/hooks/useApiMutation';
-import { useUserProfile } from '@/hooks/useUserProfile';
+} from "@/components/element/TopNavbar";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   Box,
   Button,
@@ -18,10 +19,10 @@ import {
   SimpleGrid,
   Stack,
   Text,
-} from '@mantine/core';
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+} from "@mantine/core";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 function ProfilePage() {
   const router = useRouter();
@@ -30,49 +31,53 @@ function ProfilePage() {
 
   const { userProfile, loading } = useUserProfile(userId as string);
   const [isVerifying, setIsVerifying] = useState(false);
-  
+
   const verifyMutation = useApiMutation<{ success: boolean }>(
     `/api/users/${userId}/verify`
   );
 
   const handleVerify = async () => {
     if (!userId) return;
-    
+
     try {
       setIsVerifying(true);
-      await verifyMutation.mutate({ verificationType: "USER" });
-      // Refresh profile after verification
-      window.location.reload();
+      const result = await verifyMutation.mutate({});
+      if (result?.success) {
+        // Refresh profile after verification
+        window.location.reload();
+      } else {
+        throw new Error("Verification failed");
+      }
     } catch (error) {
       console.error("Error verifying user:", error);
-      alert("Failed to verify. Please try again.");
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to verify. Please try again.";
+      alert(errorMessage);
     } finally {
       setIsVerifying(false);
     }
   };
 
-  if ((loading && status === 'loading') || !userProfile) {
+  if ((loading && status === "loading") || !userProfile) {
     return null;
   }
 
   return (
     <Box>
+      <SuspendedUserRedirect />
       <TopNavbar title="Profile" />
-      <Container
-        size="xs"
-        pt="md"
-        px="md"
-        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-      >
+      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <Stack align="center" gap="xs" pb="lg">
           {/* Avatar */}
           <Box
             style={{
               width: rem(150),
               height: rem(150),
-              borderRadius: '50%',
-              overflow: 'hidden',
-              border: '1px solid var(--mantine-color-dark-4)',
+              borderRadius: "50%",
+              overflow: "hidden",
+              border: "1px solid var(--mantine-color-dark-4)",
             }}
           >
             <Image
@@ -92,20 +97,17 @@ function ProfilePage() {
                 <Text
                   fz="xs"
                   fw={500}
-                  c={userProfile.verificationType === "ADMIN" ? "blue" : "teal"}
+                  c="blue"
                   style={{
-                    backgroundColor:
-                      userProfile.verificationType === "ADMIN"
-                        ? "rgba(37, 99, 235, 0.2)"
-                        : "rgba(20, 184, 166, 0.2)",
+                    backgroundColor: "rgba(37, 99, 235, 0.2)",
                     padding: "2px 8px",
                     borderRadius: "12px",
-                    border: `1px solid ${
-                      userProfile.verificationType === "ADMIN" ? "#2563eb" : "#14b8a6"
-                    }`,
+                    border: "1px solid #2563eb",
                   }}
                 >
-                  verify by {userProfile.verifiedByUsername || "unknown"}
+                  {userProfile.verifiedByUsername
+                    ? `verify by ${userProfile.verifiedByUsername}`
+                    : "ยืนยันตัวตนเอง"}
                 </Text>
               )}
             </Group>
@@ -136,7 +138,7 @@ function ProfilePage() {
             color="dark.4"
             radius="md"
             mt="xs"
-            onClick={() => router.push('/profile/edit')}
+            onClick={() => router.push("/profile/edit")}
           >
             Edit profile
           </Button>
@@ -145,11 +147,11 @@ function ProfilePage() {
             variant="filled"
             color="red"
             style={{
-              border: '#fa5252 solid 1px',
+              border: "#fa5252 solid 1px",
             }}
             onClick={async () => {
               await signOut();
-              router.push('/');
+              router.push("/");
             }}
           >
             <Text c="white">Logout</Text>
@@ -162,8 +164,8 @@ function ProfilePage() {
             px="md"
             py="md"
             style={{
-              backgroundColor: 'var(--mantine-color-dark-8)',
-              borderTop: '1px solid var(--mantine-color-dark-4)',
+              backgroundColor: "var(--mantine-color-dark-8)",
+              borderTop: "1px solid var(--mantine-color-dark-4)",
             }}
           >
             <Text fw={600} fz="lg" mb="sm" c="white">
@@ -174,10 +176,10 @@ function ProfilePage() {
                 <Box
                   key={img.id}
                   style={{
-                    aspectRatio: '1',
+                    aspectRatio: "1",
                     borderRadius: rem(8),
-                    overflow: 'hidden',
-                    border: '1px solid var(--mantine-color-dark-4)',
+                    overflow: "hidden",
+                    border: "1px solid var(--mantine-color-dark-4)",
                   }}
                 >
                   <Image

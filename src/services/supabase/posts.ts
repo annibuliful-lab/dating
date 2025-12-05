@@ -5,7 +5,7 @@ type PostInsert = {
   authorId: string;
   content: { text: string };
   visibility: 'PUBLIC' | 'PRIVATE';
-  imageUrl?: string | null;
+  imageUrl?: string[] | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -16,8 +16,8 @@ type PostUser = {
   username: string;
   profileImageKey: string | null;
   isVerified: boolean;
-  verificationType: string | null;
   verifiedBy: string | null;
+  role: string;
 };
 
 type PostWithUser = {
@@ -25,7 +25,7 @@ type PostWithUser = {
   authorId: string;
   content: { text: string };
   visibility: 'PUBLIC' | 'PRIVATE';
-  imageUrl?: string | null;
+  imageUrl?: string[] | null;
   createdAt?: string;
   updatedAt?: string;
   User: PostUser | null;
@@ -47,8 +47,8 @@ export const postService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType,
-          verifiedBy
+          verifiedBy,
+          role
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
@@ -61,7 +61,7 @@ export const postService = {
     if (error) throw new Error(error.message);
     
     // Fetch verifiedBy usernames for all posts
-    const verifiedByUserIds = (data as PostWithUser[] | null)
+    const verifiedByUserIds = (data as unknown as PostWithUser[] | null)
       ?.map((post) => post.User?.verifiedBy)
       .filter((id: string | null | undefined): id is string => !!id) || [];
     
@@ -80,7 +80,7 @@ export const postService = {
     }
     
     // Transform data to add verifiedByUsername
-    const transformedData = (data as PostWithUser[] | null)?.map((post) => {
+    const transformedData = (data as unknown as PostWithUser[] | null)?.map((post) => {
       const verifiedByUsername = post.User?.verifiedBy 
         ? verifiedByUsernames[post.User.verifiedBy] || null
         : null;
@@ -110,7 +110,7 @@ export const postService = {
           username,
           profileImageKey,
           isVerified,
-          verificationType
+          role
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
@@ -131,7 +131,7 @@ export const postService = {
       .select(
         `
         *,
-        User!Post_authorId_fkey (
+          User!Post_authorId_fkey (
           id,
           fullName,
           username,
@@ -139,7 +139,7 @@ export const postService = {
           age,
           gender,
           isVerified,
-          verificationType
+          role
         ),
         PostLike!PostLike_postId_fkey (
           id,
@@ -173,7 +173,7 @@ export const postService = {
             username,
             profileImageKey,
             isVerified,
-            verificationType
+            role
           )
         )
       `

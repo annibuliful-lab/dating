@@ -250,23 +250,6 @@ export default function AdminUsersPage() {
               >
                 สถานะการใช้งานบัญชี
               </Button>
-              <Button
-                variant={statusType === "account" ? "filled" : "subtle"}
-                color={statusType === "account" ? "yellow" : "gray"}
-                fullWidth
-                justify="flex-start"
-                onClick={() => setStatusType("account")}
-                disabled
-                styles={{
-                  root: {
-                    backgroundColor:
-                      statusType === "account" ? "#FFD700" : "transparent",
-                    color: statusType === "account" ? "#000" : "#fff",
-                  },
-                }}
-              >
-                บัญชี
-              </Button>
             </Stack>
           </Box>
 

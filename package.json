@@ -6,7 +6,7 @@
     "schema": "./prisma"
   },
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack --port 8080",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -18,22 +18,53 @@
     "prisma:db-pull": "prisma db pull",
     "prisma:seed": "ts-node prisma/seed/index.ts",
     "prisma:reset": "prisma migrate reset",
-    "prisma:format": "prisma migrate format"
+    "prisma:format": "prisma migrate format",
+    "supabase:generate:types": "npx supabase gen types typescript --project-id \"spcqdpthmfxjhfmvuqdb\" --schema public > generated/supabase-database.types.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.9.0",
+    "@mantine/carousel": "8.1.2",
+    "@mantine/charts": "8.1.2",
+    "@mantine/code-highlight": "8.1.2",
+    "@mantine/core": "8.1.2",
+    "@mantine/dates": "8.1.2",
+    "@mantine/dropzone": "8.1.2",
+    "@mantine/form": "8.1.2",
+    "@mantine/hooks": "8.1.2",
+    "@mantine/modals": "8.1.2",
+    "@mantine/notifications": "8.1.2",
+    "@mantine/nprogress": "8.1.2",
+    "@mantine/spotlight": "8.1.2",
+    "@mantine/tiptap": "8.1.2",
+    "@prisma/client": "6.11.1",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "2.50.0",
+    "@tiptap/extension-link": "2.23.1",
+    "@tiptap/pm": "2.23.1",
+    "@tiptap/react": "2.23.1",
+    "@tiptap/starter-kit": "2.23.1",
+    "@types/uuid": "^10.0.0",
+    "date-fns": "^4.1.0",
+    "dayjs": "1.11.13",
+    "embla-carousel": "8.5.2",
+    "embla-carousel-react": "8.5.2",
     "next": "15.3.3",
-    "prisma": "^6.9.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "next-auth": "5.0.0-beta.29",
+    "prisma": "6.11.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "recharts": "2",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
+    "@eslint/eslintrc": "3.3.1",
+    "@types/node": "20.19.0",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "eslint": "9.29.0",
     "eslint-config-next": "15.3.3",
-    "typescript": "^5"
+    "postcss": "8.5.6",
+    "postcss-preset-mantine": "1.18.0",
+    "postcss-simple-vars": "7.0.1",
+    "typescript": "5.8.3"
   }
 }

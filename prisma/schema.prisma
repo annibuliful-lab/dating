@@ -21,28 +21,73 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
-  id              String            @id @default(uuid()) @db.Uuid
-  email           String?           @unique
-  passwordHash    String?           @db.Text
-  lineId          String?           @unique
-  phone           String?           @unique
-  username        String            @unique
-  fullName        String            @db.Text
-  bio             String?           @db.Text
-  age             Int?
-  gender          String?
-  height          Float?
-  weight          Float?
-  status          UserStatus        @default(ACTIVE)
-  createdAt       DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime          @updatedAt @db.Timestamptz(6)
-  Chat            Chat[]
-  ChatParticipant ChatParticipant[]
-  Message         Message[]
-  Post            Post[]
-  PostLike        PostLike[]
-  PostSave        PostSave[]
+  id                 String            @id @default(uuid()) @db.Uuid
+  profileImageKey    String?
+  email              String?           @unique
+  passwordHash       String?           @db.Text
+  lineId             String?           @unique
+  phone              String?           @unique
+  username           String            @unique
+  name               String?           @db.Text
+  lastname           String?           @db.Text
+  fullName           String            @db.Text
+  bio                String?           @db.Text
+  birthday           DateTime?         @db.Date
+  relationShipStatus String?           @db.Text
+  age                Int?
+  gender             String?
+  height             Float?
+  weight             Float?
+  status             UserStatus        @default(ACTIVE)
+  role               UserRole          @default(USER)
+  isVerified         Boolean           @default(false)
+  verifiedAt         DateTime?         @db.Timestamptz(6)
+  verifiedBy         String?           @db.Uuid
+  verifiedByUser     User?             @relation("UserVerification", fields: [verifiedBy], references: [id])
+  verifiedUsers      User[]            @relation("UserVerification")
+  createdAt          DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @db.Timestamptz(6)
+  Chat               Chat[]
+  ChatParticipant    ChatParticipant[]
+  Message            Message[]
+  Post               Post[]
+  PostLike           PostLike[]
+  PostSave           PostSave[]
+  OAuthAccount       OAuthAccount[]
+  Session            Session[]
+  ProfileImage       ProfileImage[]
+}
+
+model OAuthAccount {
+  id                String  @id @default(cuid())
+  userId            String  @db.Uuid
+  type              String // 'oauth'
+  provider          String // 'google', 'github', etc.
+  providerAccountId String // unique id from provider (e.g. sub)
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Chat {
@@ -58,12 +103,13 @@ model Chat {
 }
 
 model ChatParticipant {
-  id      String  @id @default(uuid()) @db.Uuid
-  chat    Chat    @relation(fields: [chatId], references: [id])
-  chatId  String  @db.Uuid
-  user    User    @relation(fields: [userId], references: [id])
-  userId  String  @db.Uuid
-  isAdmin Boolean @default(false)
+  id         String    @id @default(uuid()) @db.Uuid
+  chat     Chat        @relation(fields: [chatId], references: [id])
+  chatId   String      @db.Uuid
+  user     User        @relation(fields: [userId], references: [id])
+  userId   String      @db.Uuid
+  isAdmin  Boolean     @default(false)
+  lastReadAt DateTime? @db.Timestamptz(6)
 
   @@unique([chatId, userId])
 }
@@ -84,7 +130,7 @@ model Post {
   author     User           @relation(fields: [authorId], references: [id])
   authorId   String         @db.Uuid
   content    Json?          @db.JsonB
-  imageUrl   String?        @db.Text
+  imageUrl   Json?          @db.JsonB
   visibility PostVisibility @default(PUBLIC)
   likes      PostLike[]
   saves      PostSave[]
@@ -124,4 +170,16 @@ model Ad {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
+}
+
+model ProfileImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageKey  String   @db.Text
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([userId])
 }

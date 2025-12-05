@@ -40,3 +40,9 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Carousel indicator active state */
+[data-mantine-carousel-indicator][data-active] {
+  background-color: white !important;
+  width: 24px !important;
+}

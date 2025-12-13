@@ -1,6 +1,5 @@
 'use client';
 
-import { supabase } from '@/client/supabase';
 import { LineSignIn } from '@/components/social-button/LineSignIn';
 import {
   Button,

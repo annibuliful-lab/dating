@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { supabase } from "@/client/supabase";
-import { LineSignIn } from "@/components/social-button/LineSignIn";
+import { supabase } from '@/client/supabase';
+import { LineSignIn } from '@/components/social-button/LineSignIn';
 import {
   Button,
   Container,
@@ -13,21 +13,22 @@ import {
   Stack,
   Text,
   TextInput,
-} from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { signIn } from "next-auth/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+} from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { signIn, useSession } from 'next-auth/react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { status, data } = useSession();
   const handleClickSignIn = async () => {
     try {
-      const result = await signIn("credentials", {
+      const result = await signIn('credentials', {
         email,
         password,
         redirect: false,
@@ -35,41 +36,44 @@ export default function LoginPage() {
 
       if (result?.error) {
         notifications.show({
-          title: "Login failed",
-          message: "Invalid email or password",
-          color: "red",
+          title: 'Login failed',
+          message: 'Invalid email or password',
+          color: 'red',
           autoClose: 5000,
         });
         return;
       }
 
-      await router.push("/feed");
+      await router.push('/feed');
     } catch (err) {
-      console.error("[signin-error]: ", err);
+      console.error('[signin-error]: ', err);
       notifications.show({
-        title: "Login failed",
-        message: "An error occurred. Please try again.",
-        color: "red",
+        title: 'Login failed',
+        message: 'An error occurred. Please try again.',
+        color: 'red',
         autoClose: 5000,
       });
     }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then((data) => {
-      console.log("[supabase-session]", data);
-    });
-  }, []);
+    console.log('aaaa', data, status);
+    if (status === 'authenticated') {
+      router.push('/feed');
+    }
+  }, [data, status]);
+
+  if (status === 'loading') return null;
 
   return (
     <Container
       px="md"
       style={{
-        display: "flex",
-        flexDirection: "column",
+        display: 'flex',
+        flexDirection: 'column',
         height: rem(812),
         maxWidth: rem(375),
-        justifyContent: "center",
+        justifyContent: 'center',
       }}
     >
       <Stack gap="md">
@@ -79,7 +83,7 @@ export default function LoginPage() {
           fit="contain"
           w={rem(48)}
           h={rem(48)}
-          style={{ display: "block" }}
+          style={{ display: 'block' }}
         />
 
         <Text size="xl" fw={700}>
@@ -106,10 +110,10 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           styles={{
             input: {
-              backgroundColor: "#131313",
-              borderColor: "#333",
-              color: "white",
-              height: "50px",
+              backgroundColor: '#131313',
+              borderColor: '#333',
+              color: 'white',
+              height: '50px',
             },
           }}
         />
@@ -123,27 +127,37 @@ export default function LoginPage() {
           onVisibilityChange={setShowPassword}
           styles={{
             input: {
-              backgroundColor: "#131313",
-              borderColor: "#333",
-              color: "white",
-              height: "50px",
+              backgroundColor: '#131313',
+              borderColor: '#333',
+              color: 'white',
+              height: '50px',
             },
           }}
         />
 
-        <Button fullWidth variant="primary" onClick={handleClickSignIn}>
+        <Button
+          fullWidth
+          variant="primary"
+          onClick={handleClickSignIn}
+        >
           Log in
         </Button>
 
         <Text size="sm" ta="center" mt="xs" fw={500}>
-          <a href="#" style={{ color: "white", textDecoration: "none" }}>
+          <a
+            href="#"
+            style={{ color: 'white', textDecoration: 'none' }}
+          >
             Forgot password
           </a>
         </Text>
 
         <Text size="sm" ta="center" c="dimmed">
-          Don’t have an account?{" "}
-          <Link href="/signup" style={{ color: "white", fontWeight: 500 }}>
+          Don't have an account?{' '}
+          <Link
+            href="/signup"
+            style={{ color: 'white', fontWeight: 500 }}
+          >
             Create one
           </Link>
         </Text>

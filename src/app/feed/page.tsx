@@ -1,26 +1,28 @@
-"use client";
+'use client';
 
-import { BUCKET_NAME, supabase } from "@/client/supabase";
-import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
-import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
+import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { NewUserRedirect } from '@/components/auth/NewUserRedirect';
+import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import {
   BOTTOM_NAVBAR_HEIGHT_PX,
   BottomNavbar,
-} from "@/components/element/BottomNavbar";
+} from '@/components/element/BottomNavbar';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { messageService } from "@/services/supabase/messages";
-import { postService } from "@/services/supabase/posts";
+} from '@/components/element/TopNavbar';
+import { messageService } from '@/services/supabase/messages';
+import { postService } from '@/services/supabase/posts';
 import {
   Avatar,
   Box,
   Button,
+  Center,
   Container,
   Divider,
   Group,
   Image,
+  Loader,
   Modal,
   rem,
   ScrollArea,
@@ -28,11 +30,11 @@ import {
   Stack,
   Text,
   Transition,
-} from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+} from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Post = {
   id: string;
@@ -50,7 +52,7 @@ type Post = {
     profileImageUrl?: string | null;
     isVerified?: boolean;
     verifiedByUsername?: string | null;
-    role?: "USER" | "ADMIN";
+    role?: 'USER' | 'ADMIN';
   };
 };
 
@@ -63,7 +65,8 @@ function FeedPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [chatLoading, setChatLoading] = useState<string | null>(null);
-  const [infographicModalOpened, setInfographicModalOpened] = useState(false);
+  const [infographicModalOpened, setInfographicModalOpened] =
+    useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
@@ -73,22 +76,22 @@ function FeedPage() {
   const isPulling = useRef(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
     }
   }, [router, status]);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (status === "authenticated" && session?.user?.id) {
+      if (status === 'authenticated' && session?.user?.id) {
         try {
-          const response = await fetch("/api/admin/check");
+          const response = await fetch('/api/admin/check');
           if (response.ok) {
             const data = await response.json();
-            setIsAdmin(data.isAdmin || data.role === "ADMIN");
+            setIsAdmin(data.isAdmin || data.role === 'ADMIN');
           }
         } catch (error) {
-          console.error("Error checking admin status:", error);
+          console.error('Error checking admin status:', error);
         }
       }
     };
@@ -125,8 +128,8 @@ function FeedPage() {
         // Handle backward compatibility: convert string imageUrl to array
         let imageUrlArray: string[] | null = null;
         if (postData.imageUrl) {
-          if (typeof postData.imageUrl === "string") {
-            imageUrlArray = [postData.imageUrl];
+          if (typeof postData.imageUrl === 'string') {
+            imageUrlArray = JSON.parse(postData.imageUrl as string);
           } else if (Array.isArray(postData.imageUrl)) {
             imageUrlArray = postData.imageUrl;
           }
@@ -147,7 +150,11 @@ function FeedPage() {
       });
       setPosts(postsWithImageUrls as Post[]);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to fetch posts"));
+      setError(
+        err instanceof Error
+          ? err
+          : new Error('Failed to fetch posts')
+      );
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -155,7 +162,7 @@ function FeedPage() {
   }, []);
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (status === 'authenticated') {
       fetchPosts();
       // Show infographic modal when entering feed page
       setInfographicModalOpened(true);
@@ -164,15 +171,15 @@ function FeedPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
     });
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const scrollElement = scrollAreaRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]"
+      '[data-radix-scroll-area-viewport]'
     );
     if (scrollElement && scrollElement.scrollTop === 0) {
       startY.current = e.touches[0].clientY;
@@ -217,7 +224,7 @@ function FeedPage() {
       // Navigate to the chat page
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
-      console.error("Error creating/finding chat:", err);
+      console.error('Error creating/finding chat:', err);
       // You could show a toast notification here
     } finally {
       setChatLoading(null);
@@ -233,19 +240,22 @@ function FeedPage() {
 
     try {
       setDeleting(true);
-      const response = await fetch(`/api/admin/posts/${postToDelete.id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/admin/posts/${postToDelete.id}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to delete post");
+        throw new Error(error.error || 'Failed to delete post');
       }
 
       notifications.show({
-        title: "สำเร็จ",
-        message: "ลบโพสต์แล้ว",
-        color: "green",
+        title: 'สำเร็จ',
+        message: 'ลบโพสต์แล้ว',
+        color: 'green',
       });
 
       // Remove post from local state
@@ -254,11 +264,13 @@ function FeedPage() {
       setPostToDelete(null);
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : "ไม่สามารถลบโพสต์ได้";
+        error instanceof Error
+          ? error.message
+          : 'ไม่สามารถลบโพสต์ได้';
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
+        title: 'เกิดข้อผิดพลาด',
         message: errorMessage,
-        color: "red",
+        color: 'red',
       });
     } finally {
       setDeleting(false);
@@ -274,9 +286,16 @@ function FeedPage() {
           pt="md"
           px="md"
           mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-          style={{ marginLeft: "auto", marginRight: "auto" }}
+          style={{ marginLeft: 'auto', marginRight: 'auto' }}
         >
-          <Text>Loading posts...</Text>
+          <Center>
+            <Loader
+              color="#D4AF37"
+              style={{
+                margin: 'auto',
+              }}
+            />
+          </Center>
         </Container>
       </Box>
     );
@@ -291,7 +310,7 @@ function FeedPage() {
           pt="md"
           px="md"
           mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-          style={{ marginLeft: "auto", marginRight: "auto" }}
+          style={{ marginLeft: 'auto', marginRight: 'auto' }}
         >
           <Text c="red">Error loading posts: {error.message}</Text>
         </Container>
@@ -309,7 +328,7 @@ function FeedPage() {
         pt="md"
         px="md"
         mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-        style={{ marginLeft: "auto", marginRight: "auto" }}
+        style={{ marginLeft: 'auto', marginRight: 'auto' }}
       >
         <ScrollArea
           ref={scrollAreaRef}
@@ -323,7 +342,8 @@ function FeedPage() {
           <Box
             style={{
               transform: `translateY(${pullDistance}px)`,
-              transition: pullDistance === 0 ? "transform 0.3s ease" : "none",
+              transition:
+                pullDistance === 0 ? 'transform 0.3s ease' : 'none',
             }}
           >
             <Transition
@@ -335,15 +355,17 @@ function FeedPage() {
                 <Box
                   style={{
                     ...styles,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "16px",
-                    color: "var(--mantine-color-dimmed)",
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '16px',
+                    color: 'var(--mantine-color-dimmed)',
                   }}
                 >
                   <Text size="sm">
-                    {isRefreshing ? "Refreshing..." : "Pull to refresh"}
+                    {isRefreshing
+                      ? 'Refreshing...'
+                      : 'Pull to refresh'}
                   </Text>
                 </Box>
               )}
@@ -354,22 +376,32 @@ function FeedPage() {
                 posts.map((post: Post, index: number) => (
                   <Box key={post.id}>
                     <Stack gap={10}>
-                      <Group gap="sm" align="center" justify="space-between">
+                      <Group
+                        gap="sm"
+                        align="center"
+                        justify="space-between"
+                      >
                         <Group gap="sm" align="center">
                           <Avatar
                             radius="xl"
                             color="gray"
-                            src={post.User.profileImageUrl || undefined}
-                            style={{ cursor: "pointer" }}
-                            onClick={() => handleViewProfile(post.User.id)}
+                            src={
+                              post.User.profileImageUrl || undefined
+                            }
+                            style={{ cursor: 'pointer' }}
+                            onClick={() =>
+                              handleViewProfile(post.User.id)
+                            }
                           >
-                            {post.User.fullName?.charAt(0) || "?"}
+                            {post.User.fullName?.charAt(0) || '?'}
                           </Avatar>
                           <Group gap={4} align="center">
                             <Text
                               fw={600}
-                              style={{ cursor: "pointer" }}
-                              onClick={() => handleViewProfile(post.User.id)}
+                              style={{ cursor: 'pointer' }}
+                              onClick={() =>
+                                handleViewProfile(post.User.id)
+                              }
                             >
                               {post.User.username}
                             </Text>
@@ -393,7 +425,7 @@ function FeedPage() {
                               setDeleteModalOpened(true);
                             }}
                             style={{
-                              border: "1px solid red",
+                              border: '1px solid red',
                             }}
                           >
                             X ลบโพส
@@ -427,13 +459,16 @@ function FeedPage() {
 
                       <Group justify="flex-start" mt="xs">
                         <Box
-                          onClick={() => handleSendClick(post.User.id)}
+                          onClick={() =>
+                            handleSendClick(post.User.id)
+                          }
                           style={{
                             cursor:
                               chatLoading === post.User.id
-                                ? "not-allowed"
-                                : "pointer",
-                            opacity: chatLoading === post.User.id ? 0.6 : 1,
+                                ? 'not-allowed'
+                                : 'pointer',
+                            opacity:
+                              chatLoading === post.User.id ? 0.6 : 1,
                           }}
                         >
                           <Text c="yellow">Message</Text>
@@ -466,19 +501,19 @@ function FeedPage() {
         centered
         styles={{
           title: {
-            color: "white",
+            color: 'white',
             fontWeight: 600,
-            textAlign: "center",
-            width: "100%",
+            textAlign: 'center',
+            width: '100%',
             margin: 0,
           },
           header: {
-            justifyContent: "center",
-            position: "relative",
+            justifyContent: 'center',
+            position: 'relative',
           },
           close: {
-            position: "absolute",
-            right: "var(--mantine-spacing-md)",
+            position: 'absolute',
+            right: 'var(--mantine-spacing-md)',
           },
         }}
       >
@@ -502,15 +537,16 @@ function FeedPage() {
         title="ยืนยันการลบโพสต์"
         centered
         styles={{
-          content: { backgroundColor: "#0F0F0F" },
-          header: { backgroundColor: "#0F0F0F" },
-          body: { backgroundColor: "#0F0F0F" },
-          title: { color: "white" },
+          content: { backgroundColor: '#0F0F0F' },
+          header: { backgroundColor: '#0F0F0F' },
+          body: { backgroundColor: '#0F0F0F' },
+          title: { color: 'white' },
         }}
       >
         <Stack gap="md">
           <Text c="white">
-            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้? การกระทำนี้ไม่สามารถยกเลิกได้
+            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้?
+            การกระทำนี้ไม่สามารถยกเลิกได้
           </Text>
           <Group justify="flex-end">
             <Button
@@ -523,7 +559,11 @@ function FeedPage() {
             >
               ยกเลิก
             </Button>
-            <Button color="red" onClick={handleDeletePost} loading={deleting}>
+            <Button
+              color="red"
+              onClick={handleDeletePost}
+              loading={deleting}
+            >
               ลบ
             </Button>
           </Group>

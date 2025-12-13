@@ -152,7 +152,7 @@ export default function LoginPage() {
         </Text>
 
         <Text size="sm" ta="center" c="dimmed">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link
             href="/signup"
             style={{ color: 'white', fontWeight: 500 }}

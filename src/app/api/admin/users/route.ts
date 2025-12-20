@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     // Apply search filter
     if (search) {
       query = query.or(
-        `username.ilike.%${search}%,name.ilike.%${search}%,lastname.ilike.%${search}%,phone.ilike.%${search}%`
+        `username.ilike.%${search}%,name.ilike.%${search}%,lastname.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`
       );
     }
 

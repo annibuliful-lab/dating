@@ -23,6 +23,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { useDebouncedValue } from "@mantine/hooks";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -50,8 +51,10 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const { status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebouncedValue(searchQuery, 300);
   const [statusType, setStatusType] = useState<StatusType>("verification");
   const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set());
 
@@ -64,13 +67,13 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (searchQuery) params.append("search", searchQuery);
+      if (debouncedSearchQuery) params.append("search", debouncedSearchQuery);
 
       const response = await fetch(`/api/admin/users?${params.toString()}`);
       if (!response.ok) {
@@ -91,6 +94,7 @@ export default function AdminUsersPage() {
       });
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -180,7 +184,7 @@ export default function AdminUsersPage() {
     return "";
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <Box>
         <TopNavbar title="User Status" showBack />
@@ -261,7 +265,7 @@ export default function AdminUsersPage() {
                 {getStatusTitle()}
               </Text>
               <TextInput
-                placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์"
+                placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์ อีเมล"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 leftSection={
@@ -291,8 +295,27 @@ export default function AdminUsersPage() {
                   backgroundColor: "#1a1a1a",
                   borderRadius: "8px",
                   overflow: "hidden",
+                  position: "relative",
                 }}
               >
+                {loading && (
+                  <Box
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: "rgba(0, 0, 0, 0.5)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 10,
+                    }}
+                  >
+                    <Loader size="md" />
+                  </Box>
+                )}
                 <Table
                   striped
                   highlightOnHover

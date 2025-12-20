@@ -36,6 +36,7 @@ type User = {
   phone: string | null;
   email: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  statusUpdatedAt: string | null;
   role: "USER" | "ADMIN";
   isVerified: boolean;
   verifiedAt: string | null;
@@ -182,6 +183,27 @@ export default function AdminUsersPage() {
     return "";
   };
 
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getLastUpdatedDate = (user: User) => {
+    if (statusType === "verification") {
+      return formatDate(user.verifiedAt);
+    } else if (statusType === "usage") {
+      return formatDate(user.statusUpdatedAt);
+    }
+    return "-";
+  };
+
   if (initialLoading) {
     return (
       <Box>
@@ -326,12 +348,13 @@ export default function AdminUsersPage() {
                       <Table.Th>นามสกุล</Table.Th>
                       <Table.Th>เบอร์โทร</Table.Th>
                       <Table.Th>สถานะ</Table.Th>
+                      <Table.Th>อัพเดทล่าสุด</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
                     {users.length === 0 ? (
                       <Table.Tr>
-                        <Table.Td colSpan={5} style={{ textAlign: "center" }}>
+                        <Table.Td colSpan={6} style={{ textAlign: "center" }}>
                           <Text c="dimmed" py="xl">
                             ไม่พบผู้ใช้
                           </Text>
@@ -367,6 +390,7 @@ export default function AdminUsersPage() {
                               }}
                             />
                           </Table.Td>
+                          <Table.Td>{getLastUpdatedDate(user)}</Table.Td>
                         </Table.Tr>
                       ))
                     )}

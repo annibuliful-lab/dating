@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Button } from '@mantine/core';
-import { signIn } from 'next-auth/react';
-import { useState } from 'react';
-import { GoogleIcon } from '../icons/GoogleIcon';
+import { Button } from "@mantine/core";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+import { GoogleIcon } from "../icons/GoogleIcon";
 
 export function GoogleSignIn() {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,12 +11,12 @@ export function GoogleSignIn() {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
-      await signIn('google', {
-        callbackUrl: '/feed',
+      await signIn("google", {
+        callbackUrl: "/feed",
         redirect: true,
       });
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      console.error("Google sign-in error:", error);
       setIsLoading(false);
     }
   };

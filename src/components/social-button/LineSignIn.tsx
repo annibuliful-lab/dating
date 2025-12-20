@@ -1,7 +1,7 @@
-import { Button } from '@mantine/core';
-import { signIn } from 'next-auth/react';
-import { useState } from 'react';
-import { LineIcon } from '../icons/LineIcon';
+import { Button } from "@mantine/core";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+import { LineIcon } from "../icons/LineIcon";
 
 export function LineSignIn() {
   const [isLoading, setIsLoading] = useState(false);
@@ -9,12 +9,12 @@ export function LineSignIn() {
   const handleLineSignIn = async () => {
     try {
       setIsLoading(true);
-      await signIn('line', {
-        callbackUrl: '/feed',
+      await signIn("line", {
+        callbackUrl: "/feed",
         redirect: true,
       });
     } catch (error) {
-      console.error('LINE sign-in error:', error);
+      console.error("LINE sign-in error:", error);
       setIsLoading(false);
     }
   };

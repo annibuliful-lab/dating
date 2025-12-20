@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
         phone,
         email,
         status,
+        statusUpdatedAt,
         role,
         isVerified,
         verifiedAt,

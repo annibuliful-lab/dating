@@ -8,6 +8,7 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { SearchInput } from "@/components/element/SearchInput";
 import {
   Box,
   Button,
@@ -20,10 +21,8 @@ import {
   Stack,
   Table,
   Text,
-  TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useDebouncedValue } from "@mantine/hooks";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -54,7 +53,6 @@ export default function AdminUsersPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery] = useDebouncedValue(searchQuery, 300);
   const [statusType, setStatusType] = useState<StatusType>("verification");
   const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set());
 
@@ -67,13 +65,13 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchQuery]);
+  }, [searchQuery]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (debouncedSearchQuery) params.append("search", debouncedSearchQuery);
+      if (searchQuery) params.append("search", searchQuery);
 
       const response = await fetch(`/api/admin/users?${params.toString()}`);
       if (!response.ok) {
@@ -260,27 +258,15 @@ export default function AdminUsersPage() {
           {/* Main Content */}
           <Box style={{ flex: 1 }}>
             {/* Title and Search Bar */}
-            <Group justify="space-between" mb="md" align="center">
+            <Group justify="space-between" mb="md" align="center" gap="md">
               <Text fw={600} size="lg" c="white">
                 {getStatusTitle()}
               </Text>
-              <TextInput
+              <SearchInput
                 placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์ อีเมล"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                leftSection={
-                  <Text size="sm" c="dimmed">
-                    🔍
-                  </Text>
-                }
-                style={{ flex: 1, maxWidth: rem(300) }}
-                styles={{
-                  input: {
-                    backgroundColor: "#131313",
-                    borderColor: "#333",
-                    color: "white",
-                  },
-                }}
+                onSearch={setSearchQuery}
+                debounce={300}
+                style={{ flex: 1, maxWidth: rem(400) }}
               />
             </Group>
 

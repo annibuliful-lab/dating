@@ -81,7 +81,9 @@ export const messageService = {
     if (!data) return { messages: [], hasMore: false };
 
     const hasMore = data.length > limit;
-    const messages = (hasMore ? data.slice(0, limit) : data) as unknown as MessageWithUser[];
+    const messages = (hasMore
+      ? data.slice(0, limit)
+      : data) as unknown as MessageWithUser[];
 
     return {
       messages: messages.reverse(), // Reverse to show oldest first
@@ -354,8 +356,6 @@ export const messageService = {
 
   // Real-time message subscription
   subscribeToMessages(chatId: string, callback: MessageSubscriptionCallback) {
-    console.log("Creating subscription for chat:", chatId);
-
     const channel = supabase
       .channel(`messages:${chatId}`, {
         config: {
@@ -365,7 +365,6 @@ export const messageService = {
       })
       // Listen for broadcast messages (faster, no database query needed)
       .on("broadcast", { event: "new_message" }, (payload) => {
-        console.log("Broadcast message received:", payload);
         callback(payload.payload);
       })
       // Fallback to postgres_changes for reliability
@@ -378,7 +377,6 @@ export const messageService = {
           filter: `chatId=eq.${chatId}`,
         },
         async (payload) => {
-          console.log("Postgres changes payload received:", payload);
           try {
             // Fetch the complete message with user data
             const { data, error } = await supabase
@@ -404,7 +402,6 @@ export const messageService = {
             }
 
             if (data) {
-              console.log("Calling callback with message data:", data);
               callback(data as unknown as MessageWithUser);
             }
           } catch (err) {
@@ -413,18 +410,13 @@ export const messageService = {
         }
       )
       .subscribe((status, err) => {
-        console.log("Subscription status:", status);
         if (err) {
           console.error("Subscription error:", err);
         }
-        if (status === "SUBSCRIBED") {
-          console.log("Successfully subscribed to messages for chat:", chatId);
-        } else if (status === "CHANNEL_ERROR") {
+        if (status === "CHANNEL_ERROR") {
           console.error("Error subscribing to messages for chat:", chatId);
         } else if (status === "TIMED_OUT") {
           console.error("Subscription timed out for chat:", chatId);
-        } else if (status === "CLOSED") {
-          console.log("Subscription closed for chat:", chatId);
         }
       });
 
@@ -461,18 +453,13 @@ export const messageService = {
         onTypingUpdate(typingUsers);
       })
       .on("presence", { event: "join" }, ({ key, newPresences }) => {
-        console.log("User joined:", key, newPresences);
+        // User joined
       })
       .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-        console.log("User left:", key, leftPresences);
+        // User left
       })
       .subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          console.log(
-            "Successfully subscribed to typing indicators for chat:",
-            chatId
-          );
-        }
+        // Subscribed to typing indicators
       });
 
     return channel;
@@ -498,7 +485,10 @@ export const messageService = {
   async markMessagesAsRead(chatId: string, userId: string) {
     const { error } = await supabase
       .from("ChatParticipant")
-      .update({ lastReadAt: new Date().toISOString() } as Record<string, unknown>)
+      .update({ lastReadAt: new Date().toISOString() } as Record<
+        string,
+        unknown
+      >)
       .eq("chatId", chatId)
       .eq("userId", userId);
 

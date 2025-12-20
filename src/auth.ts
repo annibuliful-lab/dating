@@ -76,32 +76,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async redirect({ url, baseUrl }) {
-      console.log("[next-auth] redirect callback:", { url, baseUrl });
-      
       // Redirect to feed page after login
       if (url.startsWith(baseUrl)) {
         // If it's a callback URL, redirect to feed (new users will be handled in session callback)
         if (url.includes("/api/auth/callback")) {
-          console.log("[next-auth] OAuth callback detected, redirecting to /feed");
           return `${baseUrl}/feed`;
         }
         return url;
       }
-      
+
       // If URL doesn't start with baseUrl, redirect to feed as fallback
-      console.log("[next-auth] External URL detected, redirecting to /feed");
       return `${baseUrl}/feed`;
     },
     async signIn({ account, user }) {
-      console.log("[next-auth] signIn callback:", {
-        provider: account?.provider,
-        providerAccountId: account?.providerAccountId,
-        userEmail: user.email,
-      });
-
       try {
         if (!account?.provider || !account?.providerAccountId) {
-          console.error("[next-auth] Missing account provider or providerAccountId");
+          console.error(
+            "[next-auth] Missing account provider or providerAccountId"
+          );
           return false;
         }
 
@@ -117,11 +109,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           console.error("[next-auth] upsertUserAccount returned null");
           return false;
         }
-
-        console.log("[next-auth] User upserted:", {
-          userId: result.userId,
-          isNewUser: result.isNewUser,
-        });
 
         // Check if user is suspended (for existing users)
         if (!result.isNewUser) {
@@ -237,12 +224,6 @@ async function upsertUserAccount(
   params: UpsertUserAccountParams
 ): Promise<{ userId: string; isNewUser: boolean } | null> {
   try {
-    console.log("[upsertUserAccount] Starting with params:", {
-      provider: params.provider,
-      providerAccountId: params.providerAccountId,
-      email: params.email,
-    });
-
     const { data: oAuthAccount, error: oAuthAccountError } = await supabase
       .from("OAuthAccount")
       .select("userId")
@@ -252,18 +233,19 @@ async function upsertUserAccount(
 
     // PGRST116 means no rows returned, which is expected for new users
     if (oAuthAccountError && oAuthAccountError.code !== "PGRST116") {
-      console.error("[upsertUserAccount] Error checking existing OAuth account:", oAuthAccountError);
+      console.error(
+        "[upsertUserAccount] Error checking existing OAuth account:",
+        oAuthAccountError
+      );
       return null;
     }
 
     // If user already exists, return their userId (not a new user)
     if (oAuthAccount !== null) {
-      console.log("[upsertUserAccount] Existing user found:", oAuthAccount.userId);
       return { userId: oAuthAccount.userId, isNewUser: false };
     }
 
     // Create new user with proper status
-    console.log("[upsertUserAccount] Creating new user");
     const userId = v7();
     const { data: user, error: insertedUserError } = await supabase
       .from("User")
@@ -279,11 +261,12 @@ async function upsertUserAccount(
       .single();
 
     if (user === null || insertedUserError) {
-      console.error("[upsertUserAccount] Failed to create user:", insertedUserError);
+      console.error(
+        "[upsertUserAccount] Failed to create user:",
+        insertedUserError
+      );
       return null;
     }
-
-    console.log("[upsertUserAccount] User created successfully:", user.id);
 
     // Create OAuth account link
     const { error: insertedOAuthAccountError } = await supabase
@@ -297,11 +280,13 @@ async function upsertUserAccount(
       });
 
     if (insertedOAuthAccountError) {
-      console.error("[upsertUserAccount] Failed to create OAuth account:", insertedOAuthAccountError);
+      console.error(
+        "[upsertUserAccount] Failed to create OAuth account:",
+        insertedOAuthAccountError
+      );
       return null;
     }
 
-    console.log("[upsertUserAccount] OAuth account created successfully");
     return { userId: user.id, isNewUser: true };
   } catch (error) {
     console.error("[upsertUserAccount] Unexpected error:", error);
@@ -309,9 +294,13 @@ async function upsertUserAccount(
   }
 }
 
-async function getUserIdByProviderAccountId(providerAccountId: string | undefined) {
+async function getUserIdByProviderAccountId(
+  providerAccountId: string | undefined
+) {
   if (!providerAccountId) {
-    console.error("[getUserIdByProviderAccountId] providerAccountId is undefined");
+    console.error(
+      "[getUserIdByProviderAccountId] providerAccountId is undefined"
+    );
     return null;
   }
 

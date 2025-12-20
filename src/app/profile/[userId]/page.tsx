@@ -72,7 +72,7 @@ function ProfileViewPage() {
             .select("role")
             .eq("id", session.user.id)
             .single();
-          if (currentUserData && !('error' in currentUserData)) {
+          if (currentUserData && !("error" in currentUserData)) {
             setCurrentUser(currentUserData as { role: string });
           }
         }
@@ -209,7 +209,6 @@ function ProfileViewPage() {
       (a, b) => a.order - b.order
     );
     sortedImages.forEach((img) => {
-      console.log(img.imageUrl);
       // Only add if imageUrl exists and is not duplicate of avatar
       if (img.imageUrl && img.imageUrl !== profile.avatarUrl) {
         carouselImages.push({
@@ -368,9 +367,10 @@ function ProfileViewPage() {
             gap="xs"
             style={{
               position: "absolute",
-              bottom: isAdmin && !isOwnProfile
-                ? `calc(${rem(140)} + env(safe-area-inset-bottom))`
-                : `calc(${rem(16)} + env(safe-area-inset-bottom))`,
+              bottom:
+                isAdmin && !isOwnProfile
+                  ? `calc(${rem(140)} + env(safe-area-inset-bottom))`
+                  : `calc(${rem(16)} + env(safe-area-inset-bottom))`,
               left: rem(16),
               right: rem(16),
               zIndex: 2,

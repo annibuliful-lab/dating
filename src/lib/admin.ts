@@ -162,7 +162,10 @@ export async function requireNotSuspended() {
   const suspended = await isUserSuspended(session.user.id);
   if (suspended) {
     return NextResponse.json(
-      { error: "Forbidden: Your account is suspended. You can only view content." },
+      {
+        error:
+          "Forbidden: Your account is suspended. You can only view content.",
+      },
       { status: 403 }
     );
   }

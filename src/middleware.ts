@@ -14,12 +14,6 @@ export default auth(async (req) => {
   const isLoggedIn = !!req.auth;
   const pathname = nextUrl.pathname;
 
-  console.log("[middleware]", {
-    pathname,
-    isLoggedIn,
-    userId: req.auth?.user?.id,
-  });
-
   // Check if route is public
   const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname === route);
 
@@ -51,17 +45,11 @@ export default auth(async (req) => {
 
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && isLoggedIn) {
-    console.log(
-      "[middleware] Authenticated user accessing auth route, redirecting to /feed"
-    );
     return NextResponse.redirect(new URL("/feed", nextUrl));
   }
 
   // Redirect unauthenticated users to signin
   if (!isLoggedIn && (isProtectedRoute || isAdminRoute)) {
-    console.log(
-      "[middleware] Unauthenticated user accessing protected route, redirecting to /signin"
-    );
     const signInUrl = new URL("/signin", nextUrl);
     signInUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signInUrl);
@@ -87,28 +75,18 @@ export default auth(async (req) => {
 
     // Check if user is suspended
     if (user.status === "SUSPENDED") {
-      console.log(
-        "[middleware] Suspended user detected, restricting to feed only"
-      );
-
       // Suspended users can only access /feed (read-only)
       if (pathname === "/feed") {
         return NextResponse.next();
       }
 
       // Redirect suspended users trying to access other pages to /feed
-      console.log(
-        "[middleware] Suspended user trying to access restricted page, redirecting to /feed"
-      );
       return NextResponse.redirect(new URL("/feed", nextUrl));
     }
 
     // Check admin routes - require ADMIN role
     if (isAdminRoute) {
       if (user.role !== "ADMIN") {
-        console.log(
-          "[middleware] Non-admin user accessing admin route, redirecting to /feed"
-        );
         return NextResponse.redirect(
           new URL("/auth/error?error=AccessDenied", nextUrl)
         );
@@ -126,9 +104,6 @@ export default auth(async (req) => {
       !pathname.startsWith("/profile/edit") &&
       !pathname.startsWith("/auth/error")
     ) {
-      console.log(
-        "[middleware] New user detected, redirecting to profile edit"
-      );
       return NextResponse.redirect(new URL("/profile/edit", nextUrl));
     }
 

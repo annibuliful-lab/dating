@@ -56,9 +56,7 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    console.log("[signin] Session status:", status, "Session data:", data);
     if (status === "authenticated") {
-      console.log("[signin] User authenticated, redirecting to /feed");
       router.push("/feed");
     }
   }, [data, status, router]);

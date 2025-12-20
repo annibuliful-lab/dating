@@ -3,13 +3,10 @@
 import { UserProfile } from "@/@types/user";
 import { supabase } from "@/client/supabase";
 import {
-  BOTTOM_NAVBAR_HEIGHT_PX,
-  BottomNavbar,
-} from "@/components/element/BottomNavbar";
-import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import { AgeIcon } from "@/components/icons/AgeIcon";
 import { GenderIcon } from "@/components/icons/GenderIcon";
 import { RulerIcon } from "@/components/icons/RulerIcon";
@@ -173,7 +170,6 @@ function ProfileViewPage() {
             <Loader size="lg" />
           </Center>
         </Container>
-        <BottomNavbar />
       </Box>
     );
   }
@@ -189,7 +185,6 @@ function ProfileViewPage() {
             </Text>
           </Center>
         </Container>
-        <BottomNavbar />
       </Box>
     );
   }
@@ -463,8 +458,6 @@ function ProfileViewPage() {
           </Group>
         </Box>
       </Box>
-
-      <BottomNavbar />
     </Box>
   );
 }

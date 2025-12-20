@@ -1,13 +1,10 @@
 "use client";
 
 import {
-  BOTTOM_NAVBAR_HEIGHT_PX,
-  BottomNavbar,
-} from "@/components/element/BottomNavbar";
-import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import { SearchInput } from "@/components/element/SearchInput";
 import {
   Box,
@@ -220,13 +217,7 @@ export default function AdminUsersPage() {
   return (
     <Box>
       <TopNavbar title="User Status" showBack />
-      <Container
-        size="xl"
-        pt="md"
-        px="md"
-        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-        pb={rem(BOTTOM_NAVBAR_HEIGHT_PX + 20)}
-      >
+      <Container size="xl" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <Group align="flex-start" gap="md">
           {/* Side Menu */}
           <Box
@@ -401,7 +392,6 @@ export default function AdminUsersPage() {
           </Box>
         </Group>
       </Container>
-      <BottomNavbar />
     </Box>
   );
 }

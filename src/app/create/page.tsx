@@ -1,10 +1,6 @@
 "use client";
 
 import {
-  BOTTOM_NAVBAR_HEIGHT_PX,
-  BottomNavbar,
-} from "@/components/element/BottomNavbar";
-import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
@@ -44,7 +40,9 @@ function CreatePostPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
@@ -214,7 +212,10 @@ function CreatePostPage() {
             size="sm"
             onClick={handleSubmit}
             loading={isSubmitting}
-            disabled={(!content.trim() && selectedImages.length === 0) || content.length > MAX_CHARACTERS}
+            disabled={
+              (!content.trim() && selectedImages.length === 0) ||
+              content.length > MAX_CHARACTERS
+            }
           >
             Post
           </Button>
@@ -222,7 +223,7 @@ function CreatePostPage() {
       />
 
       <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
-        <Stack gap="lg" pb={rem(BOTTOM_NAVBAR_HEIGHT_PX)}>
+        <Stack gap="lg">
           {/* User Profile Section */}
           <Group gap="sm" align="center">
             <Avatar
@@ -326,8 +327,6 @@ function CreatePostPage() {
           )}
         </Stack>
       </Container>
-
-      <BottomNavbar />
     </Box>
   );
 }

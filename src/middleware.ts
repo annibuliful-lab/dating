@@ -88,17 +88,19 @@ export default auth(async (req) => {
     // Check if user is suspended
     if (user.status === "SUSPENDED") {
       console.log(
-        "[middleware] Suspended user detected, redirecting to error page"
+        "[middleware] Suspended user detected, restricting to feed only"
       );
 
-      // Allow access to auth error page
-      if (pathname === "/auth/error") {
+      // Suspended users can only access /feed (read-only)
+      if (pathname === "/feed") {
         return NextResponse.next();
       }
 
-      return NextResponse.redirect(
-        new URL("/auth/error?error=Suspended", nextUrl)
+      // Redirect suspended users trying to access other pages to /feed
+      console.log(
+        "[middleware] Suspended user trying to access restricted page, redirecting to /feed"
       );
+      return NextResponse.redirect(new URL("/feed", nextUrl));
     }
 
     // Check admin routes - require ADMIN role

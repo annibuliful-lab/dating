@@ -68,6 +68,7 @@ function FeedPage() {
   const [infographicModalOpened, setInfographicModalOpened] =
     useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -82,20 +83,28 @@ function FeedPage() {
   }, [router, status]);
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkUserStatus = async () => {
       if (status === 'authenticated' && session?.user?.id) {
         try {
-          const response = await fetch('/api/admin/check');
-          if (response.ok) {
-            const data = await response.json();
-            setIsAdmin(data.isAdmin || data.role === 'ADMIN');
+          // Check admin status
+          const adminResponse = await fetch('/api/admin/check');
+          if (adminResponse.ok) {
+            const adminData = await adminResponse.json();
+            setIsAdmin(adminData.isAdmin || adminData.role === 'ADMIN');
+          }
+
+          // Check suspended status
+          const statusResponse = await fetch('/api/user/status-check');
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            setIsSuspended(statusData.isSuspended);
           }
         } catch (error) {
-          console.error('Error checking admin status:', error);
+          console.error('Error checking user status:', error);
         }
       }
     };
-    checkAdminStatus();
+    checkUserStatus();
   }, [status, session]);
 
   const fetchPosts = useCallback(async (isRefresh = false) => {
@@ -457,23 +466,25 @@ function FeedPage() {
                         </SimpleGrid>
                       )}
 
-                      <Group justify="flex-start" mt="xs">
-                        <Box
-                          onClick={() =>
-                            handleSendClick(post.User.id)
-                          }
-                          style={{
-                            cursor:
-                              chatLoading === post.User.id
-                                ? 'not-allowed'
-                                : 'pointer',
-                            opacity:
-                              chatLoading === post.User.id ? 0.6 : 1,
-                          }}
-                        >
-                          <Text c="yellow">Message</Text>
-                        </Box>
-                      </Group>
+                      {!isSuspended && (
+                        <Group justify="flex-start" mt="xs">
+                          <Box
+                            onClick={() =>
+                              handleSendClick(post.User.id)
+                            }
+                            style={{
+                              cursor:
+                                chatLoading === post.User.id
+                                  ? 'not-allowed'
+                                  : 'pointer',
+                              opacity:
+                                chatLoading === post.User.id ? 0.6 : 1,
+                            }}
+                          >
+                            <Text c="yellow">Message</Text>
+                          </Box>
+                        </Group>
+                      )}
                     </Stack>
                     {index < posts.length - 1 && (
                       <Divider mt="lg" color="dark.4" />

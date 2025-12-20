@@ -15,64 +15,84 @@ export function BottomNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
   const isActive = (href: string) => pathname === href;
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkUserStatus = async () => {
       try {
-        const response = await fetch("/api/admin/check");
-        if (response.ok) {
-          const data = await response.json();
-          setIsAdmin(data.isAdmin);
+        // Check admin status
+        const adminResponse = await fetch("/api/admin/check");
+        if (adminResponse.ok) {
+          const adminData = await adminResponse.json();
+          setIsAdmin(adminData.isAdmin);
+        }
+
+        // Check suspended status
+        const statusResponse = await fetch("/api/user/status-check");
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          setIsSuspended(statusData.isSuspended);
         }
       } catch (error) {
-        console.error("Error checking admin status:", error);
+        console.error("Error checking user status:", error);
       }
     };
-    checkAdminStatus();
+    checkUserStatus();
   }, []);
 
-  const navItems = [
-    {
-      label: "Home",
-      icon: <HomeIcon color={isActive("/feed") ? "#FFFFFF" : "#989898"} />,
-      href: "/feed",
-    },
-    {
-      label: "Create post",
-      icon: (
-        <CreatePostIcon color={isActive("/create") ? "#FFFFFF" : "#989898"} />
-      ),
-      href: "/create",
-    },
-    {
-      label: "Inbox",
-      icon: <InboxIcon color={isActive("/inbox") ? "#FFFFFF" : "#989898"} />,
-      href: "/inbox",
-    },
-    ...(isAdmin
-      ? [
-          {
-            label: "User Status",
-            icon: (
-              <UserStatusIcon
-                color={
-                  isActive("/admin/users") ? "#FFFFFF" : "#989898"
-                }
-              />
-            ),
-            href: "/admin/users",
-          },
-        ]
-      : []),
-    {
-      label: "Profile",
-      icon: (
-        <ProfileIcon color={isActive("/profile") ? "#FFFFFF" : "#989898"} />
-      ),
-      href: "/profile",
-    },
-  ] as const;
+  // If user is suspended, only show Feed menu
+  const navItems = isSuspended
+    ? [
+        {
+          label: "Home",
+          icon: <HomeIcon color={isActive("/feed") ? "#FFFFFF" : "#989898"} />,
+          href: "/feed",
+        },
+      ]
+    : ([
+        {
+          label: "Home",
+          icon: <HomeIcon color={isActive("/feed") ? "#FFFFFF" : "#989898"} />,
+          href: "/feed",
+        },
+        {
+          label: "Create post",
+          icon: (
+            <CreatePostIcon
+              color={isActive("/create") ? "#FFFFFF" : "#989898"}
+            />
+          ),
+          href: "/create",
+        },
+        {
+          label: "Inbox",
+          icon: (
+            <InboxIcon color={isActive("/inbox") ? "#FFFFFF" : "#989898"} />
+          ),
+          href: "/inbox",
+        },
+        ...(isAdmin
+          ? [
+              {
+                label: "User Status",
+                icon: (
+                  <UserStatusIcon
+                    color={isActive("/admin/users") ? "#FFFFFF" : "#989898"}
+                  />
+                ),
+                href: "/admin/users",
+              },
+            ]
+          : []),
+        {
+          label: "Profile",
+          icon: (
+            <ProfileIcon color={isActive("/profile") ? "#FFFFFF" : "#989898"} />
+          ),
+          href: "/profile",
+        },
+      ] as const);
 
   return (
     <Box

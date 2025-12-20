@@ -148,3 +148,24 @@ export async function getUserStatus(
     return null;
   }
 }
+
+/**
+ * Middleware to check if user is suspended, returns 403 if suspended
+ * Use this to protect write operations (POST, PUT, DELETE) from suspended users
+ */
+export async function requireNotSuspended() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const suspended = await isUserSuspended(session.user.id);
+  if (suspended) {
+    return NextResponse.json(
+      { error: "Forbidden: Your account is suspended. You can only view content." },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}

@@ -9,6 +9,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: "jwt",
   },
+  pages: {
+    signIn: "/signin",
+    error: "/auth/error",
+  },
   providers: [
     CredentialsProvider({
       credentials: {
@@ -51,6 +55,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     LineProvider({
       clientId: process.env.AUTH_LINE_ID,
       clientSecret: process.env.AUTH_LINE_SECRET,
+      authorization: {
+        params: {
+          scope: "profile openid email",
+          bot_prompt: "normal",
+        },
+      },
     }),
     Google({
       clientId: process.env.AUTH_GOOGLE_ID as string,
@@ -66,29 +76,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async redirect({ url, baseUrl }) {
+      console.log("[next-auth] redirect callback:", { url, baseUrl });
+      
       // Redirect to feed page after login
       if (url.startsWith(baseUrl)) {
         // If it's a callback URL, redirect to feed (new users will be handled in session callback)
         if (url.includes("/api/auth/callback")) {
+          console.log("[next-auth] OAuth callback detected, redirecting to /feed");
           return `${baseUrl}/feed`;
         }
         return url;
       }
+      
+      // If URL doesn't start with baseUrl, redirect to feed as fallback
+      console.log("[next-auth] External URL detected, redirecting to /feed");
       return `${baseUrl}/feed`;
     },
     async signIn({ account, user }) {
-      console.log("aaaaa", account, user);
+      console.log("[next-auth] signIn callback:", {
+        provider: account?.provider,
+        providerAccountId: account?.providerAccountId,
+        userEmail: user.email,
+      });
+
       try {
+        if (!account?.provider || !account?.providerAccountId) {
+          console.error("[next-auth] Missing account provider or providerAccountId");
+          return false;
+        }
+
         const result = await upsertUserAccount({
           type: "oauth",
-          provider: account?.provider as string,
-          providerAccountId: account?.providerAccountId as string,
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
           email: user.email as string,
-          idToken: account?.access_token as string,
+          idToken: account.access_token as string,
+        });
+
+        if (!result) {
+          console.error("[next-auth] upsertUserAccount returned null");
+          return false;
+        }
+
+        console.log("[next-auth] User upserted:", {
+          userId: result.userId,
+          isNewUser: result.isNewUser,
         });
 
         // Check if user is suspended (for existing users)
-        if (result && !result.isNewUser) {
+        if (!result.isNewUser) {
           const { data: userInfo, error } = await supabase
             .from("User")
             .select("status")
@@ -96,19 +132,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .single();
 
           if (!error && userInfo && userInfo.status === "SUSPENDED") {
+            console.error("[next-auth] User is suspended:", result.userId);
             throw new Error("บัญชีของคุณถูกพักการใช้งานชั่วคราว");
           }
         }
 
         // Store isNewUser flag in account for JWT callback
-        if (account && result) {
-          (account as Record<string, unknown>).isNewUser = result.isNewUser;
-          (account as Record<string, unknown>).userId = result.userId;
-        }
+        (account as Record<string, unknown>).isNewUser = result.isNewUser;
+        (account as Record<string, unknown>).userId = result.userId;
 
         return true;
       } catch (err) {
-        console.debug("[next-auth] Custom upsert failed:", err);
+        console.error("[next-auth] signIn callback error:", err);
         // If error message contains suspension message, throw it
         if (err instanceof Error && err.message.includes("พักการใช้งาน")) {
           throw err;
@@ -201,66 +236,85 @@ type UpsertUserAccountParams = {
 async function upsertUserAccount(
   params: UpsertUserAccountParams
 ): Promise<{ userId: string; isNewUser: boolean } | null> {
-  const { data: oAuthAccount, error: oAuthAccountError } = await supabase
-    .from("OAuthAccount")
-    .select("userId")
-    .eq("provider", params.provider)
-    .eq("providerAccountId", params.providerAccountId)
-    .single();
+  try {
+    console.log("[upsertUserAccount] Starting with params:", {
+      provider: params.provider,
+      providerAccountId: params.providerAccountId,
+      email: params.email,
+    });
 
-  console.log("oAuthAccount", {
-    data: oAuthAccount,
-    error: oAuthAccountError,
-  });
+    const { data: oAuthAccount, error: oAuthAccountError } = await supabase
+      .from("OAuthAccount")
+      .select("userId")
+      .eq("provider", params.provider)
+      .eq("providerAccountId", params.providerAccountId)
+      .single();
 
-  // If user already exists, return their userId (not a new user)
-  if (oAuthAccount !== null) {
-    return { userId: oAuthAccount.userId, isNewUser: false };
+    // PGRST116 means no rows returned, which is expected for new users
+    if (oAuthAccountError && oAuthAccountError.code !== "PGRST116") {
+      console.error("[upsertUserAccount] Error checking existing OAuth account:", oAuthAccountError);
+      return null;
+    }
+
+    // If user already exists, return their userId (not a new user)
+    if (oAuthAccount !== null) {
+      console.log("[upsertUserAccount] Existing user found:", oAuthAccount.userId);
+      return { userId: oAuthAccount.userId, isNewUser: false };
+    }
+
+    // Create new user with proper status
+    console.log("[upsertUserAccount] Creating new user");
+    const userId = v7();
+    const { data: user, error: insertedUserError } = await supabase
+      .from("User")
+      .insert({
+        id: userId,
+        fullName: "",
+        status: "ACTIVE", // User status: Active (ปกติใช้งาน)
+        isVerified: false, // Verify status: Under review (รอยืนยันตัวตน)
+        updatedAt: new Date().toUTCString(),
+        username: v7(),
+      })
+      .select("id")
+      .single();
+
+    if (user === null || insertedUserError) {
+      console.error("[upsertUserAccount] Failed to create user:", insertedUserError);
+      return null;
+    }
+
+    console.log("[upsertUserAccount] User created successfully:", user.id);
+
+    // Create OAuth account link
+    const { error: insertedOAuthAccountError } = await supabase
+      .from("OAuthAccount")
+      .insert({
+        id: v7() as string,
+        type: params.type,
+        provider: params.provider,
+        providerAccountId: params.providerAccountId,
+        userId: user.id,
+      });
+
+    if (insertedOAuthAccountError) {
+      console.error("[upsertUserAccount] Failed to create OAuth account:", insertedOAuthAccountError);
+      return null;
+    }
+
+    console.log("[upsertUserAccount] OAuth account created successfully");
+    return { userId: user.id, isNewUser: true };
+  } catch (error) {
+    console.error("[upsertUserAccount] Unexpected error:", error);
+    return null;
   }
+}
 
-  // Create new user with proper status
-  const userId = v7();
-  const { data: user, error: insertedUserError } = await supabase
-    .from("User")
-    .insert({
-      id: userId,
-      fullName: "",
-      status: "ACTIVE", // User status: Active (ปกติใช้งาน)
-      isVerified: false, // Verify status: Under review (รอยืนยันตัวตน)
-      updatedAt: new Date().toUTCString(),
-      username: v7(),
-    })
-    .select("id")
-    .single();
-
-  console.log("insertedUser", {
-    data: user,
-    error: insertedUserError,
-  });
-
-  if (user === null || insertedUserError) {
-    console.error("Failed to create user:", insertedUserError);
+async function getUserIdByProviderAccountId(providerAccountId: string | undefined) {
+  if (!providerAccountId) {
+    console.error("[getUserIdByProviderAccountId] providerAccountId is undefined");
     return null;
   }
 
-  const { data: insertedOAuthAccount, error: insertedOAuthAccountError } =
-    await supabase.from("OAuthAccount").insert({
-      id: v7() as string,
-      type: params.type,
-      provider: params.provider,
-      providerAccountId: params.providerAccountId,
-      userId: user.id,
-    });
-
-  console.log("insertedOAuthAccount", {
-    data: insertedOAuthAccount,
-    error: insertedOAuthAccountError,
-  });
-
-  return { userId: user.id, isNewUser: true };
-}
-
-async function getUserIdByProviderAccountId(providerAccountId: string) {
   const { data: oAuthAccount, error: oAuthAccountError } = await supabase
     .from("OAuthAccount")
     .select("userId")
@@ -268,6 +322,7 @@ async function getUserIdByProviderAccountId(providerAccountId: string) {
     .single();
 
   if (oAuthAccountError) {
+    console.error("[getUserIdByProviderAccountId] Error:", oAuthAccountError);
     return null;
   }
 

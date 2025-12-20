@@ -56,11 +56,12 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    console.log('aaaa', data, status);
+    console.log('[signin] Session status:', status, 'Session data:', data);
     if (status === 'authenticated') {
+      console.log('[signin] User authenticated, redirecting to /feed');
       router.push('/feed');
     }
-  }, [data, status]);
+  }, [data, status, router]);
 
   if (status === 'loading') return null;
 

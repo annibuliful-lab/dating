@@ -67,7 +67,7 @@ export default auth(async (req) => {
       .single();
 
     if (error) {
-      console.error("[middleware] Error fetching user:", error);
+      console.error("[proxy] Error fetching user:", error);
       return NextResponse.redirect(
         new URL("/auth/error?error=DatabaseError", nextUrl)
       );
@@ -114,7 +114,7 @@ export default auth(async (req) => {
   return NextResponse.next();
 });
 
-// Configure which routes the middleware should run on
+// Configure which routes the proxy should run on
 export const config = {
   matcher: [
     /*

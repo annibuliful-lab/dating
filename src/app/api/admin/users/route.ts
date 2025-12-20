@@ -48,7 +48,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Apply status filter
-    if (status && (status === "ACTIVE" || status === "INACTIVE" || status === "SUSPENDED")) {
+    if (
+      status &&
+      (status === "ACTIVE" || status === "INACTIVE" || status === "SUSPENDED")
+    ) {
       query = query.eq("status", status);
     }
 
@@ -76,4 +79,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

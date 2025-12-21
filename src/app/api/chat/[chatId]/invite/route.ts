@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { supabase } from "@/client/supabase";
 import { messageService } from "@/services/supabase/messages";
+import { requireNotSuspended } from "@/lib/admin";
 import { NextRequest, NextResponse } from "next/server";
 
 type RouteParams = { chatId: string };
@@ -15,6 +16,10 @@ export async function POST(
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Check if user is suspended
+    const suspendedCheck = await requireNotSuspended();
+    if (suspendedCheck) return suspendedCheck;
 
     const { userId } = await request.json();
 

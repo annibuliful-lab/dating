@@ -1,15 +1,10 @@
 "use client";
 
 import {
-  BOTTOM_NAVBAR_HEIGHT_PX,
-  BottomNavbar,
-} from "@/components/element/BottomNavbar";
-import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
 import { CameraIcon } from "@/components/icons/CameraIcon";
-import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
 import { compressImage } from "@/lib/image-compression";
 import { mediaService } from "@/services/supabase/media";
 import { postService } from "@/services/supabase/posts";
@@ -45,7 +40,9 @@ function CreatePostPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
@@ -190,7 +187,6 @@ function CreatePostPage() {
   if (status === "loading") {
     return (
       <Box>
-        <SuspendedUserRedirect />
         <TopNavbar title="Create post" showBack />
         <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Text>Loading...</Text>
@@ -206,7 +202,6 @@ function CreatePostPage() {
 
   return (
     <Box>
-      <SuspendedUserRedirect />
       <TopNavbar
         title="Create post"
         showBack
@@ -217,7 +212,10 @@ function CreatePostPage() {
             size="sm"
             onClick={handleSubmit}
             loading={isSubmitting}
-            disabled={(!content.trim() && selectedImages.length === 0) || content.length > MAX_CHARACTERS}
+            disabled={
+              (!content.trim() && selectedImages.length === 0) ||
+              content.length > MAX_CHARACTERS
+            }
           >
             Post
           </Button>
@@ -225,7 +223,7 @@ function CreatePostPage() {
       />
 
       <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
-        <Stack gap="lg" pb={rem(BOTTOM_NAVBAR_HEIGHT_PX)}>
+        <Stack gap="lg">
           {/* User Profile Section */}
           <Group gap="sm" align="center">
             <Avatar
@@ -329,8 +327,6 @@ function CreatePostPage() {
           )}
         </Stack>
       </Container>
-
-      <BottomNavbar />
     </Box>
   );
 }

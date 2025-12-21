@@ -3,13 +3,10 @@
 import { UserProfile } from "@/@types/user";
 import { supabase } from "@/client/supabase";
 import {
-  BOTTOM_NAVBAR_HEIGHT_PX,
-  BottomNavbar,
-} from "@/components/element/BottomNavbar";
-import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import { AgeIcon } from "@/components/icons/AgeIcon";
 import { GenderIcon } from "@/components/icons/GenderIcon";
 import { RulerIcon } from "@/components/icons/RulerIcon";
@@ -75,7 +72,7 @@ function ProfileViewPage() {
             .select("role")
             .eq("id", session.user.id)
             .single();
-          if (currentUserData && !('error' in currentUserData)) {
+          if (currentUserData && !("error" in currentUserData)) {
             setCurrentUser(currentUserData as { role: string });
           }
         }
@@ -173,7 +170,6 @@ function ProfileViewPage() {
             <Loader size="lg" />
           </Center>
         </Container>
-        <BottomNavbar />
       </Box>
     );
   }
@@ -189,7 +185,6 @@ function ProfileViewPage() {
             </Text>
           </Center>
         </Container>
-        <BottomNavbar />
       </Box>
     );
   }
@@ -214,7 +209,6 @@ function ProfileViewPage() {
       (a, b) => a.order - b.order
     );
     sortedImages.forEach((img) => {
-      console.log(img.imageUrl);
       // Only add if imageUrl exists and is not duplicate of avatar
       if (img.imageUrl && img.imageUrl !== profile.avatarUrl) {
         carouselImages.push({
@@ -373,9 +367,10 @@ function ProfileViewPage() {
             gap="xs"
             style={{
               position: "absolute",
-              bottom: isAdmin && !isOwnProfile
-                ? `calc(${rem(140)} + env(safe-area-inset-bottom))`
-                : `calc(${rem(16)} + env(safe-area-inset-bottom))`,
+              bottom:
+                isAdmin && !isOwnProfile
+                  ? `calc(${rem(140)} + env(safe-area-inset-bottom))`
+                  : `calc(${rem(16)} + env(safe-area-inset-bottom))`,
               left: rem(16),
               right: rem(16),
               zIndex: 2,
@@ -463,8 +458,6 @@ function ProfileViewPage() {
           </Group>
         </Box>
       </Box>
-
-      <BottomNavbar />
     </Box>
   );
 }

@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  BOTTOM_NAVBAR_HEIGHT_PX,
-  BottomNavbar,
-} from "@/components/element/BottomNavbar";
-import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
+import { SearchInput } from "@/components/element/SearchInput";
 import {
   Box,
   Button,
@@ -20,7 +18,6 @@ import {
   Stack,
   Table,
   Text,
-  TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useSession } from "next-auth/react";
@@ -36,6 +33,7 @@ type User = {
   phone: string | null;
   email: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  statusUpdatedAt: string | null;
   role: "USER" | "ADMIN";
   isVerified: boolean;
   verifiedAt: string | null;
@@ -50,7 +48,8 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const { status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusType, setStatusType] = useState<StatusType>("verification");
   const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set());
@@ -91,6 +90,7 @@ export default function AdminUsersPage() {
       });
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -180,7 +180,28 @@ export default function AdminUsersPage() {
     return "";
   };
 
-  if (loading) {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getLastUpdatedDate = (user: User) => {
+    if (statusType === "verification") {
+      return formatDate(user.verifiedAt);
+    } else if (statusType === "usage") {
+      return formatDate(user.statusUpdatedAt);
+    }
+    return "-";
+  };
+
+  if (initialLoading) {
     return (
       <Box>
         <TopNavbar title="User Status" showBack />
@@ -196,13 +217,7 @@ export default function AdminUsersPage() {
   return (
     <Box>
       <TopNavbar title="User Status" showBack />
-      <Container
-        size="xl"
-        pt="md"
-        px="md"
-        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-        pb={rem(BOTTOM_NAVBAR_HEIGHT_PX + 20)}
-      >
+      <Container size="xl" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
         <Group align="flex-start" gap="md">
           {/* Side Menu */}
           <Box
@@ -256,27 +271,15 @@ export default function AdminUsersPage() {
           {/* Main Content */}
           <Box style={{ flex: 1 }}>
             {/* Title and Search Bar */}
-            <Group justify="space-between" mb="md" align="center">
+            <Group justify="space-between" mb="md" align="center" gap="md">
               <Text fw={600} size="lg" c="white">
                 {getStatusTitle()}
               </Text>
-              <TextInput
-                placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                leftSection={
-                  <Text size="sm" c="dimmed">
-                    🔍
-                  </Text>
-                }
-                style={{ flex: 1, maxWidth: rem(300) }}
-                styles={{
-                  input: {
-                    backgroundColor: "#131313",
-                    borderColor: "#333",
-                    color: "white",
-                  },
-                }}
+              <SearchInput
+                placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์ อีเมล"
+                onSearch={setSearchQuery}
+                debounce={300}
+                style={{ flex: 1, maxWidth: rem(400) }}
               />
             </Group>
 
@@ -291,8 +294,27 @@ export default function AdminUsersPage() {
                   backgroundColor: "#1a1a1a",
                   borderRadius: "8px",
                   overflow: "hidden",
+                  position: "relative",
                 }}
               >
+                {loading && (
+                  <Box
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: "rgba(0, 0, 0, 0.5)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 10,
+                    }}
+                  >
+                    <Loader size="md" />
+                  </Box>
+                )}
                 <Table
                   striped
                   highlightOnHover
@@ -317,12 +339,13 @@ export default function AdminUsersPage() {
                       <Table.Th>นามสกุล</Table.Th>
                       <Table.Th>เบอร์โทร</Table.Th>
                       <Table.Th>สถานะ</Table.Th>
+                      <Table.Th>อัพเดทล่าสุด</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
                     {users.length === 0 ? (
                       <Table.Tr>
-                        <Table.Td colSpan={5} style={{ textAlign: "center" }}>
+                        <Table.Td colSpan={6} style={{ textAlign: "center" }}>
                           <Text c="dimmed" py="xl">
                             ไม่พบผู้ใช้
                           </Text>
@@ -358,6 +381,7 @@ export default function AdminUsersPage() {
                               }}
                             />
                           </Table.Td>
+                          <Table.Td>{getLastUpdatedDate(user)}</Table.Td>
                         </Table.Tr>
                       ))
                     )}
@@ -368,7 +392,6 @@ export default function AdminUsersPage() {
           </Box>
         </Group>
       </Container>
-      <BottomNavbar />
     </Box>
   );
 }

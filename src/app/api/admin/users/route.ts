@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
         phone,
         email,
         status,
+        statusUpdatedAt,
         role,
         isVerified,
         verifiedAt,
@@ -42,12 +43,15 @@ export async function GET(req: NextRequest) {
     // Apply search filter
     if (search) {
       query = query.or(
-        `username.ilike.%${search}%,name.ilike.%${search}%,lastname.ilike.%${search}%,phone.ilike.%${search}%`
+        `username.ilike.%${search}%,name.ilike.%${search}%,lastname.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`
       );
     }
 
     // Apply status filter
-    if (status && (status === "ACTIVE" || status === "INACTIVE" || status === "SUSPENDED")) {
+    if (
+      status &&
+      (status === "ACTIVE" || status === "INACTIVE" || status === "SUSPENDED")
+    ) {
       query = query.eq("status", status);
     }
 
@@ -75,4 +79,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

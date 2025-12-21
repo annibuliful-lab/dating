@@ -2,13 +2,10 @@
 
 import { BUCKET_NAME, supabase } from "@/client/supabase";
 import {
-  BOTTOM_NAVBAR_HEIGHT_PX,
-  BottomNavbar,
-} from "@/components/element/BottomNavbar";
-import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
 // Using a simple refresh icon from Mantine
 import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
@@ -395,7 +392,6 @@ function InboxPage() {
             <Loader size="lg" />
           </Center>
         </Container>
-        <BottomNavbar />
       </Box>
     );
   }
@@ -432,7 +428,6 @@ function InboxPage() {
             </Stack>
           </Center>
         </Container>
-        <BottomNavbar />
       </Box>
     );
   }
@@ -459,7 +454,7 @@ function InboxPage() {
         }
       />
       <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
-        <Stack gap="lg" pb={rem(BOTTOM_NAVBAR_HEIGHT_PX)}>
+        <Stack gap="lg">
           {chats.length === 0 ? (
             <Center py="xl">
               <Stack align="center" gap="md">
@@ -547,8 +542,6 @@ function InboxPage() {
           )}
         </Stack>
       </Container>
-
-      <BottomNavbar />
 
       {/* New Chat Modal */}
       <Modal

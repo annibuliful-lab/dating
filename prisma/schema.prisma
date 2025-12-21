@@ -45,6 +45,7 @@ model User {
   height             Float?
   weight             Float?
   status             UserStatus        @default(ACTIVE)
+  statusUpdatedAt    DateTime?         @db.Timestamptz(6)
   role               UserRole          @default(USER)
   isVerified         Boolean           @default(false)
   verifiedAt         DateTime?         @db.Timestamptz(6)

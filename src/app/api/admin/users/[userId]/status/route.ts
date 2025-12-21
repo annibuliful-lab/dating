@@ -31,6 +31,7 @@ export async function PATCH(
     // Build update object
     const updateData: {
       status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+      statusUpdatedAt?: string;
       isVerified?: boolean;
       verifiedAt?: string | null;
       verifiedBy?: string | null;
@@ -41,6 +42,7 @@ export async function PATCH(
       (status === "ACTIVE" || status === "INACTIVE" || status === "SUSPENDED")
     ) {
       updateData.status = status;
+      updateData.statusUpdatedAt = new Date().toISOString();
     }
 
     if (isVerified !== undefined) {

@@ -5,6 +5,8 @@ import "@mantine/dates/styles.css";
 import "@mantine/notifications/styles.css";
 import { SessionProvider } from "next-auth/react";
 import { Inter } from "next/font/google";
+import { ClientLayout } from "@/components/layout/ClientLayout";
+
 const inter = Inter({
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
@@ -22,7 +24,9 @@ export default function RootLayout({
       </head>
       <body>
         <SessionProvider>
-          <MantineAppProvider>{children}</MantineAppProvider>
+          <MantineAppProvider>
+            <ClientLayout>{children}</ClientLayout>
+          </MantineAppProvider>
         </SessionProvider>
       </body>
     </html>

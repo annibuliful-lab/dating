@@ -1,7 +1,6 @@
 "use client";
 
 import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
-import { BottomNavbar } from "@/components/element/BottomNavbar";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
@@ -231,8 +230,6 @@ function ProfilePage() {
           </Group>
         </Stack> */}
       </Container>
-
-      <BottomNavbar />
     </Box>
   );
 }

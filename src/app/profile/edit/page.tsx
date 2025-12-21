@@ -53,7 +53,9 @@ function EditProfilePage() {
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
   const [bio, setBio] = useState("");
-  const [userStatus, setUserStatus] = useState<"ACTIVE" | "INACTIVE" | "SUSPENDED">("ACTIVE");
+  const [userStatus, setUserStatus] = useState<
+    "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  >("ACTIVE");
   const [isVerified, setIsVerified] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
@@ -62,7 +64,9 @@ function EditProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [checkingUsername, setCheckingUsername] = useState(false);
-  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(
+    null
+  );
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -77,8 +81,7 @@ function EditProfilePage() {
   const BUCKET = "dating";
 
   const openFilePicker = () => fileInputRef.current?.click();
-  const openProfileImagesPicker = () =>
-    profileImagesInputRef.current?.click();
+  const openProfileImagesPicker = () => profileImagesInputRef.current?.click();
 
   // Calculate age from birthday
   const calculateAge = (birthDate: Date | null): number | null => {
@@ -87,7 +90,10 @@ function EditProfilePage() {
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birth.getDate())
+    ) {
       age--;
     }
     return age;
@@ -105,12 +111,15 @@ function EditProfilePage() {
       const response = await fetch("/api/users/check-username", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usernameToCheck, excludeUserId: userId }),
+        body: JSON.stringify({
+          username: usernameToCheck,
+          excludeUserId: userId,
+        }),
       });
 
       const data = await response.json();
       setUsernameAvailable(data.available);
-      
+
       if (!data.available) {
         notifications.show({
           color: "red",
@@ -141,7 +150,10 @@ function EditProfilePage() {
         setPhone(profile.phone ?? "");
         setGender(profile.gender ?? null);
         setBirthday(profile.birthday ? new Date(profile.birthday) : null);
-        setAge(profile.age ?? calculateAge(profile.birthday ? new Date(profile.birthday) : null));
+        setAge(
+          profile.age ??
+            calculateAge(profile.birthday ? new Date(profile.birthday) : null)
+        );
         setHeight(profile.height != null ? String(profile.height) : "");
         setWeight(profile.weight != null ? String(profile.weight) : "");
         setBio(profile.bio ?? "");
@@ -212,7 +224,7 @@ function EditProfilePage() {
     try {
       // Compress image before upload
       const compressedFile = await compressImage(file, 1920, 1920, 0.8);
-      
+
       const ext = compressedFile.name.split(".").pop() || "jpg";
       const key = `users/${
         userId || "anon"
@@ -285,9 +297,13 @@ function EditProfilePage() {
       for (const file of files) {
         // Compress image before upload
         const compressedFile = await compressImage(file, 1920, 1920, 0.8);
-        
+
         const ext = compressedFile.name.split(".").pop() || "jpg";
-        const key = `users/${userId || "anon"}/profile-images/${userId}-${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+        const key = `users/${
+          userId || "anon"
+        }/profile-images/${userId}-${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2)}.${ext}`;
 
         // Upload compressed file
         const { error: uploadErr } = await supabase.storage
@@ -348,12 +364,22 @@ function EditProfilePage() {
     if (!data?.user.id) return;
 
     // Validate required fields
+    if (!fullName.trim()) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: "red",
+        title: "Error",
+        message: "ชื่อ-นามสกุลจำเป็นต้องกรอก",
+      });
+      return;
+    }
+
     if (!username.trim()) {
       setShowConfirmModal(false);
       notifications.show({
         color: "red",
         title: "Error",
-        message: "Username is required",
+        message: "ชื่อผู้ใช้จำเป็นต้องกรอก",
       });
       return;
     }
@@ -363,7 +389,7 @@ function EditProfilePage() {
       notifications.show({
         color: "red",
         title: "Error",
-        message: "Username is already taken. Please choose another.",
+        message: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น",
       });
       return;
     }
@@ -373,7 +399,7 @@ function EditProfilePage() {
       notifications.show({
         color: "red",
         title: "Error",
-        message: "Gender is required",
+        message: "เพศจำเป็นต้องเลือก",
       });
       return;
     }
@@ -383,7 +409,7 @@ function EditProfilePage() {
       notifications.show({
         color: "red",
         title: "Error",
-        message: "Date of birth is required",
+        message: "วันเกิดจำเป็นต้องกรอก",
       });
       return;
     }
@@ -395,11 +421,12 @@ function EditProfilePage() {
       const profileData = {
         username,
         name: fullName,
-        lastname,
+        lastname: null,
         gender,
         birthday,
         bio: bio || null,
         lineId: lineId || null,
+        phone: phone || null,
         height: height || null,
         weight: weight || null,
         email: email || null,
@@ -479,7 +506,11 @@ function EditProfilePage() {
         }}
       >
         <Group h={rem(TOP_NAVBAR_HEIGHT_PX)} px="md" justify="space-between">
-          <Text c="white" onClick={() => router.back()} style={{ cursor: "pointer" }}>
+          <Text
+            c="white"
+            onClick={() => router.back()}
+            style={{ cursor: "pointer" }}
+          >
             ← Back
           </Text>
           <Text c="white" fw={600}>
@@ -574,10 +605,7 @@ function EditProfilePage() {
             >
               {getStatusLabel(userStatus)}
             </Badge>
-            <Badge
-              color={isVerified ? "blue" : "yellow"}
-              variant="light"
-            >
+            <Badge color={isVerified ? "blue" : "yellow"} variant="light">
               {getVerificationStatusLabel()}
             </Badge>
           </Group>
@@ -592,20 +620,13 @@ function EditProfilePage() {
           {/* Required Fields Section */}
           <Stack gap="sm">
             <Text fw={700}>ข้อมูลส่วนตัว *</Text>
-            
-            {/* Full Name - Read Only */}
+
+            {/* Full Name - Editable */}
             <TextInput
-              label="ชื่อ-นามสกุล"
+              label="ชื่อ-นามสกุล *"
               placeholder="ชื่อ-นามสกุล"
-              value={`${fullName} ${lastname || ""}`.trim()}
-              readOnly
-              disabled
-              styles={{
-                input: {
-                  backgroundColor: "var(--mantine-color-dark-7)",
-                  cursor: "not-allowed",
-                },
-              }}
+              value={fullName}
+              onChange={(e) => setFullName(e.currentTarget.value)}
             />
 
             {/* Username - Editable */}
@@ -623,26 +644,23 @@ function EditProfilePage() {
               }
               rightSection={
                 usernameAvailable === true ? (
-                  <Text c="green" fz="xs">✓</Text>
+                  <Text c="green" fz="xs">
+                    ✓
+                  </Text>
                 ) : usernameAvailable === false ? (
-                  <Text c="red" fz="xs">✗</Text>
+                  <Text c="red" fz="xs">
+                    ✗
+                  </Text>
                 ) : null
               }
             />
 
-            {/* Phone - Read Only */}
+            {/* Phone - Editable */}
             <TextInput
-              label="เบอร์ *"
-              placeholder="เบอร์"
+              label="เบอร์"
+              placeholder="เบอร์โทร"
               value={phone}
-              readOnly
-              disabled
-              styles={{
-                input: {
-                  backgroundColor: "var(--mantine-color-dark-7)",
-                  cursor: "not-allowed",
-                },
-              }}
+              onChange={(e) => setPhone(e.currentTarget.value)}
             />
 
             {/* Email - Editable */}
@@ -693,7 +711,8 @@ function EditProfilePage() {
                   if (value === null) {
                     setBirthday(null);
                   } else {
-                    const dateValue = typeof value === 'string' ? new Date(value) : value;
+                    const dateValue =
+                      typeof value === "string" ? new Date(value) : value;
                     setBirthday(dateValue instanceof Date ? dateValue : null);
                   }
                 }}

@@ -93,7 +93,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
     } catch (err) {
-      console.log("Could not play notification sound:", err);
+      // Could not play notification sound
     }
   }, [soundEnabled]);
 
@@ -104,9 +104,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching messages for chat:", chatId);
       const chatMessages = await messageService.getChatMessages(chatId);
-      console.log("Fetched messages:", chatMessages);
 
       const transformedMessages: ChatMessage[] = chatMessages
         .reverse() // Reverse to show oldest first in chat (Facebook-style)
@@ -137,7 +135,6 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       setMessages(transformedMessages);
       setHasOlderMessages(chatMessages.length >= 50); // Assume more if we got a full page
-      console.log("Messages set, loading should be false now");
 
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({
@@ -148,7 +145,6 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       console.error("Error fetching messages:", err);
       setError(err instanceof Error ? err.message : "Failed to load messages");
     } finally {
-      console.log("Setting loading to false");
       setLoading(false);
     }
   }, [chatId, session?.user?.id, formatMessageTime]);
@@ -166,7 +162,6 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setLoadingOlderMessages(true);
       const oldestMessage = messages[0]; // First message in the array (oldest)
 
-      console.log("Loading older messages before:", oldestMessage.id);
       const { messages: olderMessages, hasMore } =
         await messageService.getOlderMessages(chatId, oldestMessage.id, 20);
 
@@ -236,26 +231,19 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   const setupRealtimeSubscription = useCallback(() => {
     if (!chatId) {
-      console.log("No chatId provided, skipping subscription setup");
       return;
     }
 
-    console.log("Setting up realtime subscription for chat:", chatId);
-    console.log("Current session user ID:", session?.user?.id);
-
     if (subscriptionRef.current) {
-      console.log("Cleaning up existing message subscription");
       subscriptionRef.current.unsubscribe();
     }
     if (typingSubscriptionRef.current) {
-      console.log("Cleaning up existing typing subscription");
       typingSubscriptionRef.current.unsubscribe();
     }
 
     const subscription = messageService.subscribeToMessages(
       chatId,
       (newMessage: MessageWithUser) => {
-        console.log("New message received:", newMessage);
         let senderAvatarUrl = null;
         if (newMessage.User?.profileImageKey) {
           const { data: imageData } = supabase.storage
@@ -273,7 +261,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           senderName: newMessage.User?.fullName || "Unknown",
           senderAvatar: senderAvatarUrl,
           senderIsVerified: newMessage.User?.isVerified || false,
-          senderRole: (newMessage.User?.role as "USER" | "ADMIN" | undefined) || "USER",
+          senderRole:
+            (newMessage.User?.role as "USER" | "ADMIN" | undefined) || "USER",
           createdAtLabel: formatMessageTime(new Date(newMessage.createdAt)),
           createdAt: newMessage.createdAt,
         };
@@ -284,13 +273,11 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           );
 
           if (existingIndex !== -1) {
-            console.log("Updating existing message with real data");
             const updatedMessages = [...prev];
             updatedMessages[existingIndex] = transformedMessage;
             return updatedMessages;
           }
 
-          console.log("Adding new message to chat");
           const newMessages = [...prev, transformedMessage];
 
           if (transformedMessage.author === "other") {
@@ -323,12 +310,10 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
     return () => {
       if (subscriptionRef.current) {
-        console.log("Cleaning up realtime subscription");
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
       }
       if (typingSubscriptionRef.current) {
-        console.log("Cleaning up typing subscription");
         typingSubscriptionRef.current.unsubscribe();
         typingSubscriptionRef.current = null;
       }
@@ -641,12 +626,10 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   useEffect(() => {
     return () => {
       if (subscriptionRef.current) {
-        console.log("Component unmounting, cleaning up subscription");
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
       }
       if (typingSubscriptionRef.current) {
-        console.log("Component unmounting, cleaning up typing subscription");
         typingSubscriptionRef.current.unsubscribe();
         typingSubscriptionRef.current = null;
       }

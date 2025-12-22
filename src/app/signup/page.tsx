@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { PasswordChecklist } from "@/components/element/PasswordChecklist";
-import { ActiveCheckCircle } from "@/components/icons/CheckCircle";
-import { LineSignIn } from "@/components/social-button/LineSignIn";
-import { useApiMutation } from "@/hooks/useApiMutation";
-import { isValidEmail } from "@/shared/validation";
+import { PasswordChecklist } from '@/components/element/PasswordChecklist';
+import { ActiveCheckCircle } from '@/components/icons/CheckCircle';
+import { LineSignIn } from '@/components/social-button/LineSignIn';
+import { useApiMutation } from '@/hooks/useApiMutation';
+import { isValidEmail } from '@/shared/validation';
 import {
   Box,
   Button,
@@ -15,40 +15,41 @@ import {
   Stack,
   Text,
   TextInput,
-} from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+  Image,
+} from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 const passwordValidations = [
   {
-    label: "8 characters minimum",
+    label: '8 characters minimum',
     validator: (pw: string) => pw.length >= 8,
   },
   {
-    label: "a number",
+    label: 'a number',
     validator: (pw: string) => /\d/.test(pw),
   },
   {
-    label: "an uppercase letter",
+    label: 'an uppercase letter',
     validator: (pw: string) => /[A-Z]/.test(pw),
   },
   {
-    label: "a special character",
+    label: 'a special character',
     validator: (pw: string) => /[!@#$%^&*(),.?":{}|<>]/.test(pw),
   },
 ];
 
-type RegistrationMethod = "email" | "line";
+type RegistrationMethod = 'email' | 'line';
 
 export default function SignupPage() {
   const router = useRouter();
   const [registrationMethod, setRegistrationMethod] =
-    useState<RegistrationMethod>("email");
+    useState<RegistrationMethod>('email');
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const { mutate, loading } = useApiMutation<{
     message: string;
@@ -56,22 +57,22 @@ export default function SignupPage() {
       user?: Array<{ id?: string }>;
       insertedOAuthAccount?: unknown;
     };
-  }>("/api/auth/register", {
+  }>('/api/auth/register', {
     onCompleted: async (data) => {
       notifications.show({
-        title: "Sign up",
-        message: "Sign up successfully",
+        title: 'Sign up',
+        message: 'Sign up successfully',
         autoClose: 5000,
       });
 
       // Redirect to post-registration screen
-      const userId = data?.data?.user?.[0]?.id || "";
+      const userId = data?.data?.user?.[0]?.id || '';
       await router.push(`/signup/verify?userId=${userId}`);
     },
     onError: () => {
       notifications.show({
-        title: "Sign up",
-        message: "Sign up failed, please contact administrator",
+        title: 'Sign up',
+        message: 'Sign up failed, please contact administrator',
         autoClose: 5000,
       });
     },
@@ -91,16 +92,20 @@ export default function SignupPage() {
     <Container
       px="md"
       style={{
-        display: "flex",
-        flexDirection: "column",
+        display: 'flex',
+        flexDirection: 'column',
         height: rem(812),
         maxWidth: rem(375),
-        justifyContent: "center",
+        justifyContent: 'center',
       }}
     >
       <Stack gap="md">
-        {/* Logo Placeholder */}
-        <Box bg="#3A3A3A" p="sm" w={rem(48)} h={rem(48)} />
+        <Image
+          alt="logo"
+          src="https://wcjxna7kg9rqnf7r.public.blob.vercel-storage.com/IMG_9165.PNG"
+          fit="contain"
+          w={rem(48)}
+        />
 
         <Text size="xl" fw={700}>
           Sign up for Amorisloki
@@ -115,24 +120,24 @@ export default function SignupPage() {
             setRegistrationMethod(value as RegistrationMethod)
           }
           data={[
-            { label: "Email/Password", value: "email" },
-            { label: "Line", value: "line" },
+            { label: 'Email/Password', value: 'email' },
+            { label: 'Line', value: 'line' },
           ]}
           fullWidth
           styles={{
             root: {
-              backgroundColor: "#131313",
+              backgroundColor: '#131313',
             },
             indicator: {
-              backgroundColor: "#FFD400",
+              backgroundColor: '#FFD400',
             },
             label: {
-              color: "white",
+              color: 'white',
             },
           }}
         />
 
-        {registrationMethod === "line" ? (
+        {registrationMethod === 'line' ? (
           <LineSignIn />
         ) : (
           <>
@@ -145,10 +150,10 @@ export default function SignupPage() {
               rightSection={isEmailValid && <ActiveCheckCircle />}
               styles={{
                 input: {
-                  backgroundColor: "#131313",
-                  borderColor: "#333",
-                  color: "white",
-                  height: "50px",
+                  backgroundColor: '#131313',
+                  borderColor: '#333',
+                  color: 'white',
+                  height: '50px',
                 },
               }}
             />
@@ -163,10 +168,10 @@ export default function SignupPage() {
               autoComplete="off"
               styles={{
                 input: {
-                  backgroundColor: "#131313",
-                  borderColor: "#333",
-                  color: "white",
-                  height: "50px",
+                  backgroundColor: '#131313',
+                  borderColor: '#333',
+                  color: 'white',
+                  height: '50px',
                 },
               }}
             />
@@ -191,8 +196,11 @@ export default function SignupPage() {
         )}
 
         <Text size="sm" ta="center" c="dimmed">
-          Already have an account?{" "}
-          <Link href="/signin" style={{ color: "#FFD400", fontWeight: 500 }}>
+          Already have an account?{' '}
+          <Link
+            href="/signin"
+            style={{ color: '#FFD400', fontWeight: 500 }}
+          >
             Log in
           </Link>
         </Text>

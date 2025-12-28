@@ -1,10 +1,21 @@
-"use client";
+'use client';
 
-import { MediaPreview } from "@/components/chat/MediaPreview";
-import { CameraIcon } from "@/components/icons/CameraIcon";
-import { SendIcon } from "@/components/icons/SendIcon";
-import { ActionIcon, Box, Container, Group, TextInput } from "@mantine/core";
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { MediaPreview } from '@/components/chat/MediaPreview';
+import { CameraIcon } from '@/components/icons/CameraIcon';
+import { SendIcon } from '@/components/icons/SendIcon';
+import {
+  ActionIcon,
+  Box,
+  Container,
+  Group,
+  TextInput,
+} from '@mantine/core';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from 'react';
 
 interface MessageInputProps {
   message: string;
@@ -58,7 +69,7 @@ export const MessageInput = forwardRef<
       }
     }, [sending, uploadingMedia]);
     const handleKeyPress = (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
@@ -74,7 +85,9 @@ export const MessageInput = forwardRef<
       }
     };
 
-    const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMessageChange = (
+      e: React.ChangeEvent<HTMLInputElement>
+    ) => {
       const value = e.currentTarget.value;
       setMessage(value);
       onTyping(value);
@@ -84,18 +97,20 @@ export const MessageInput = forwardRef<
       fileInputRef.current?.click();
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (
+      e: React.ChangeEvent<HTMLInputElement>
+    ) => {
       const files = Array.from(e.target.files || []);
       if (files.length > 0 && onMediaSelect) {
         // Validate each file
         const validTypes = [
-          "image/jpeg",
-          "image/png",
-          "image/gif",
-          "image/webp",
-          "video/mp4",
-          "video/webm",
-          "video/quicktime",
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'video/mp4',
+          'video/webm',
+          'video/quicktime',
         ];
 
         const validFiles: File[] = [];
@@ -105,14 +120,16 @@ export const MessageInput = forwardRef<
           if (!validTypes.includes(file.type)) {
             errors.push(`File ${index + 1}: Invalid file type`);
           } else if (file.size > 10 * 1024 * 1024) {
-            errors.push(`File ${index + 1}: File size must be less than 10MB`);
+            errors.push(
+              `File ${index + 1}: File size must be less than 10MB`
+            );
           } else {
             validFiles.push(file);
           }
         });
 
         if (errors.length > 0) {
-          alert(errors.join("\n"));
+          alert(errors.join('\n'));
         }
 
         if (validFiles.length > 0) {
@@ -121,7 +138,7 @@ export const MessageInput = forwardRef<
       }
       // Reset input value to allow selecting the same files again
       if (e.target) {
-        e.target.value = "";
+        e.target.value = '';
       }
     };
 
@@ -130,20 +147,22 @@ export const MessageInput = forwardRef<
         pos="fixed"
         left={0}
         right={0}
-        bottom={0}
+        bottom={70}
         bg="#0F0F0F"
         style={{
-          paddingBottom: "calc(env(safe-area-inset-bottom))",
-          borderTop: "1px solid var(--mantine-color-dark-4)",
+          paddingBottom: 'calc(env(safe-area-inset-bottom))',
+          borderTop: '1px solid var(--mantine-color-dark-4)',
         }}
       >
-        {selectedMedia && selectedMedia.length > 0 && onRemoveMedia && (
-          <MediaPreview
-            files={selectedMedia}
-            onRemove={onRemoveMedia}
-            sending={uploadingMedia || false}
-          />
-        )}
+        {selectedMedia &&
+          selectedMedia.length > 0 &&
+          onRemoveMedia && (
+            <MediaPreview
+              files={selectedMedia}
+              onRemove={onRemoveMedia}
+              sending={uploadingMedia || false}
+            />
+          )}
 
         <Container size="xs" px="md" py="sm">
           <Group align="center" gap="sm">
@@ -152,7 +171,7 @@ export const MessageInput = forwardRef<
               type="file"
               accept="image/*,video/*"
               multiple
-              style={{ display: "none" }}
+              style={{ display: 'none' }}
               onChange={handleFileChange}
             />
             <ActionIcon
@@ -198,4 +217,4 @@ export const MessageInput = forwardRef<
   }
 );
 
-MessageInput.displayName = "MessageInput";
+MessageInput.displayName = 'MessageInput';

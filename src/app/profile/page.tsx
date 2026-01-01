@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
+import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { useApiMutation } from "@/hooks/useApiMutation";
-import { useUserProfile } from "@/hooks/useUserProfile";
+} from '@/components/element/TopNavbar';
+import { useApiMutation } from '@/hooks/useApiMutation';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   Box,
   Button,
@@ -18,10 +18,10 @@ import {
   SimpleGrid,
   Stack,
   Text,
-} from "@mantine/core";
-import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+} from '@mantine/core';
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 function ProfilePage() {
   const router = useRouter();
@@ -45,21 +45,21 @@ function ProfilePage() {
         // Refresh profile after verification
         window.location.reload();
       } else {
-        throw new Error("Verification failed");
+        throw new Error('Verification failed');
       }
     } catch (error) {
-      console.error("Error verifying user:", error);
+      console.error('Error verifying user:', error);
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to verify. Please try again.";
+          : 'Failed to verify. Please try again.';
       alert(errorMessage);
     } finally {
       setIsVerifying(false);
     }
   };
 
-  if ((loading && status === "loading") || !userProfile) {
+  if ((loading && status === 'loading') || !userProfile) {
     return null;
   }
 
@@ -67,16 +67,21 @@ function ProfilePage() {
     <Box>
       <SuspendedUserRedirect />
       <TopNavbar title="Profile" />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
         <Stack align="center" gap="xs" pb="lg">
           {/* Avatar */}
           <Box
             style={{
               width: rem(150),
               height: rem(150),
-              borderRadius: "50%",
-              overflow: "hidden",
-              border: "1px solid var(--mantine-color-dark-4)",
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '1px solid var(--mantine-color-dark-4)',
             }}
           >
             <Image
@@ -98,15 +103,15 @@ function ProfilePage() {
                   fw={500}
                   c="blue"
                   style={{
-                    backgroundColor: "rgba(37, 99, 235, 0.2)",
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                    border: "1px solid #2563eb",
+                    backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    border: '1px solid #2563eb',
                   }}
                 >
                   {userProfile.verifiedByUsername
                     ? `verify by ${userProfile.verifiedByUsername}`
-                    : "ยืนยันตัวตนเอง"}
+                    : 'ยืนยันตัวตนเอง'}
                 </Text>
               )}
             </Group>
@@ -119,7 +124,7 @@ function ProfilePage() {
             {userProfile.bio}
           </Text>
 
-          {!userProfile.isVerified && (
+          {/* {!userProfile.isVerified && (
             <Button
               variant="filled"
               color="teal"
@@ -130,14 +135,14 @@ function ProfilePage() {
             >
               Verify Yourself
             </Button>
-          )}
+          )} */}
 
           <Button
             variant="secondary"
             color="dark.4"
             radius="md"
             mt="xs"
-            onClick={() => router.push("/profile/edit")}
+            onClick={() => router.push('/profile/edit')}
           >
             Edit profile
           </Button>
@@ -146,11 +151,11 @@ function ProfilePage() {
             variant="filled"
             color="red"
             style={{
-              border: "#fa5252 solid 1px",
+              border: '#fa5252 solid 1px',
             }}
             onClick={async () => {
               await signOut();
-              router.push("/");
+              router.push('/');
             }}
           >
             <Text c="white">Logout</Text>
@@ -158,41 +163,42 @@ function ProfilePage() {
         </Stack>
 
         {/* Profile Images Gallery */}
-        {userProfile.profileImages && userProfile.profileImages.length > 0 && (
-          <Box
-            px="md"
-            py="md"
-            style={{
-              backgroundColor: "var(--mantine-color-dark-8)",
-              borderTop: "1px solid var(--mantine-color-dark-4)",
-            }}
-          >
-            <Text fw={600} fz="lg" mb="sm" c="white">
-              Photos
-            </Text>
-            <SimpleGrid cols={3} spacing="sm">
-              {userProfile.profileImages.map((img) => (
-                <Box
-                  key={img.id}
-                  style={{
-                    aspectRatio: "1",
-                    borderRadius: rem(8),
-                    overflow: "hidden",
-                    border: "1px solid var(--mantine-color-dark-4)",
-                  }}
-                >
-                  <Image
-                    src={img.imageUrl}
-                    alt="Profile image"
-                    fit="cover"
-                    w="100%"
-                    h="100%"
-                  />
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Box>
-        )}
+        {userProfile.profileImages &&
+          userProfile.profileImages.length > 0 && (
+            <Box
+              px="md"
+              py="md"
+              style={{
+                backgroundColor: 'var(--mantine-color-dark-8)',
+                borderTop: '1px solid var(--mantine-color-dark-4)',
+              }}
+            >
+              <Text fw={600} fz="lg" mb="sm" c="white">
+                Photos
+              </Text>
+              <SimpleGrid cols={3} spacing="sm">
+                {userProfile.profileImages.map((img) => (
+                  <Box
+                    key={img.id}
+                    style={{
+                      aspectRatio: '1',
+                      borderRadius: rem(8),
+                      overflow: 'hidden',
+                      border: '1px solid var(--mantine-color-dark-4)',
+                    }}
+                  >
+                    <Image
+                      src={img.imageUrl}
+                      alt="Profile image"
+                      fit="cover"
+                      w="100%"
+                      h="100%"
+                    />
+                  </Box>
+                ))}
+              </SimpleGrid>
+            </Box>
+          )}
 
         {/* <Stack gap="xs" pb={rem(80)}>
           <Group align="center" gap="sm">

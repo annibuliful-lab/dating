@@ -39,7 +39,7 @@ export const MessageInput = forwardRef<
       message,
       setMessage,
       onSend,
-      onTyping,
+      // onTyping,
       sending,
       onMediaSelect,
       selectedMedia,
@@ -90,7 +90,7 @@ export const MessageInput = forwardRef<
     ) => {
       const value = e.currentTarget.value;
       setMessage(value);
-      onTyping(value);
+      // onTyping(value);
     };
 
     const handleMediaClick = () => {

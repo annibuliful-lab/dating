@@ -1,11 +1,15 @@
-"use client";
+'use client';
 
-import { BUCKET_NAME, supabase } from "@/client/supabase";
-import { ChatMessage, MessageWithUser, TypingUser } from "@/@types/message";
-import { mediaService } from "@/services/supabase/media";
-import { messageService } from "@/services/supabase/messages";
-import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { BUCKET_NAME, supabase } from '@/client/supabase';
+import {
+  ChatMessage,
+  MessageWithUser,
+  TypingUser,
+} from '@/@types/message';
+import { mediaService } from '@/services/supabase/media';
+import { messageService } from '@/services/supabase/messages';
+import { useSession } from 'next-auth/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseChatMessagesProps {
   chatId: string;
@@ -13,28 +17,30 @@ interface UseChatMessagesProps {
 
 export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const { data: session } = useSession();
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(
-    null
-  );
-  const [editText, setEditText] = useState("");
+  const [editingMessage, setEditingMessage] =
+    useState<ChatMessage | null>(null);
+  const [editText, setEditText] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<File[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] =
+    useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(true);
 
-  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
-  const typingSubscriptionRef = useRef<{
-    unsubscribe: () => void;
-  } | null>(null);
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(
+    null
+  );
+  // const typingSubscriptionRef = useRef<{
+  //   unsubscribe: () => void;
+  // } | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -42,23 +48,24 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   const formatMessageTime = useCallback((date: Date): string => {
     const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInHours =
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-      return date.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
       });
     } else if (diffInHours < 48) {
-      return `Yesterday ${date.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
+      return `Yesterday ${date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
       })}`;
     } else {
-      return date.toLocaleDateString("en-US", {
-        weekday: "long",
-        hour: "numeric",
-        minute: "2-digit",
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        hour: 'numeric',
+        minute: '2-digit',
       });
     }
   }, []);
@@ -81,8 +88,14 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
 
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(
+        800,
+        audioContext.currentTime
+      );
+      oscillator.frequency.setValueAtTime(
+        600,
+        audioContext.currentTime + 0.1
+      );
 
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(
@@ -104,7 +117,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setLoading(true);
       setError(null);
 
-      const chatMessages = await messageService.getChatMessages(chatId);
+      const chatMessages = await messageService.getChatMessages(
+        chatId
+      );
 
       const transformedMessages: ChatMessage[] = chatMessages
         .reverse() // Reverse to show oldest first in chat (Facebook-style)
@@ -121,14 +136,18 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             text: msg.text,
             imageUrl: msg.imageUrl,
             videoUrl:
-              (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
-            author: msg.senderId === session?.user?.id ? "me" : "other",
+              (msg as MessageWithUser & { videoUrl?: string })
+                .videoUrl || null,
+            author:
+              msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
-            senderName: msg.User?.fullName || "Unknown",
+            senderName: msg.User?.fullName || 'Unknown',
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
-            senderRole: msg.User?.role || "USER",
-            createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
+            senderRole: msg.User?.role || 'USER',
+            createdAtLabel: formatMessageTime(
+              new Date(msg.createdAt)
+            ),
             createdAt: msg.createdAt,
           };
         });
@@ -138,12 +157,14 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({
-          behavior: "smooth",
+          behavior: 'smooth',
         });
       }, 100);
     } catch (err) {
-      console.error("Error fetching messages:", err);
-      setError(err instanceof Error ? err.message : "Failed to load messages");
+      console.error('Error fetching messages:', err);
+      setError(
+        err instanceof Error ? err.message : 'Failed to load messages'
+      );
     } finally {
       setLoading(false);
     }
@@ -155,23 +176,28 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       loadingOlderMessages ||
       !hasOlderMessages ||
       messages.length === 0
-    )
+    ) {
       return;
+    }
 
     try {
       setLoadingOlderMessages(true);
       const oldestMessage = messages[0]; // First message in the array (oldest)
 
       const { messages: olderMessages, hasMore } =
-        await messageService.getOlderMessages(chatId, oldestMessage.id, 20);
+        await messageService.getOlderMessages(
+          chatId,
+          oldestMessage.id,
+          20
+        );
 
       if (olderMessages.length === 0) {
         setHasOlderMessages(false);
         return;
       }
 
-      const transformedOlderMessages: ChatMessage[] = olderMessages.map(
-        (msg: MessageWithUser) => {
+      const transformedOlderMessages: ChatMessage[] =
+        olderMessages.map((msg: MessageWithUser) => {
           let senderAvatarUrl = null;
           if (msg.User?.profileImageKey) {
             const { data: imageData } = supabase.storage
@@ -184,18 +210,21 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             text: msg.text,
             imageUrl: msg.imageUrl,
             videoUrl:
-              (msg as MessageWithUser & { videoUrl?: string }).videoUrl || null,
-            author: msg.senderId === session?.user?.id ? "me" : "other",
+              (msg as MessageWithUser & { videoUrl?: string })
+                .videoUrl || null,
+            author:
+              msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
-            senderName: msg.User?.fullName || "Unknown",
+            senderName: msg.User?.fullName || 'Unknown',
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
-            senderRole: msg.User?.role || "USER",
-            createdAtLabel: formatMessageTime(new Date(msg.createdAt)),
+            senderRole: msg.User?.role || 'USER',
+            createdAtLabel: formatMessageTime(
+              new Date(msg.createdAt)
+            ),
             createdAt: msg.createdAt,
           };
-        }
-      );
+        });
 
       // Store current scroll position
       const container = messagesContainerRef.current;
@@ -216,7 +245,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         }
       }, 100);
     } catch (err) {
-      console.error("Error loading older messages:", err);
+      console.error('Error loading older messages:', err);
     } finally {
       setLoadingOlderMessages(false);
     }
@@ -237,9 +266,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     if (subscriptionRef.current) {
       subscriptionRef.current.unsubscribe();
     }
-    if (typingSubscriptionRef.current) {
-      typingSubscriptionRef.current.unsubscribe();
-    }
+    // if (typingSubscriptionRef.current) {
+    //   typingSubscriptionRef.current.unsubscribe();
+    // }
 
     const subscription = messageService.subscribeToMessages(
       chatId,
@@ -256,14 +285,20 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           text: newMessage.text,
           imageUrl: newMessage.imageUrl,
           videoUrl: newMessage.videoUrl || null,
-          author: newMessage.senderId === session?.user?.id ? "me" : "other",
+          author:
+            newMessage.senderId === session?.user?.id
+              ? 'me'
+              : 'other',
           senderId: newMessage.senderId,
-          senderName: newMessage.User?.fullName || "Unknown",
+          senderName: newMessage.User?.fullName || 'Unknown',
           senderAvatar: senderAvatarUrl,
           senderIsVerified: newMessage.User?.isVerified || false,
           senderRole:
-            (newMessage.User?.role as "USER" | "ADMIN" | undefined) || "USER",
-          createdAtLabel: formatMessageTime(new Date(newMessage.createdAt)),
+            (newMessage.User?.role as 'USER' | 'ADMIN' | undefined) ||
+            'USER',
+          createdAtLabel: formatMessageTime(
+            new Date(newMessage.createdAt)
+          ),
           createdAt: newMessage.createdAt,
         };
 
@@ -280,13 +315,13 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
           const newMessages = [...prev, transformedMessage];
 
-          if (transformedMessage.author === "other") {
+          if (transformedMessage.author === 'other') {
             playNotificationSound();
           }
 
           setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({
-              behavior: "smooth",
+              behavior: 'smooth',
             });
           }, 100);
 
@@ -295,33 +330,39 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       }
     );
 
-    const typingSubscription = messageService.subscribeToTyping(
-      chatId,
-      (typingUsers) => {
-        const otherTypingUsers = typingUsers.filter(
-          (user) => user.userId !== session?.user?.id
-        );
-        setTypingUsers(otherTypingUsers);
-      }
-    );
+    // const typingSubscription = messageService.subscribeToTyping(
+    //   chatId,
+    //   (typingUsers) => {
+    //     const otherTypingUsers = typingUsers.filter(
+    //       (user) => user.userId !== session?.user?.id
+    //     );
+    //     setTypingUsers(otherTypingUsers);
+    //   }
+    // );
 
-    subscriptionRef.current = subscription;
-    typingSubscriptionRef.current = typingSubscription;
+    // subscriptionRef.current = subscription;
+    // typingSubscriptionRef.current = typingSubscription;
 
     return () => {
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
       }
-      if (typingSubscriptionRef.current) {
-        typingSubscriptionRef.current.unsubscribe();
-        typingSubscriptionRef.current = null;
-      }
+      // if (typingSubscriptionRef.current) {
+      //   typingSubscriptionRef.current.unsubscribe();
+      //   typingSubscriptionRef.current = null;
+      // }
     };
-  }, [chatId, session?.user?.id, playNotificationSound, formatMessageTime]);
+  }, [
+    chatId,
+    session?.user?.id,
+    playNotificationSound,
+    formatMessageTime,
+  ]);
 
   const handleSend = useCallback(async () => {
-    if (!message.trim() || !session?.user?.id || !chatId || sending) return;
+    if (!message.trim() || !session?.user?.id || !chatId || sending)
+      return;
 
     const messageText = message.trim();
     const messageId = crypto.randomUUID();
@@ -335,7 +376,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         await messageService.sendTypingIndicator(
           chatId,
           session.user.id,
-          session.user.name || "User",
+          session.user.name || 'User',
           false
         );
       }
@@ -350,20 +391,20 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         text: messageText,
         imageUrl: null,
         videoUrl: null,
-        author: "me",
+        author: 'me',
         senderId: session.user.id,
-        senderName: session.user.name || "You",
-        senderAvatar: session.user.image || "",
+        senderName: session.user.name || 'You',
+        senderAvatar: session.user.image || '',
         createdAtLabel: formatMessageTime(new Date(currentTime)),
         createdAt: currentTime,
       };
 
       setMessages((prev) => [...prev, optimisticMessage]);
-      setMessage("");
+      setMessage('');
 
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({
-          behavior: "smooth",
+          behavior: 'smooth',
         });
       }, 100);
 
@@ -374,8 +415,10 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         text: messageText,
       });
     } catch (err) {
-      console.error("Error sending message:", err);
-      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+      console.error('Error sending message:', err);
+      setMessages((prev) =>
+        prev.filter((msg) => msg.id !== messageId)
+      );
       setMessage(messageText);
     } finally {
       setSending(false);
@@ -407,7 +450,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         await messageService.sendTypingIndicator(
           chatId,
           session.user.id,
-          session.user.name || "User",
+          session.user.name || 'User',
           true
         );
       } else if (!shouldBeTyping && wasTyping) {
@@ -415,31 +458,31 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         await messageService.sendTypingIndicator(
           chatId,
           session.user.id,
-          session.user.name || "User",
+          session.user.name || 'User',
           false
         );
       }
 
-      if (shouldBeTyping) {
-        typingTimeoutRef.current = setTimeout(async () => {
-          if (isTyping && chatId && session?.user?.id) {
-            setIsTyping(false);
-            await messageService.sendTypingIndicator(
-              chatId,
-              session.user.id,
-              session.user.name || "User",
-              false
-            );
-          }
-        }, 3000);
-      }
+      // if (shouldBeTyping) {
+      //   typingTimeoutRef.current = setTimeout(async () => {
+      //     if (isTyping && chatId && session?.user?.id) {
+      //       setIsTyping(false);
+      //       await messageService.sendTypingIndicator(
+      //         chatId,
+      //         session.user.id,
+      //         session.user.name || 'User',
+      //         false
+      //       );
+      //     }
+      //   }, 3000);
+      // }
     },
     [session?.user?.id, session?.user?.name, chatId, isTyping]
   );
 
   const handleEditMessage = useCallback((message: ChatMessage) => {
     setEditingMessage(message);
-    setEditText(message.text || "");
+    setEditText(message.text || '');
     setShowEditModal(true);
   }, []);
 
@@ -447,37 +490,48 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     if (!editingMessage || !editText.trim()) return;
 
     try {
-      await messageService.editMessage(editingMessage.id, editText.trim());
+      await messageService.editMessage(
+        editingMessage.id,
+        editText.trim()
+      );
 
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === editingMessage.id ? { ...msg, text: editText.trim() } : msg
+          msg.id === editingMessage.id
+            ? { ...msg, text: editText.trim() }
+            : msg
         )
       );
 
       setShowEditModal(false);
       setEditingMessage(null);
-      setEditText("");
+      setEditText('');
     } catch (err) {
-      console.error("Error editing message:", err);
+      console.error('Error editing message:', err);
     }
   }, [editingMessage, editText]);
 
-  const handleDeleteMessage = useCallback(async (messageId: string) => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
+  const handleDeleteMessage = useCallback(
+    async (messageId: string) => {
+      if (!confirm('Are you sure you want to delete this message?'))
+        return;
 
-    try {
-      await messageService.deleteMessage(messageId);
-      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
-    } catch (err) {
-      console.error("Error deleting message:", err);
-    }
-  }, []);
+      try {
+        await messageService.deleteMessage(messageId);
+        setMessages((prev) =>
+          prev.filter((msg) => msg.id !== messageId)
+        );
+      } catch (err) {
+        console.error('Error deleting message:', err);
+      }
+    },
+    []
+  );
 
   const closeEditModal = useCallback(() => {
     setShowEditModal(false);
     setEditingMessage(null);
-    setEditText("");
+    setEditText('');
   }, []);
 
   const handleMediaSelect = useCallback((files: File[]) => {
@@ -495,7 +549,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     });
 
     if (errors.length > 0) {
-      alert(errors.join("\n"));
+      alert(errors.join('\n'));
     }
 
     if (validFiles.length > 0) {
@@ -525,40 +579,42 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       );
 
       // Create messages for each uploaded file
-      const messagePromises = selectedMedia.map(async (file, index) => {
-        const messageId = crypto.randomUUID();
-        messageIds.push(messageId);
+      const messagePromises = selectedMedia.map(
+        async (file, index) => {
+          const messageId = crypto.randomUUID();
+          messageIds.push(messageId);
 
-        const isVideo = file.type.startsWith("video/");
-        const isImage = file.type.startsWith("image/");
-        const uploadResult = uploadResults[index];
+          const isVideo = file.type.startsWith('video/');
+          const isImage = file.type.startsWith('image/');
+          const uploadResult = uploadResults[index];
 
-        // Create optimistic message
-        const optimisticMessage: ChatMessage = {
-          id: messageId,
-          text: null,
-          imageUrl: isImage ? uploadResult.publicUrl : null,
-          videoUrl: isVideo ? uploadResult.publicUrl : null,
-          author: "me",
-          senderId: session.user.id!,
-          senderName: session.user.name || "You",
-          senderAvatar: session.user.image || "",
-          createdAtLabel: formatMessageTime(new Date(currentTime)),
-          createdAt: currentTime,
-        };
+          // Create optimistic message
+          const optimisticMessage: ChatMessage = {
+            id: messageId,
+            text: null,
+            imageUrl: isImage ? uploadResult.publicUrl : null,
+            videoUrl: isVideo ? uploadResult.publicUrl : null,
+            author: 'me',
+            senderId: session.user.id!,
+            senderName: session.user.name || 'You',
+            senderAvatar: session.user.image || '',
+            createdAtLabel: formatMessageTime(new Date(currentTime)),
+            createdAt: currentTime,
+          };
 
-        // Send message with media
-        await messageService.sendMessage({
-          id: messageId,
-          chatId: chatId,
-          senderId: session.user.id!,
-          text: "",
-          imageUrl: isImage ? uploadResult.publicUrl : null,
-          videoUrl: isVideo ? uploadResult.publicUrl : null,
-        });
+          // Send message with media
+          await messageService.sendMessage({
+            id: messageId,
+            chatId: chatId,
+            senderId: session.user.id!,
+            text: '',
+            imageUrl: isImage ? uploadResult.publicUrl : null,
+            videoUrl: isVideo ? uploadResult.publicUrl : null,
+          });
 
-        return optimisticMessage;
-      });
+          return optimisticMessage;
+        }
+      );
 
       // Wait for all messages to be sent
       const optimisticMessages = await Promise.all(messagePromises);
@@ -568,13 +624,17 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setSelectedMedia([]);
 
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        messagesEndRef.current?.scrollIntoView({
+          behavior: 'smooth',
+        });
       }, 100);
     } catch (err) {
-      console.error("Error sending media messages:", err);
+      console.error('Error sending media messages:', err);
       // Remove failed messages
-      setMessages((prev) => prev.filter((msg) => !messageIds.includes(msg.id)));
-      alert("Failed to send media. Please try again.");
+      setMessages((prev) =>
+        prev.filter((msg) => !messageIds.includes(msg.id))
+      );
+      alert('Failed to send media. Please try again.');
     } finally {
       setUploadingMedia(false);
     }
@@ -596,7 +656,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           URL.createObjectURL(selectedMedia[index])
         );
         // Remove the file from the array
-        setSelectedMedia((prev) => prev.filter((_, i) => i !== index));
+        setSelectedMedia((prev) =>
+          prev.filter((_, i) => i !== index)
+        );
       }
     },
     [selectedMedia]
@@ -608,7 +670,11 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       const scrollTop = container.scrollTop;
 
       // If scrolled to the top and there are more messages to load
-      if (scrollTop < 100 && hasOlderMessages && !loadingOlderMessages) {
+      if (
+        scrollTop < 100 &&
+        hasOlderMessages &&
+        !loadingOlderMessages
+      ) {
         loadOlderMessages();
       }
     },
@@ -621,7 +687,12 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       const cleanup = setupRealtimeSubscription();
       return cleanup;
     }
-  }, [chatId, session?.user?.id, fetchMessages, setupRealtimeSubscription]);
+  }, [
+    chatId,
+    session?.user?.id,
+    fetchMessages,
+    setupRealtimeSubscription,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -629,10 +700,10 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
       }
-      if (typingSubscriptionRef.current) {
-        typingSubscriptionRef.current.unsubscribe();
-        typingSubscriptionRef.current = null;
-      }
+      // if (typingSubscriptionRef.current) {
+      //   typingSubscriptionRef.current.unsubscribe();
+      //   typingSubscriptionRef.current = null;
+      // }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;

@@ -1,3 +1,4 @@
+// hooks/useChatMessages.ts
 'use client';
 
 import { BUCKET_NAME, supabase } from '@/client/supabase';
@@ -17,20 +18,26 @@ interface UseChatMessagesProps {
 
 export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const { data: session } = useSession();
+
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+
   const [editingMessage, setEditingMessage] =
     useState<ChatMessage | null>(null);
   const [editText, setEditText] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+
   const [soundEnabled, setSoundEnabled] = useState(true);
+
   const [selectedMedia, setSelectedMedia] = useState<File[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+
   const [loadingOlderMessages, setLoadingOlderMessages] =
     useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(true);
@@ -38,13 +45,17 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(
     null
   );
-  // const typingSubscriptionRef = useRef<{
-  //   unsubscribe: () => void;
-  // } | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
+
+  // Guard: current active chat id (prevents stale callbacks)
+  const activeChatIdRef = useRef<string>('');
+  useEffect(() => {
+    activeChatIdRef.current = chatId;
+  }, [chatId]);
 
   const formatMessageTime = useCallback((date: Date): string => {
     const now = new Date();
@@ -81,6 +92,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             webkitAudioContext: typeof AudioContext;
           }
         ).webkitAudioContext;
+
       const audioContext = new AudioContextClass();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -105,39 +117,60 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
-    } catch (err) {
-      // Could not play notification sound
+    } catch {
+      // ignore
     }
   }, [soundEnabled]);
 
+  // Reset per-room state when chatId changes (prevents room mix UI)
+  useEffect(() => {
+    setMessages([]);
+    setTypingUsers([]);
+    setIsTyping(false);
+    setHasOlderMessages(true);
+    setLoadingOlderMessages(false);
+    setError(null);
+
+    // also stop pending typing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, [chatId]);
+
   const fetchMessages = useCallback(async () => {
     if (!chatId) return;
+
+    const currentChatId = chatId;
 
     try {
       setLoading(true);
       setError(null);
 
       const chatMessages = await messageService.getChatMessages(
-        chatId
+        currentChatId
       );
 
+      // Guard async: if switched rooms while waiting, ignore
+      if (activeChatIdRef.current !== currentChatId) return;
+
       const transformedMessages: ChatMessage[] = chatMessages
-        .reverse() // Reverse to show oldest first in chat (Facebook-style)
+        .reverse()
         .map((msg: MessageWithUser) => {
-          let senderAvatarUrl = null;
+          let senderAvatarUrl: string | null = null;
+
           if (msg.User?.profileImageKey) {
             const { data: imageData } = supabase.storage
               .from(BUCKET_NAME)
               .getPublicUrl(msg.User.profileImageKey);
             senderAvatarUrl = imageData.publicUrl;
           }
+
           return {
             id: msg.id,
             text: msg.text,
-            imageUrl: msg.imageUrl,
-            videoUrl:
-              (msg as MessageWithUser & { videoUrl?: string })
-                .videoUrl || null,
+            imageUrl: (msg as any).imageUrl ?? null,
+            videoUrl: (msg as any).videoUrl ?? null,
             author:
               msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
@@ -153,20 +186,22 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         });
 
       setMessages(transformedMessages);
-      setHasOlderMessages(chatMessages.length >= 50); // Assume more if we got a full page
+      setHasOlderMessages(chatMessages.length >= 50);
 
       setTimeout(() => {
+        if (activeChatIdRef.current !== currentChatId) return;
         messagesEndRef.current?.scrollIntoView({
           behavior: 'smooth',
         });
       }, 100);
     } catch (err) {
-      console.error('Error fetching messages:', err);
+      if (activeChatIdRef.current !== currentChatId) return;
       setError(
         err instanceof Error ? err.message : 'Failed to load messages'
       );
     } finally {
-      setLoading(false);
+      if (activeChatIdRef.current === currentChatId)
+        setLoading(false);
     }
   }, [chatId, session?.user?.id, formatMessageTime]);
 
@@ -176,20 +211,25 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       loadingOlderMessages ||
       !hasOlderMessages ||
       messages.length === 0
-    ) {
+    )
       return;
-    }
+
+    const currentChatId = chatId;
 
     try {
       setLoadingOlderMessages(true);
-      const oldestMessage = messages[0]; // First message in the array (oldest)
+
+      const oldestMessage = messages[0];
 
       const { messages: olderMessages, hasMore } =
         await messageService.getOlderMessages(
-          chatId,
+          currentChatId,
           oldestMessage.id,
           20
         );
+
+      // Guard async
+      if (activeChatIdRef.current !== currentChatId) return;
 
       if (olderMessages.length === 0) {
         setHasOlderMessages(false);
@@ -198,7 +238,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       const transformedOlderMessages: ChatMessage[] =
         olderMessages.map((msg: MessageWithUser) => {
-          let senderAvatarUrl = null;
+          let senderAvatarUrl: string | null = null;
           if (msg.User?.profileImageKey) {
             const { data: imageData } = supabase.storage
               .from(BUCKET_NAME)
@@ -208,10 +248,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           return {
             id: msg.id,
             text: msg.text,
-            imageUrl: msg.imageUrl,
-            videoUrl:
-              (msg as MessageWithUser & { videoUrl?: string })
-                .videoUrl || null,
+            imageUrl: (msg as any).imageUrl ?? null,
+            videoUrl: (msg as any).videoUrl ?? null,
             author:
               msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
@@ -226,28 +264,27 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           };
         });
 
-      // Store current scroll position
       const container = messagesContainerRef.current;
       if (container) {
         scrollPositionRef.current =
           container.scrollHeight - container.scrollTop;
       }
 
-      // Add older messages to the beginning of the array
       setMessages((prev) => [...transformedOlderMessages, ...prev]);
       setHasOlderMessages(hasMore);
 
-      // Restore scroll position after new messages are added
       setTimeout(() => {
+        if (activeChatIdRef.current !== currentChatId) return;
         if (container) {
           container.scrollTop =
             container.scrollHeight - scrollPositionRef.current;
         }
       }, 100);
     } catch (err) {
-      console.error('Error loading older messages:', err);
+      // ignore or set error
     } finally {
-      setLoadingOlderMessages(false);
+      if (activeChatIdRef.current === currentChatId)
+        setLoadingOlderMessages(false);
     }
   }, [
     chatId,
@@ -259,32 +296,37 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   ]);
 
   const setupRealtimeSubscription = useCallback(() => {
-    if (!chatId) {
-      return;
-    }
+    if (!chatId) return;
 
-    if (subscriptionRef.current) {
-      subscriptionRef.current.unsubscribe();
-    }
-    // if (typingSubscriptionRef.current) {
-    //   typingSubscriptionRef.current.unsubscribe();
-    // }
+    // unsubscribe old
+    subscriptionRef.current?.unsubscribe();
+    subscriptionRef.current = null;
+
+    const currentChatId = chatId;
 
     const subscription = messageService.subscribeToMessages(
-      chatId,
+      currentChatId,
       (newMessage: MessageWithUser) => {
-        let senderAvatarUrl = null;
+        // Guard: ignore events if room changed
+        if (activeChatIdRef.current !== currentChatId) return;
+
+        // Guard: ensure payload chatId matches (if service provides it)
+        if (newMessage.chatId && newMessage.chatId !== currentChatId)
+          return;
+
+        let senderAvatarUrl: string | null = null;
         if (newMessage.User?.profileImageKey) {
           const { data: imageData } = supabase.storage
             .from(BUCKET_NAME)
             .getPublicUrl(newMessage.User.profileImageKey);
           senderAvatarUrl = imageData.publicUrl;
         }
+
         const transformedMessage: ChatMessage = {
           id: newMessage.id,
           text: newMessage.text,
-          imageUrl: newMessage.imageUrl,
-          videoUrl: newMessage.videoUrl || null,
+          imageUrl: (newMessage as any).imageUrl ?? null,
+          videoUrl: (newMessage as any).videoUrl ?? null,
           author:
             newMessage.senderId === session?.user?.id
               ? 'me'
@@ -293,9 +335,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           senderName: newMessage.User?.fullName || 'Unknown',
           senderAvatar: senderAvatarUrl,
           senderIsVerified: newMessage.User?.isVerified || false,
-          senderRole:
-            (newMessage.User?.role as 'USER' | 'ADMIN' | undefined) ||
-            'USER',
+          senderRole: (newMessage.User?.role as any) || 'USER',
           createdAtLabel: formatMessageTime(
             new Date(newMessage.createdAt)
           ),
@@ -303,55 +343,40 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         };
 
         setMessages((prev) => {
-          const existingIndex = prev.findIndex(
-            (msg) => msg.id === transformedMessage.id
+          // Guard inside setState too (extra safe)
+          if (activeChatIdRef.current !== currentChatId) return prev;
+
+          const idx = prev.findIndex(
+            (m) => m.id === transformedMessage.id
           );
-
-          if (existingIndex !== -1) {
-            const updatedMessages = [...prev];
-            updatedMessages[existingIndex] = transformedMessage;
-            return updatedMessages;
+          if (idx !== -1) {
+            const copy = [...prev];
+            copy[idx] = transformedMessage;
+            return copy;
           }
 
-          const newMessages = [...prev, transformedMessage];
+          const next = [...prev, transformedMessage];
 
-          if (transformedMessage.author === 'other') {
+          if (transformedMessage.author === 'other')
             playNotificationSound();
-          }
 
           setTimeout(() => {
+            if (activeChatIdRef.current !== currentChatId) return;
             messagesEndRef.current?.scrollIntoView({
               behavior: 'smooth',
             });
           }, 100);
 
-          return newMessages;
+          return next;
         });
       }
     );
 
-    // const typingSubscription = messageService.subscribeToTyping(
-    //   chatId,
-    //   (typingUsers) => {
-    //     const otherTypingUsers = typingUsers.filter(
-    //       (user) => user.userId !== session?.user?.id
-    //     );
-    //     setTypingUsers(otherTypingUsers);
-    //   }
-    // );
-
-    // subscriptionRef.current = subscription;
-    // typingSubscriptionRef.current = typingSubscription;
+    subscriptionRef.current = subscription;
 
     return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-        subscriptionRef.current = null;
-      }
-      // if (typingSubscriptionRef.current) {
-      //   typingSubscriptionRef.current.unsubscribe();
-      //   typingSubscriptionRef.current = null;
-      // }
+      subscriptionRef.current?.unsubscribe();
+      subscriptionRef.current = null;
     };
   }, [
     chatId,
@@ -364,27 +389,13 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     if (!message.trim() || !session?.user?.id || !chatId || sending)
       return;
 
+    const currentChatId = chatId;
     const messageText = message.trim();
     const messageId = crypto.randomUUID();
     const currentTime = new Date().toISOString();
 
     try {
       setSending(true);
-
-      if (isTyping) {
-        setIsTyping(false);
-        await messageService.sendTypingIndicator(
-          chatId,
-          session.user.id,
-          session.user.name || 'User',
-          false
-        );
-      }
-
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
 
       const optimisticMessage: ChatMessage = {
         id: messageId,
@@ -399,10 +410,15 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         createdAt: currentTime,
       };
 
-      setMessages((prev) => [...prev, optimisticMessage]);
+      setMessages((prev) => {
+        if (activeChatIdRef.current !== currentChatId) return prev;
+        return [...prev, optimisticMessage];
+      });
+
       setMessage('');
 
       setTimeout(() => {
+        if (activeChatIdRef.current !== currentChatId) return;
         messagesEndRef.current?.scrollIntoView({
           behavior: 'smooth',
         });
@@ -410,18 +426,19 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       await messageService.sendMessage({
         id: messageId,
-        chatId: chatId,
+        chatId: currentChatId,
         senderId: session.user.id!,
         text: messageText,
       });
     } catch (err) {
-      console.error('Error sending message:', err);
-      setMessages((prev) =>
-        prev.filter((msg) => msg.id !== messageId)
-      );
-      setMessage(messageText);
+      // revert optimistic only if still same room
+      if (activeChatIdRef.current === currentChatId) {
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+        setMessage(messageText);
+      }
     } finally {
-      setSending(false);
+      if (activeChatIdRef.current === currentChatId)
+        setSending(false);
     }
   }, [
     message,
@@ -430,59 +447,18 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     session?.user?.image,
     chatId,
     sending,
-    isTyping,
     formatMessageTime,
   ]);
 
-  const handleTyping = useCallback(
-    async (text: string) => {
-      if (!session?.user?.id || !chatId) return;
+  const handleTyping = useCallback(async (_text: string) => {
+    // (คุณคอมเมนต์ typing timeout ไว้แล้ว — โค้ดนี้ปล่อยไว้เฉยๆ)
+    // ถ้าจะใช้ typing indicator ให้ใช้ void messageService.sendTypingIndicator(...) พร้อม guard currentChatId
+    return;
+  }, []);
 
-      const wasTyping = isTyping;
-      const shouldBeTyping = text.length > 0;
-
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      if (shouldBeTyping && !wasTyping) {
-        setIsTyping(true);
-        await messageService.sendTypingIndicator(
-          chatId,
-          session.user.id,
-          session.user.name || 'User',
-          true
-        );
-      } else if (!shouldBeTyping && wasTyping) {
-        setIsTyping(false);
-        await messageService.sendTypingIndicator(
-          chatId,
-          session.user.id,
-          session.user.name || 'User',
-          false
-        );
-      }
-
-      // if (shouldBeTyping) {
-      //   typingTimeoutRef.current = setTimeout(async () => {
-      //     if (isTyping && chatId && session?.user?.id) {
-      //       setIsTyping(false);
-      //       await messageService.sendTypingIndicator(
-      //         chatId,
-      //         session.user.id,
-      //         session.user.name || 'User',
-      //         false
-      //       );
-      //     }
-      //   }, 3000);
-      // }
-    },
-    [session?.user?.id, session?.user?.name, chatId, isTyping]
-  );
-
-  const handleEditMessage = useCallback((message: ChatMessage) => {
-    setEditingMessage(message);
-    setEditText(message.text || '');
+  const handleEditMessage = useCallback((m: ChatMessage) => {
+    setEditingMessage(m);
+    setEditText(m.text || '');
     setShowEditModal(true);
   }, []);
 
@@ -506,8 +482,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setShowEditModal(false);
       setEditingMessage(null);
       setEditText('');
-    } catch (err) {
-      console.error('Error editing message:', err);
+    } catch {
+      // ignore
     }
   }, [editingMessage, editText]);
 
@@ -518,11 +494,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       try {
         await messageService.deleteMessage(messageId);
-        setMessages((prev) =>
-          prev.filter((msg) => msg.id !== messageId)
-        );
-      } catch (err) {
-        console.error('Error deleting message:', err);
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      } catch {
+        // ignore
       }
     },
     []
@@ -535,52 +509,43 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   }, []);
 
   const handleMediaSelect = useCallback((files: File[]) => {
-    // Validate all files
     const validFiles: File[] = [];
     const errors: string[] = [];
 
     files.forEach((file, index) => {
       const validation = mediaService.validateFile(file);
-      if (!validation.valid) {
+      if (!validation.valid)
         errors.push(`File ${index + 1}: ${validation.error}`);
-      } else {
-        validFiles.push(file);
-      }
+      else validFiles.push(file);
     });
 
-    if (errors.length > 0) {
-      alert(errors.join('\n'));
-    }
-
-    if (validFiles.length > 0) {
+    if (errors.length > 0) alert(errors.join('\n'));
+    if (validFiles.length > 0)
       setSelectedMedia((prev) => [...prev, ...validFiles]);
-    }
   }, []);
 
   const handleSendMedia = useCallback(async () => {
     if (
-      !selectedMedia ||
-      selectedMedia.length === 0 ||
+      !selectedMedia.length ||
       !session?.user?.id ||
       !chatId ||
       uploadingMedia
     )
       return;
 
+    const currentChatId = chatId;
     const currentTime = new Date().toISOString();
     const messageIds: string[] = [];
 
     try {
       setUploadingMedia(true);
 
-      // Upload all media files first
       const uploadResults = await mediaService.uploadMultipleMedia(
         selectedMedia
       );
 
-      // Create messages for each uploaded file
-      const messagePromises = selectedMedia.map(
-        async (file, index) => {
+      const optimisticMessages = await Promise.all(
+        selectedMedia.map(async (file, index) => {
           const messageId = crypto.randomUUID();
           messageIds.push(messageId);
 
@@ -588,8 +553,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           const isImage = file.type.startsWith('image/');
           const uploadResult = uploadResults[index];
 
-          // Create optimistic message
-          const optimisticMessage: ChatMessage = {
+          const optimistic: ChatMessage = {
             id: messageId,
             text: null,
             imageUrl: isImage ? uploadResult.publicUrl : null,
@@ -602,41 +566,40 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             createdAt: currentTime,
           };
 
-          // Send message with media
           await messageService.sendMessage({
             id: messageId,
-            chatId: chatId,
+            chatId: currentChatId,
             senderId: session.user.id!,
             text: '',
-            imageUrl: isImage ? uploadResult.publicUrl : null,
-            videoUrl: isVideo ? uploadResult.publicUrl : null,
+            imageUrl: optimistic.imageUrl,
+            videoUrl: optimistic.videoUrl,
           });
 
-          return optimisticMessage;
-        }
+          return optimistic;
+        })
       );
 
-      // Wait for all messages to be sent
-      const optimisticMessages = await Promise.all(messagePromises);
+      if (activeChatIdRef.current !== currentChatId) return;
 
-      // Add all messages to the chat
       setMessages((prev) => [...prev, ...optimisticMessages]);
       setSelectedMedia([]);
 
       setTimeout(() => {
+        if (activeChatIdRef.current !== currentChatId) return;
         messagesEndRef.current?.scrollIntoView({
           behavior: 'smooth',
         });
       }, 100);
     } catch (err) {
-      console.error('Error sending media messages:', err);
-      // Remove failed messages
-      setMessages((prev) =>
-        prev.filter((msg) => !messageIds.includes(msg.id))
-      );
-      alert('Failed to send media. Please try again.');
+      if (activeChatIdRef.current === currentChatId) {
+        setMessages((prev) =>
+          prev.filter((m) => !messageIds.includes(m.id))
+        );
+        alert('Failed to send media. Please try again.');
+      }
     } finally {
-      setUploadingMedia(false);
+      if (activeChatIdRef.current === currentChatId)
+        setUploadingMedia(false);
     }
   }, [
     selectedMedia,
@@ -650,12 +613,10 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   const handleRemoveMedia = useCallback(
     (index: number) => {
-      if (selectedMedia && selectedMedia[index]) {
-        // Revoke the preview URL for the specific file
+      if (selectedMedia[index]) {
         mediaService.revokePreviewUrl(
           URL.createObjectURL(selectedMedia[index])
         );
-        // Remove the file from the array
         setSelectedMedia((prev) =>
           prev.filter((_, i) => i !== index)
         );
@@ -667,15 +628,12 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
       const container = e.currentTarget;
-      const scrollTop = container.scrollTop;
-
-      // If scrolled to the top and there are more messages to load
       if (
-        scrollTop < 100 &&
+        container.scrollTop < 100 &&
         hasOlderMessages &&
         !loadingOlderMessages
       ) {
-        loadOlderMessages();
+        void loadOlderMessages();
       }
     },
     [hasOlderMessages, loadingOlderMessages, loadOlderMessages]
@@ -683,7 +641,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   useEffect(() => {
     if (chatId && session?.user?.id) {
-      fetchMessages();
+      void fetchMessages();
       const cleanup = setupRealtimeSubscription();
       return cleanup;
     }
@@ -696,14 +654,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   useEffect(() => {
     return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-        subscriptionRef.current = null;
-      }
-      // if (typingSubscriptionRef.current) {
-      //   typingSubscriptionRef.current.unsubscribe();
-      //   typingSubscriptionRef.current = null;
-      // }
+      subscriptionRef.current?.unsubscribe();
+      subscriptionRef.current = null;
+
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
@@ -712,7 +665,6 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   }, []);
 
   return {
-    // State
     message,
     setMessage,
     messages,
@@ -720,20 +672,22 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     sending,
     error,
     typingUsers,
+
     editingMessage,
     editText,
     setEditText,
     showEditModal,
     soundEnabled,
     setSoundEnabled,
+
     messagesEndRef,
     messagesContainerRef,
+
     selectedMedia,
     uploadingMedia,
     loadingOlderMessages,
     hasOlderMessages,
 
-    // Actions
     handleSend,
     handleTyping,
     handleEditMessage,

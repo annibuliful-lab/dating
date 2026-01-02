@@ -3,11 +3,11 @@
 import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
 import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
+import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
-import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
 import {
@@ -58,6 +58,8 @@ function FeedPage() {
   const { status, data: session } = useSession();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -69,6 +71,7 @@ function FeedPage() {
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
   const [deleting, setDeleting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
 
@@ -103,14 +106,26 @@ function FeedPage() {
     checkUserStatus();
   }, [status, session]);
 
-  const fetchPosts = useCallback(async (isRefresh = false) => {
+  const fetchPosts = useCallback(async (offset = 0, isRefresh = false) => {
     try {
       if (isRefresh) {
         setIsRefreshing(true);
-      } else {
+      } else if (offset === 0) {
         setLoading(true);
+      } else {
+        setLoadingMore(true);
       }
-      const data = await postService.getPublicPosts();
+      
+      const limit = 20;
+      const data = await postService.getPublicPosts(limit, offset);
+      
+      // Check if we have more posts
+      if (data.length < limit) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
       // Convert profileImageKey to URL for each post
       const postsWithImageUrls = (data || []).map((post: unknown) => {
         const postData = post as {
@@ -153,18 +168,24 @@ function FeedPage() {
           },
         };
       });
-      setPosts(postsWithImageUrls as Post[]);
+
+      if (offset === 0) {
+        setPosts(postsWithImageUrls as Post[]);
+      } else {
+        setPosts((prevPosts) => [...prevPosts, ...(postsWithImageUrls as Post[])]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to fetch posts"));
     } finally {
       setLoading(false);
       setIsRefreshing(false);
+      setLoadingMore(false);
     }
   }, []);
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchPosts();
+      fetchPosts(0);
       // Show infographic modal when entering feed page
       setInfographicModalOpened(true);
     }
@@ -179,9 +200,7 @@ function FeedPage() {
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    const scrollElement = scrollAreaRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]"
-    );
+    const scrollElement = viewportRef.current;
     if (scrollElement && scrollElement.scrollTop === 0) {
       startY.current = e.touches[0].clientY;
       isPulling.current = true;
@@ -204,7 +223,7 @@ function FeedPage() {
 
   const handleTouchEnd = () => {
     if (isPulling.current && pullDistance > 50) {
-      fetchPosts(true);
+      fetchPosts(0, true);
     }
     setPullDistance(0);
     isPulling.current = false;
@@ -328,12 +347,31 @@ function FeedPage() {
       >
         <ScrollArea
           ref={scrollAreaRef}
+          viewportRef={viewportRef}
           h={`calc(100vh - ${
             TOP_NAVBAR_HEIGHT_PX + BOTTOM_NAVBAR_HEIGHT_PX + 32
           }px)`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onScrollPositionChange={({ y }) => {
+             const scrollElement = viewportRef.current;
+             if (scrollElement) {
+               const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+               if (
+                 scrollHeight - scrollTop <= clientHeight + 100 &&
+                 !loading &&
+                 !isRefreshing &&
+                 !loadingMore &&
+                 hasMore
+               ) {
+                  // Prevent multiple calls
+                  if (posts.length > 0) {
+                     fetchPosts(posts.length);
+                  }
+               }
+             }
+           }}
         >
           <Box
             style={{
@@ -466,6 +504,11 @@ function FeedPage() {
                 <Text c="dimmed" ta="center" mt="xl">
                   No posts yet. Be the first to create one!
                 </Text>
+              )}
+              {loadingMore && (
+                 <Center py="md">
+                    <Loader color="#D4AF37" size="sm" />
+                 </Center>
               )}
             </Stack>
           </Box>

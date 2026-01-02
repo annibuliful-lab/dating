@@ -1,11 +1,12 @@
 "use client";
 
+import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
+import { SearchInput } from "@/components/element/SearchInput";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
-import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
-import { SearchInput } from "@/components/element/SearchInput";
+import { useAdminUsers } from "@/hooks/useAdmin";
 import {
   Box,
   Button,
@@ -47,9 +48,7 @@ type StatusType = "verification" | "usage" | "account";
 export default function AdminUsersPage() {
   const router = useRouter();
   const { status } = useSession();
-  const [users, setUsers] = useState<User[]>([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [loading, setLoading] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusType, setStatusType] = useState<StatusType>("verification");
   const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set());
@@ -60,39 +59,16 @@ export default function AdminUsersPage() {
     }
   }, [status, router]);
 
+  const { data: usersData, loading: usersLoading, refetch: fetchUsers, updateUserStatus } = useAdminUsers(searchQuery);
+  const users = usersData || [];
+  const loading = usersLoading || initialLoading;
+  
+  // Clean up initial loading
   useEffect(() => {
-    fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (searchQuery) params.append("search", searchQuery);
-
-      const response = await fetch(`/api/admin/users?${params.toString()}`);
-      if (!response.ok) {
-        if (response.status === 403) {
-          router.push("/feed");
-          return;
-        }
-        throw new Error("Failed to fetch users");
-      }
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      notifications.show({
-        title: "เกิดข้อผิดพลาด",
-        message: "ไม่สามารถโหลดรายการผู้ใช้ได้",
-        color: "red",
-      });
-    } finally {
-      setLoading(false);
+    if (!usersLoading) {
       setInitialLoading(false);
     }
-  };
+  }, [usersLoading]);
 
   const handleStatusChange = async (userId: string, newValue: string) => {
     setUpdatingUsers((prev) => new Set(prev).add(userId));
@@ -109,16 +85,7 @@ export default function AdminUsersPage() {
         updateData.status = newValue as "ACTIVE" | "INACTIVE" | "SUSPENDED";
       }
 
-      const response = await fetch(`/api/admin/users/${userId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update user status");
-      }
+      await updateUserStatus(userId, updateData);
 
       notifications.show({
         title: "สำเร็จ",

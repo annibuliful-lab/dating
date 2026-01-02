@@ -28,7 +28,7 @@ export function NewUserRedirect() {
             .select("id, createdAt")
             .eq("id", userId)
             .gte("createdAt", twoMinutesAgo)
-            .single();
+            .maybeSingle();
 
           if (!error && user) {
             // This is a new user, redirect to verification page

@@ -8,6 +8,8 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from "@/components/element/TopNavbar";
+import { useAdminCheck } from "@/hooks/useAdmin";
+import { useUserStatusCheck } from "@/hooks/useUser";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
 import {
@@ -80,31 +82,17 @@ function FeedPage() {
       router.push("/");
     }
   }, [router, status]);
+  const { data: adminData } = useAdminCheck();
+  const { data: userStatusData } = useUserStatusCheck();
 
   useEffect(() => {
-    const checkUserStatus = async () => {
-      if (status === "authenticated" && session?.user?.id) {
-        try {
-          // Check admin status
-          const adminResponse = await fetch("/api/admin/check");
-          if (adminResponse.ok) {
-            const adminData = await adminResponse.json();
-            setIsAdmin(adminData.isAdmin || adminData.role === "ADMIN");
-          }
-
-          // Check suspended status
-          const statusResponse = await fetch("/api/user/status-check");
-          if (statusResponse.ok) {
-            const statusData = await statusResponse.json();
-            setIsSuspended(statusData.isSuspended);
-          }
-        } catch (error) {
-          console.error("Error checking user status:", error);
-        }
-      }
-    };
-    checkUserStatus();
-  }, [status, session]);
+    if (adminData) {
+      setIsAdmin(adminData.isAdmin || adminData.role === "ADMIN");
+    }
+    if (userStatusData) {
+      setIsSuspended(userStatusData.isSuspended);
+    }
+  }, [adminData, userStatusData]);
 
   const fetchPosts = useCallback(async (offset = 0, isRefresh = false) => {
     try {

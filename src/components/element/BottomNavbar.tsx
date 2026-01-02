@@ -7,39 +7,23 @@ import { UserStatusIcon } from "@/components/icons/UserStatusIcon";
 import { ActionIcon, Box, Group, Text, rem } from "@mantine/core";
 import { usePathname, useRouter } from "next/navigation";
 import { CreatePostIcon } from "../icons/CreatePostIcon";
-import { useEffect, useState } from "react";
+
+import { useAdminCheck } from "@/hooks/useAdmin";
+import { useUserStatusCheck } from "@/hooks/useUser";
 
 export const BOTTOM_NAVBAR_HEIGHT_PX = 72;
 
 export function BottomNavbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSuspended, setIsSuspended] = useState(false);
+  
+  const { data: adminData } = useAdminCheck();
+  const { data: statusData } = useUserStatusCheck();
+  
+  const isAdmin = adminData?.isAdmin ?? false;
+  const isSuspended = statusData?.isSuspended ?? false;
+
   const isActive = (href: string) => pathname === href;
-
-  useEffect(() => {
-    const checkUserStatus = async () => {
-      try {
-        // Check admin status
-        const adminResponse = await fetch("/api/admin/check");
-        if (adminResponse.ok) {
-          const adminData = await adminResponse.json();
-          setIsAdmin(adminData.isAdmin);
-        }
-
-        // Check suspended status
-        const statusResponse = await fetch("/api/user/status-check");
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          setIsSuspended(statusData.isSuspended);
-        }
-      } catch (error) {
-        console.error("Error checking user status:", error);
-      }
-    };
-    checkUserStatus();
-  }, []);
 
   // If user is suspended, only show Feed menu
   const navItems = isSuspended

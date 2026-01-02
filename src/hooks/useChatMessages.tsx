@@ -1,7 +1,7 @@
 "use client";
 
-import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { ChatMessage, MessageWithUser, TypingUser } from "@/@types/message";
+import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { mediaService } from "@/services/supabase/media";
 import { messageService } from "@/services/supabase/messages";
 import { useSession } from "next-auth/react";
@@ -92,7 +92,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
-    } catch (err) {
+    } catch {
       // Could not play notification sound
     }
   }, [soundEnabled]);

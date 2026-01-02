@@ -1,12 +1,12 @@
 import {
-  ChatInsert,
-  ChatWithLatestMessage,
-  MessageSubscriptionCallback,
-  MessageWithUser,
-  SendMessageData,
-  SupabasePresenceState,
-  TypingSubscriptionCallback,
-  TypingUser,
+    ChatInsert,
+    ChatWithLatestMessage,
+    MessageSubscriptionCallback,
+    MessageWithUser,
+    SendMessageData,
+    SupabasePresenceState,
+    TypingSubscriptionCallback,
+    TypingUser,
 } from "@/@types/message";
 import { supabase } from "@/client/supabase";
 
@@ -452,14 +452,16 @@ export const messageService = {
 
         onTypingUpdate(typingUsers);
       })
-      .on("presence", { event: "join" }, ({ key, newPresences }) => {
-        // User joined
+      .on('presence', { event: 'join' }, () => {
+        // console.log('join', key, newPresences);
       })
-      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-        // User left
+      .on('presence', { event: 'leave' }, () => {
+        // console.log('leave', key, leftPresences);
       })
-      .subscribe(async (status) => {
-        // Subscribed to typing indicators
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+           // channel.track({ online_at: new Date().toISOString() });
+        }
       });
 
     return channel;

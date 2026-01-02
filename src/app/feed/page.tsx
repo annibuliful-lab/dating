@@ -10,6 +10,7 @@ import {
 } from "@/components/element/TopNavbar";
 import { useAdminCheck } from "@/hooks/useAdmin";
 import { useUserStatusCheck } from "@/hooks/useUser";
+import { adminService } from "@/services/admin";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
 import {
@@ -248,14 +249,8 @@ function FeedPage() {
 
     try {
       setDeleting(true);
-      const response = await fetch(`/api/admin/posts/${postToDelete.id}`, {
-        method: "DELETE",
-      });
+      await adminService.deletePost(postToDelete.id);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete post");
-      }
 
       notifications.show({
         title: "สำเร็จ",
@@ -342,7 +337,7 @@ function FeedPage() {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          onScrollPositionChange={({ y }) => {
+          onScrollPositionChange={() => {
              const scrollElement = viewportRef.current;
              if (scrollElement) {
                const { scrollTop, scrollHeight, clientHeight } = scrollElement;

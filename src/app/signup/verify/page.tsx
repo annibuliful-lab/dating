@@ -2,14 +2,14 @@
 
 import { LineIcon } from "@/components/icons/LineIcon";
 import {
-  Box,
-  Button,
-  Container,
-  Image,
-  Modal,
-  rem,
-  Stack,
-  Text,
+    Box,
+    Button,
+    Container,
+    Image,
+    Modal,
+    rem,
+    Stack,
+    Text,
 } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -163,7 +163,7 @@ export default function VerifyPage() {
               เปิดแอป LINE แล้วสแกน QR Code นี้
             </Text>
             <Text size="xs" ta="center" c="dimmed">
-              หลังจากเพิ่มเพื่อนแล้ว กรุณากด "เสร็จสิ้น" ด้านล่าง
+              หลังจากเพิ่มเพื่อนแล้ว กรุณากด &quot;เสร็จสิ้น&quot; ด้านล่าง
             </Text>
           </Stack>
 

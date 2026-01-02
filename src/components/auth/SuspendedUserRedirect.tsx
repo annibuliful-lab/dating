@@ -1,34 +1,17 @@
 'use client';
 
+import { useUserStatusCheck } from '@/hooks/useUser';
+import { Box, Container, Stack, Text, Title } from '@mantine/core';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
-import { Box, Container, Text, Title, Stack } from '@mantine/core';
 
 export function SuspendedUserRedirect() {
   const { data: session, status } = useSession();
-  const [isSuspended, setIsSuspended] = useState(false);
-  const [checked, setChecked] = useState(false);
+  
+  const { data } = useUserStatusCheck({
+    enabled: status === 'authenticated' && !!session?.user?.id
+  });
 
-  useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id && !checked) {
-      const checkUserStatus = async () => {
-        setChecked(true);
-        try {
-          const response = await fetch('/api/user/status-check');
-          if (response.ok) {
-            const data = await response.json();
-            if (data.isSuspended) {
-              setIsSuspended(true);
-            }
-          }
-        } catch (err) {
-          console.error('Error checking user status:', err);
-        }
-      };
-
-      checkUserStatus();
-    }
-  }, [status, session, checked]);
+  const isSuspended = data?.isSuspended;
 
   if (isSuspended) {
     return (

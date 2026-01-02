@@ -1,6 +1,9 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+// Actually, `auth` wrapper might infer type. Let's check usage. 
+// Line 12: export default auth(async (req) => {
+// req is NextAuthRequest which extends NextRequest.
+// If unused, just remove it.
 import { supabase } from "./client/supabase";
 
 // Define route types
@@ -66,6 +69,13 @@ export default auth(async (req) => {
       .eq("id", userId)
       .single();
 
+    const userData = user as unknown as {
+      status: string;
+      role: string;
+      fullName: string | null;
+      username: string;
+    };
+
     if (error) {
       console.error("[proxy] Error fetching user:", error);
       return NextResponse.redirect(
@@ -74,7 +84,7 @@ export default auth(async (req) => {
     }
 
     // Check if user is suspended
-    if (user.status === "SUSPENDED") {
+    if (userData.status === "SUSPENDED") {
       // Suspended users can only access /feed (read-only)
       if (pathname === "/feed") {
         return NextResponse.next();
@@ -86,7 +96,7 @@ export default auth(async (req) => {
 
     // Check admin routes - require ADMIN role
     if (isAdminRoute) {
-      if (user.role !== "ADMIN") {
+      if (userData.role !== "ADMIN") {
         return NextResponse.redirect(
           new URL("/auth/error?error=AccessDenied", nextUrl)
         );
@@ -96,7 +106,9 @@ export default auth(async (req) => {
     // Check if user has completed their profile (new users)
     // New users have empty fullName or generated username (uuid format)
     const isNewUser =
-      !user.fullName || user.fullName === "" || user.username.length > 30; // UUID v7 is longer than typical usernames
+      !userData.fullName ||
+      userData.fullName === "" ||
+      userData.username.length > 30; // UUID v7 is longer than typical usernames
 
     // Redirect new users to profile edit page (except if they're already there)
     if (

@@ -4,22 +4,19 @@ import { useCallback } from "react";
 
 export function useAdminCheck() {
   return useApiQuery<{ isAdmin: boolean; role: "USER" | "ADMIN" }>(
-    "/api/admin/check",
-    {
-      onCompleted: (data) => console.log("Admin check completed", data),
-    }
+    "/api/admin/check"
   );
 }
 
 export function useAdminUsers(searchQuery?: string) {
-  const result = useApiQuery<any[]>(
+  const result = useApiQuery<Record<string, unknown>[]>(
     `/api/admin/users${searchQuery ? `?search=${searchQuery}` : ""}`,
     {
       retries: 1,
     }
   );
 
-  const updateUserStatus = useCallback(async (userId: string, data: any) => {
+  const updateUserStatus = useCallback(async (userId: string, data: Record<string, unknown>) => {
     return adminService.updateUserStatus(userId, data);
   }, []);
 

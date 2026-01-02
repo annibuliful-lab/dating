@@ -2,7 +2,7 @@ import { postService } from "@/services/post";
 import { useCallback, useEffect, useState } from "react";
 
 export function usePublicPosts(limit = 20) {
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(true);

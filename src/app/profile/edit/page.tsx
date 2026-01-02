@@ -10,30 +10,30 @@ import { getUserProfile } from "@/services/profile/get";
 import { saveProfileImages } from "@/services/profile/images";
 import { updateUserProfile } from "@/services/profile/update";
 import {
-  Badge,
-  Box,
-  Button,
-  Container,
-  Group,
-  Image,
-  LoadingOverlay,
-  Modal,
-  PasswordInput,
-  Select,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-  Textarea,
-  ThemeIcon,
-  rem,
+    Badge,
+    Box,
+    Button,
+    Container,
+    Group,
+    Image,
+    LoadingOverlay,
+    Modal,
+    PasswordInput,
+    Select,
+    SimpleGrid,
+    Stack,
+    Text,
+    TextInput,
+    Textarea,
+    ThemeIcon,
+    rem,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
+import { format } from "date-fns";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { format } from "date-fns";
 
 function EditProfilePage() {
   const { data } = useSession();
@@ -42,7 +42,6 @@ function EditProfilePage() {
   // Profile states
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
-  const [lastname, setLastname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [lineId, setLineId] = useState("");
@@ -144,7 +143,6 @@ function EditProfilePage() {
         const profile = await getUserProfile(userId);
         setUsername(profile.username ?? "");
         setFullName(profile.fullName ?? "");
-        setLastname(profile.lastname ?? "");
         setEmail(profile.email ?? "");
         setLineId(profile.lineId ?? "");
         setPhone(profile.phone ?? "");

@@ -2,31 +2,30 @@
 
 import { BUCKET_NAME, supabase } from "@/client/supabase";
 import {
-  TOP_NAVBAR_HEIGHT_PX,
-  TopNavbar,
+    TOP_NAVBAR_HEIGHT_PX,
+    TopNavbar,
 } from "@/components/element/TopNavbar";
-import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
 // Using a simple refresh icon from Mantine
 import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
 import { messageService } from "@/services/supabase/messages";
 import { userService } from "@/services/supabase/users";
 import {
-  ActionIcon,
-  Avatar,
-  Box,
-  Button,
-  Center,
-  Container,
-  Divider,
-  Flex,
-  Group,
-  Loader,
-  Modal,
-  Stack,
-  Text,
-  TextInput,
-  rem,
+    ActionIcon,
+    Avatar,
+    Box,
+    Button,
+    Center,
+    Container,
+    Divider,
+    Flex,
+    Group,
+    Loader,
+    Modal,
+    Stack,
+    Text,
+    TextInput,
+    rem,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useSession } from "next-auth/react";

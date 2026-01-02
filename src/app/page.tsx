@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
 import { supabase } from "@/client/supabase";
-import { Box, Button, Container, Image, rem, Text, Stack } from "@mantine/core";
+import { Box, Button, Container, Image, rem, Stack, Text } from "@mantine/core";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
   const router = useRouter();
   useEffect(() => {
     const getTest = async () => {
-      const result = await supabase.from("_prisma_migrations").select();
+      await supabase.from("_prisma_migrations").select();
     };
     getTest();
   }, []);
 
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const handleClickLogin = () => {
     router.push("/signin");

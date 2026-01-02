@@ -6,16 +6,15 @@ import { LineSignIn } from '@/components/social-button/LineSignIn';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { isValidEmail } from '@/shared/validation';
 import {
-  Box,
-  Button,
-  Container,
-  PasswordInput,
-  rem,
-  SegmentedControl,
-  Stack,
-  Text,
-  TextInput,
-  Image,
+    Button,
+    Container,
+    Image,
+    PasswordInput,
+    rem,
+    SegmentedControl,
+    Stack,
+    Text,
+    TextInput,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import Link from 'next/link';

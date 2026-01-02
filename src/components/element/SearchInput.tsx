@@ -1,7 +1,7 @@
-import { TextInput, TextInputProps, rem, CloseButton } from "@mantine/core";
-import { useDebouncedCallback } from "@mantine/hooks";
-import { useState, useCallback, memo } from "react";
 import { SearchIcon } from "@/components/icons/SearchIcon";
+import { CloseButton, TextInput, TextInputProps, rem } from "@mantine/core";
+import { useDebouncedCallback } from "@mantine/hooks";
+import { memo, useCallback, useState } from "react";
 
 type SearchInputProps = Omit<
   TextInputProps,
@@ -58,7 +58,7 @@ export const SearchInput = memo(
         }
         value={internalValue}
         onChange={handleChange}
-        styles={(theme) => ({
+        styles={() => ({
           root: {
             flex: 1,
           },
@@ -86,3 +86,4 @@ export const SearchInput = memo(
     );
   }
 );
+SearchInput.displayName = 'SearchInput';

@@ -49,6 +49,7 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const { status } = useSession();
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusType, setStatusType] = useState<StatusType>("verification");
   const [updatingUsers, setUpdatingUsers] = useState<Set<string>>(new Set());
@@ -60,7 +61,7 @@ export default function AdminUsersPage() {
   }, [status, router]);
 
   const { data: usersData, loading: usersLoading, refetch: fetchUsers, updateUserStatus } = useAdminUsers(searchQuery);
-  const users = usersData || [];
+  const users = (usersData as unknown as User[]) || [];
   const loading = usersLoading || initialLoading;
   
   // Clean up initial loading

@@ -3,7 +3,7 @@ import { supabase } from "@/client/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {

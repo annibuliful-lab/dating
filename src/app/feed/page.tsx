@@ -13,6 +13,7 @@ import { useUserStatusCheck } from "@/hooks/useUser";
 import { adminService } from "@/services/admin";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
+import type { PostWithUser } from "@/@types/database";
 import { Carousel } from "@mantine/carousel";
 import {
   Avatar,
@@ -38,30 +39,17 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Post = {
-  id: string;
-  content: {
-    text?: string;
-    [key: string]: unknown;
-  } | null;
-  imageUrl?: string[] | null;
-  createdAt: string;
-  User: {
-    id: string;
-    fullName: string;
-    username: string;
-    profileImageKey: string | null;
+// Extended Post type with profileImageUrl for UI
+type PostWithImageUrl = PostWithUser & {
+  User: PostWithUser["User"] & {
     profileImageUrl?: string | null;
-    isVerified?: boolean;
-    verifiedByUsername?: string | null;
-    role?: "USER" | "ADMIN";
   };
 };
 
 function FeedPage() {
   const router = useRouter();
   const { status, data: session } = useSession();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostWithImageUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -73,7 +61,7 @@ function FeedPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [postToDelete, setPostToDelete] = useState<Post | null>(null);
+  const [postToDelete, setPostToDelete] = useState<PostWithImageUrl | null>(null);
   const [deleting, setDeleting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -131,16 +119,8 @@ function FeedPage() {
       }
 
       // Convert profileImageKey to URL for each post
-      const postsWithImageUrls = (data || []).map((post: unknown) => {
-        const postData = post as {
-          User?: {
-            profileImageKey?: string | null;
-            [key: string]: unknown;
-          };
-          imageUrl?: string | string[] | null;
-          content?: unknown;
-          [key: string]: unknown;
-        };
+      const postsWithImageUrls = (data || []).map((post: PostWithUser) => {
+        const postData = post;
         let profileImageUrl = null;
         if (postData.User?.profileImageKey) {
           const { data: imageData } = supabase.storage
@@ -153,7 +133,11 @@ function FeedPage() {
         let imageUrlArray: string[] | null = null;
         if (postData.imageUrl) {
           if (typeof postData.imageUrl === "string") {
-            imageUrlArray = JSON.parse(postData.imageUrl as string);
+            try {
+              imageUrlArray = JSON.parse(postData.imageUrl) as string[];
+            } catch {
+              imageUrlArray = null;
+            }
           } else if (Array.isArray(postData.imageUrl)) {
             imageUrlArray = postData.imageUrl;
           }
@@ -161,24 +145,20 @@ function FeedPage() {
 
         return {
           ...postData,
-          content: postData.content as {
-            text?: string;
-            [key: string]: unknown;
-          } | null,
           imageUrl: imageUrlArray,
-          User: {
+          User: postData.User ? {
             ...postData.User,
             profileImageUrl,
-          },
-        };
+          } : null,
+        } as PostWithImageUrl;
       });
 
       if (offset === 0) {
-        setPosts(postsWithImageUrls as Post[]);
+        setPosts(postsWithImageUrls);
       } else {
         setPosts((prevPosts) => [
           ...prevPosts,
-          ...(postsWithImageUrls as Post[]),
+          ...postsWithImageUrls,
         ]);
       }
     } catch (err) {
@@ -484,7 +464,7 @@ function FeedPage() {
               )}
 
               {posts && posts.length > 0 ? (
-                posts.map((post: Post, index: number) => (
+                posts.map((post: PostWithImageUrl, index: number) => (
                   <Box key={post.id}>
                     <Stack gap={10}>
                       <Group gap="sm" align="center" justify="space-between">

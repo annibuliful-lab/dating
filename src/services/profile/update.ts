@@ -18,6 +18,24 @@ type ProfileInput = {
   password?: string | null;
 };
 
+type UserUpdatePayload = {
+  username?: string;
+  fullName?: string | null;
+  lastname?: string | null;
+  gender?: string | null;
+  birthday?: string | null;
+  age?: number | null;
+  bio?: string | null;
+  phone?: string | null;
+  lineId?: string | null;
+  height?: number | null;
+  weight?: number | null;
+  relationShipStatus?: string | null;
+  email?: string | null;
+  profileImageKey?: string;
+  passwordHash?: string;
+};
+
 function toNullableNumber(v: number | string | null | undefined) {
   if (v === '' || v === null || v === undefined) return null;
   const n = typeof v === 'string' ? Number(v) : v;
@@ -40,8 +58,7 @@ function calculateAge(birthday: Date | null | undefined): number | null {
   return age;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function clean<T extends Record<string, any>>(obj: T): Partial<T> {
+function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const out: Partial<T> = {};
   for (const k in obj) {
     const v = obj[k];
@@ -59,7 +76,7 @@ export async function updateUserProfile(
   const birthdayDate = input.birthday ? new Date(input.birthday) : null;
   const age = calculateAge(birthdayDate);
 
-  const payload = clean({
+  const payload: UserUpdatePayload = clean({
     username: input.username,
     fullName: input.name,
     lastname: input.lastname,
@@ -73,21 +90,20 @@ export async function updateUserProfile(
     weight: toNullableNumber(input.weight),
     relationShipStatus: input.relationShipStatus,
     email: input.email ?? null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as any;
+  });
 
   if (input.profileImageKey) {
-    payload['profileImageKey'] = input.profileImageKey;
+    payload.profileImageKey = input.profileImageKey;
   }
 
   // Only update password if provided
   if (input.password && input.password.trim() !== '') {
-    payload['passwordHash'] = input.password;
+    payload.passwordHash = input.password;
   }
 
   const { data, error } = await supabase
     .from('User')
-    .update(payload)
+    .update(payload as Record<string, unknown>)
     .eq('id', userId)
     .select()
     .single();

@@ -2,6 +2,7 @@
 
 import { TopNavbar, TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
 import { BUCKET_NAME, supabase } from "@/client/supabase";
+import type { PostWithUser } from "@/@types/database";
 import {
   Avatar,
   Badge,
@@ -23,33 +24,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { notifications } from "@mantine/notifications";
 
-type Post = {
-  id: string;
-  content: {
-    text?: string;
-    [key: string]: unknown;
-  } | null;
-  imageUrl: string[] | null;
-  visibility: string;
-  createdAt: string;
-  User: {
-    id: string;
-    fullName: string;
-    username: string;
-    profileImageKey: string | null;
-    isVerified: boolean;
-    status: string;
-  };
-  PostLike?: Array<{ count?: number }>;
-  PostSave?: Array<{ count?: number }>;
-};
-
 export default function AdminPostsPage() {
   const router = useRouter();
   const { status } = useSession();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostWithUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedPost, setSelectedPost] = useState<PostWithUser | null>(null);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -190,28 +170,30 @@ export default function AdminPostsPage() {
                   <Stack gap="md">
                     {/* Author Info */}
                     <Group justify="space-between">
-                      <Group gap="xs">
-                        <Avatar
-                          src={getProfileImageUrl(post.User.profileImageKey)}
-                          size="sm"
-                          radius="xl"
-                        />
-                        <Stack gap={0}>
-                          <Group gap="xs">
-                            <Text size="sm" fw={600} c="white">
-                              {post.User.fullName}
+                      {post.User && (
+                        <Group gap="xs">
+                          <Avatar
+                            src={getProfileImageUrl(post.User.profileImageKey)}
+                            size="sm"
+                            radius="xl"
+                          />
+                          <Stack gap={0}>
+                            <Group gap="xs">
+                              <Text size="sm" fw={600} c="white">
+                                {post.User.fullName}
+                              </Text>
+                              {post.User.isVerified && (
+                                <Badge size="xs" color="blue">
+                                  ยืนยันแล้ว
+                                </Badge>
+                              )}
+                            </Group>
+                            <Text size="xs" c="dimmed">
+                              @{post.User.username}
                             </Text>
-                            {post.User.isVerified && (
-                              <Badge size="xs" color="blue">
-                                ยืนยันแล้ว
-                              </Badge>
-                            )}
-                          </Group>
-                          <Text size="xs" c="dimmed">
-                            @{post.User.username}
-                          </Text>
-                        </Stack>
-                      </Group>
+                          </Stack>
+                        </Group>
+                      )}
                       <Button
                         size="xs"
                         color="red"

@@ -698,6 +698,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       const cleanup = setupRealtimeSubscription();
       return cleanup;
     }
+    return undefined;
   }, [
     chatId,
     session?.user?.id,

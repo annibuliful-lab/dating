@@ -7,6 +7,7 @@ import {
   TopNavbar,
 } from "@/components/element/TopNavbar";
 import { useAdminUsers } from "@/hooks/useAdmin";
+import type { DatabaseUser } from "@/@types/database";
 import {
   Box,
   Button,
@@ -24,24 +25,6 @@ import { notifications } from "@mantine/notifications";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-type User = {
-  id: string;
-  username: string;
-  name: string | null;
-  lastname: string | null;
-  fullName: string;
-  phone: string | null;
-  email: string | null;
-  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
-  statusUpdatedAt: string | null;
-  role: "USER" | "ADMIN";
-  isVerified: boolean;
-  verifiedAt: string | null;
-  verifiedBy: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
 
 type StatusType = "verification" | "usage" | "account";
 
@@ -66,7 +49,7 @@ export default function AdminUsersPage() {
     refetch: fetchUsers,
     updateUserStatus,
   } = useAdminUsers(searchQuery);
-  const users = (usersData as unknown as User[]) || [];
+  const users = (usersData as DatabaseUser[]) || [];
   const loading = usersLoading || initialLoading;
 
   // Clean up initial loading
@@ -144,7 +127,7 @@ export default function AdminUsersPage() {
     return "";
   };
 
-  const getCurrentStatusValue = (user: User) => {
+  const getCurrentStatusValue = (user: DatabaseUser) => {
     if (statusType === "verification") {
       return user.isVerified ? "verified" : "pending";
     } else if (statusType === "usage") {
@@ -165,7 +148,7 @@ export default function AdminUsersPage() {
     });
   };
 
-  const getLastUpdatedDate = (user: User) => {
+  const getLastUpdatedDate = (user: DatabaseUser) => {
     if (statusType === "verification") {
       return formatDate(user.verifiedAt);
     } else if (statusType === "usage") {

@@ -1,9 +1,11 @@
 import { supabase } from '@/client/supabase';
 import { NextResponse } from 'next/server';
+import type { UsernameCheckRequest, UsernameCheckResponse } from '@/@types/api';
 
 export async function POST(request: Request) {
   try {
-    const { username, excludeUserId } = await request.json();
+    const body = await request.json() as Partial<UsernameCheckRequest>;
+    const { username, excludeUserId } = body;
 
     if (!username || typeof username !== 'string') {
       return NextResponse.json(
@@ -33,17 +35,20 @@ export async function POST(request: Request) {
 
     const isAvailable = !data || data.length === 0;
 
-    return NextResponse.json({
+    const response: UsernameCheckResponse = {
       available: isAvailable,
       message: isAvailable
         ? 'Username is available'
         : 'Username is already taken',
-    });
-  } catch {
-    return NextResponse.json(
-      { available: false, message: 'Internal server error' },
-      { status: 500 }
-    );
+    };
+
+    return NextResponse.json(response);
+  } catch (error) {
+    const response: UsernameCheckResponse = {
+      available: false,
+      message: error instanceof Error ? error.message : 'Internal server error',
+    };
+    return NextResponse.json(response, { status: 500 });
   }
 }
 

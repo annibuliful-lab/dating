@@ -1,6 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
-import { Chat } from "../../generated/prisma";
+import type { ChatWithRelations } from "./database";
 
 // Base types from database
 export type MessageInsert = {
@@ -85,15 +83,7 @@ export interface ChatWithLatestMessage {
   chatId: string;
   userId: string;
   isAdmin: boolean;
-  Chat: Chat & {
-    User?: {
-      id: string;
-      fullName: string;
-      profileImageKey: string | null;
-    };
-    latestMessage?: MessageWithUser;
-    hasUnread?: boolean;
-  };
+  Chat: ChatWithRelations;
 }
 
 // Supabase presence state type
@@ -101,3 +91,6 @@ export interface SupabasePresenceState {
   presence_ref: string;
   [key: string]: unknown;
 }
+
+// Re-export database types for convenience
+export type { ChatParticipantWithChat, ChatParticipantWithUser } from "./database";

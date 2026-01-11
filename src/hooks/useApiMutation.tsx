@@ -50,7 +50,7 @@ export function useApiMutation<TResponse, TBody = unknown>(
       );
 
       setData(result);
-      onCompleted?.(result as never);
+      onCompleted?.(result);
       return result;
     } catch (err) {
       const e =

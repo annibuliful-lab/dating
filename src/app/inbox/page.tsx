@@ -100,9 +100,8 @@ function InboxPage() {
 
           // Get other participants (excluding current user)
           const otherParticipants =
-            chat.ChatParticipant?.filter(
-              (p) => p.userId !== session.user.id
-            ) || [];
+            chat.ChatParticipant?.filter((p) => p.userId !== session.user.id) ||
+            [];
 
           // Generate chat name based on participants
           let chatName = "Unknown";

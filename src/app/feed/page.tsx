@@ -1,5 +1,6 @@
 "use client";
 
+import type { PostWithUser } from "@/@types/database";
 import { BUCKET_NAME, supabase } from "@/client/supabase";
 import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
 import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
@@ -13,7 +14,6 @@ import { useUserStatusCheck } from "@/hooks/useUser";
 import { adminService } from "@/services/admin";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
-import type { PostWithUser } from "@/@types/database";
 import { Carousel } from "@mantine/carousel";
 import {
   Avatar,
@@ -61,7 +61,9 @@ function FeedPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [postToDelete, setPostToDelete] = useState<PostWithImageUrl | null>(null);
+  const [postToDelete, setPostToDelete] = useState<PostWithImageUrl | null>(
+    null
+  );
   const [deleting, setDeleting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -146,20 +148,19 @@ function FeedPage() {
         return {
           ...postData,
           imageUrl: imageUrlArray,
-          User: postData.User ? {
-            ...postData.User,
-            profileImageUrl,
-          } : null,
+          User: postData.User
+            ? {
+                ...postData.User,
+                profileImageUrl,
+              }
+            : null,
         } as PostWithImageUrl;
       });
 
       if (offset === 0) {
         setPosts(postsWithImageUrls);
       } else {
-        setPosts((prevPosts) => [
-          ...prevPosts,
-          ...postsWithImageUrls,
-        ]);
+        setPosts((prevPosts) => [...prevPosts, ...postsWithImageUrls]);
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to fetch posts"));

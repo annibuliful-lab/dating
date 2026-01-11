@@ -1,5 +1,6 @@
 "use client";
 
+import type { DatabaseUser } from "@/@types/database";
 import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
 import { SearchInput } from "@/components/element/SearchInput";
 import {
@@ -7,7 +8,6 @@ import {
   TopNavbar,
 } from "@/components/element/TopNavbar";
 import { useAdminUsers } from "@/hooks/useAdmin";
-import type { DatabaseUser } from "@/@types/database";
 import {
   Box,
   Button,

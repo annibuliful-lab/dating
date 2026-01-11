@@ -1,6 +1,8 @@
 import { requireAdmin } from "@/lib/admin";
 import { supabase } from "@/client/supabase";
 import { NextResponse } from "next/server";
+import type { PostWithUser } from "@/@types/database";
+import type { ApiErrorResponse } from "@/@types/api";
 
 /**
  * GET /api/admin/posts
@@ -34,19 +36,22 @@ export async function GET() {
 
     if (error) {
       console.error("Error fetching posts:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch posts" },
-        { status: 500 }
-      );
+      const errorResponse: ApiErrorResponse = {
+        error: "Failed to fetch posts",
+        message: error.message,
+      };
+      return NextResponse.json(errorResponse, { status: 500 });
     }
 
-    return NextResponse.json(posts || []);
+    const typedPosts = (posts || []) as unknown as PostWithUser[];
+    return NextResponse.json(typedPosts);
   } catch (error) {
     console.error("Error in GET /api/admin/posts:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    const errorResponse: ApiErrorResponse = {
+      error: "Internal server error",
+      message: error instanceof Error ? error.message : "Unknown error",
+    };
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 

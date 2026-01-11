@@ -2,8 +2,8 @@
 
 import { BUCKET_NAME, supabase } from "@/client/supabase";
 import {
-    TOP_NAVBAR_HEIGHT_PX,
-    TopNavbar,
+  TOP_NAVBAR_HEIGHT_PX,
+  TopNavbar,
 } from "@/components/element/TopNavbar";
 import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
 // Using a simple refresh icon from Mantine
@@ -11,21 +11,21 @@ import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
 import { messageService } from "@/services/supabase/messages";
 import { userService } from "@/services/supabase/users";
 import {
-    ActionIcon,
-    Avatar,
-    Box,
-    Button,
-    Center,
-    Container,
-    Divider,
-    Flex,
-    Group,
-    Loader,
-    Modal,
-    Stack,
-    Text,
-    TextInput,
-    rem,
+  ActionIcon,
+  Avatar,
+  Box,
+  Button,
+  Center,
+  Container,
+  Divider,
+  Flex,
+  Group,
+  Loader,
+  Modal,
+  Stack,
+  Text,
+  TextInput,
+  rem,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useSession } from "next-auth/react";
@@ -86,18 +86,22 @@ function InboxPage() {
       const userChats = await messageService.getUserChats(session.user.id);
 
       // Transform the data to match our ChatPreview type
-      const transformedChats: ChatPreview[] = userChats.map(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (participant: any) => {
+      // Only show chats that have at least one message
+      const transformedChats: ChatPreview[] = userChats
+        .filter((participant) => {
+          const chat = participant.Chat;
+          const latestMessage = chat.latestMessage;
+          // Only include chats that have at least one message
+          return !!latestMessage;
+        })
+        .map((participant) => {
           const chat = participant.Chat;
           const latestMessage = chat.latestMessage;
 
           // Get other participants (excluding current user)
           const otherParticipants =
-            chat.ChatParticipant?.filter(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (p: any) => p.userId !== session.user.id
-            ) || [];
+            chat.ChatParticipant?.filter((p) => p.userId !== session.user.id) ||
+            [];
 
           // Generate chat name based on participants
           let chatName = "Unknown";
@@ -105,8 +109,7 @@ function InboxPage() {
             chatName = chat.name;
           } else if (otherParticipants.length > 0) {
             chatName = otherParticipants
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .map((p: any) => p.User?.fullName || "Unknown")
+              .map((p) => p.User?.fullName || "Unknown")
               .join(", ");
           } else {
             chatName = `Chat ${chat.id.slice(0, 8)}`;
@@ -132,23 +135,21 @@ function InboxPage() {
             preview,
             dateLabel,
             unread,
-            participants: otherParticipants
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .map((p: any) => {
-                let profileImageUrl = null;
-                if (p.User?.profileImageKey) {
-                  const { data: imageData } = supabase.storage
-                    .from(BUCKET_NAME)
-                    .getPublicUrl(p.User.profileImageKey);
-                  profileImageUrl = imageData.publicUrl;
-                }
-                return {
-                  id: p.userId,
-                  fullName: p.User?.fullName || "Unknown",
-                  profileImageKey: p.User?.profileImageKey || null,
-                  profileImageUrl,
-                };
-              }),
+            participants: otherParticipants.map((p) => {
+              let profileImageUrl = null;
+              if (p.User?.profileImageKey) {
+                const { data: imageData } = supabase.storage
+                  .from(BUCKET_NAME)
+                  .getPublicUrl(p.User.profileImageKey);
+                profileImageUrl = imageData.publicUrl;
+              }
+              return {
+                id: p.userId,
+                fullName: p.User?.fullName || "Unknown",
+                profileImageKey: p.User?.profileImageKey || null,
+                profileImageUrl,
+              };
+            }),
             latestMessage: latestMessage
               ? {
                   text: latestMessage.text,
@@ -157,8 +158,7 @@ function InboxPage() {
                 }
               : undefined,
           };
-        }
-      );
+        });
 
       setChats(transformedChats);
     } catch (err) {
@@ -630,64 +630,67 @@ function InboxPage() {
             </Center>
           ) : (
             <Stack gap="xs" mah={400} style={{ overflowY: "auto" }}>
-                  {searchResults.map((user) => (
-                    <Box
-                      key={user.id}
-                      p="sm"
-                      style={{
-                        cursor: "pointer",
-                        borderRadius: "8px",
-                        border: "1px solid #373A40",
-                        transition: "background-color 0.2s",
-                        opacity: isGroupChatMode && selectedUsers.includes(user.id) ? 0.5 : 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "#25262b";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                      }}
-                      onClick={() => handleStartChat(user.id)}
-                    >
-                      <Group wrap="nowrap" justify="space-between">
-                        <Group wrap="nowrap">
-                          <Avatar
-                            src={user.profileImageUrl || undefined}
-                            alt={user.fullName}
-                            radius="xl"
-                            size={50}
-                          >
-                            {user.fullName?.charAt(0) || "?"}
-                          </Avatar>
-                          <Stack gap={2}>
-                            <Text fw={600}>{user.fullName}</Text>
-                            <Group gap="xs">
-                              {user.username && (
-                                <Text c="dimmed" size="sm">
-                                  @{user.username}
-                                </Text>
-                              )}
-                              {user.age && (
-                                <Text c="dimmed" size="sm">
-                                  • {user.age} years
-                                </Text>
-                              )}
-                              {user.gender && (
-                                <Text c="dimmed" size="sm">
-                                  • {user.gender}
-                                </Text>
-                              )}
-                            </Group>
-                          </Stack>
+              {searchResults.map((user) => (
+                <Box
+                  key={user.id}
+                  p="sm"
+                  style={{
+                    cursor: "pointer",
+                    borderRadius: "8px",
+                    border: "1px solid #373A40",
+                    transition: "background-color 0.2s",
+                    opacity:
+                      isGroupChatMode && selectedUsers.includes(user.id)
+                        ? 0.5
+                        : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#25262b";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                  onClick={() => handleStartChat(user.id)}
+                >
+                  <Group wrap="nowrap" justify="space-between">
+                    <Group wrap="nowrap">
+                      <Avatar
+                        src={user.profileImageUrl || undefined}
+                        alt={user.fullName}
+                        radius="xl"
+                        size={50}
+                      >
+                        {user.fullName?.charAt(0) || "?"}
+                      </Avatar>
+                      <Stack gap={2}>
+                        <Text fw={600}>{user.fullName}</Text>
+                        <Group gap="xs">
+                          {user.username && (
+                            <Text c="dimmed" size="sm">
+                              @{user.username}
+                            </Text>
+                          )}
+                          {user.age && (
+                            <Text c="dimmed" size="sm">
+                              • {user.age} years
+                            </Text>
+                          )}
+                          {user.gender && (
+                            <Text c="dimmed" size="sm">
+                              • {user.gender}
+                            </Text>
+                          )}
                         </Group>
-                        {isGroupChatMode && selectedUsers.includes(user.id) && (
-                          <Text c="blue" size="sm" fw={600}>
-                            ✓
-                          </Text>
-                        )}
-                      </Group>
-                    </Box>
-                  ))}
+                      </Stack>
+                    </Group>
+                    {isGroupChatMode && selectedUsers.includes(user.id) && (
+                      <Text c="blue" size="sm" fw={600}>
+                        ✓
+                      </Text>
+                    )}
+                  </Group>
+                </Box>
+              ))}
             </Stack>
           )}
 

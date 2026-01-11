@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
  * Admin can delete posts
  */
 export async function DELETE(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ postId: string }> }
 ) {
   try {

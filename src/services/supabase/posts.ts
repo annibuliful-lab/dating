@@ -1,36 +1,14 @@
 import { supabase } from '@/client/supabase';
+import type { PostContent, PostWithUser, PostVisibility } from '@/@types/database';
 
 type PostInsert = {
   id?: string;
   authorId: string;
-  content: { text: string };
-  visibility: 'PUBLIC' | 'PRIVATE';
+  content: PostContent;
+  visibility: PostVisibility;
   imageUrl?: string[] | null;
   createdAt?: string;
   updatedAt?: string;
-};
-
-type PostUser = {
-  id: string;
-  fullName: string;
-  username: string;
-  profileImageKey: string | null;
-  isVerified: boolean;
-  verifiedBy: string | null;
-  role: string;
-};
-
-type PostWithUser = {
-  id: string;
-  authorId: string;
-  content: { text: string };
-  visibility: 'PUBLIC' | 'PRIVATE';
-  imageUrl?: string[] | null;
-  createdAt?: string;
-  updatedAt?: string;
-  User: PostUser | null;
-  PostLike?: Array<{ count?: number }>;
-  PostSave?: Array<{ count?: number }>;
 };
 
 export const postService = {
@@ -60,10 +38,15 @@ export const postService = {
 
     if (error) throw new Error(error.message);
     
+    if (!data) return [];
+    
+    // Type assertion for Supabase response
+    const posts = data as unknown as PostWithUser[];
+    
     // Fetch verifiedBy usernames for all posts
-    const verifiedByUserIds = (data as unknown as PostWithUser[] | null)
-      ?.map((post) => post.User?.verifiedBy)
-      .filter((id: string | null | undefined): id is string => !!id) || [];
+    const verifiedByUserIds = posts
+      .map((post) => post.User?.verifiedBy)
+      .filter((id): id is string => !!id);
     
     const verifiedByUsernames: Record<string, string> = {};
     if (verifiedByUserIds.length > 0) {
@@ -80,21 +63,21 @@ export const postService = {
     }
     
     // Transform data to add verifiedByUsername
-    const transformedData = (data as unknown as PostWithUser[] | null)?.map((post) => {
+    const transformedData = posts.map((post) => {
       const verifiedByUsername = post.User?.verifiedBy 
         ? verifiedByUsernames[post.User.verifiedBy] || null
         : null;
       
       return {
         ...post,
-        User: {
+        User: post.User ? {
           ...post.User,
           verifiedByUsername,
-        },
+        } : null,
       };
     });
     
-    return transformedData || data;
+    return transformedData;
   },
 
   // Fetch posts by specific user

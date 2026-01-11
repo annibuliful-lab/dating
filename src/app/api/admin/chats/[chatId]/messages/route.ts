@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
  * Get all messages in any chat (admin can see all chat messages)
  */
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {

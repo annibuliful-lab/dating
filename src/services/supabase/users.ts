@@ -1,4 +1,5 @@
 import { supabase } from '@/client/supabase';
+import type { DatabaseUser, UserStatus } from '@/@types/database';
 
 type UserUpdate = {
   fullName?: string;
@@ -8,7 +9,7 @@ type UserUpdate = {
   gender?: string | null;
   height?: number | null;
   profileImageKey?: string | null;
-  status?: string | null;
+  status?: UserStatus | null;
   updatedAt?: string;
 };
 
@@ -82,16 +83,17 @@ export const userService = {
   },
 
   // Update user profile
-  async updateUserProfile(id: string, updates: UserUpdate) {
+  async updateUserProfile(id: string, updates: UserUpdate): Promise<DatabaseUser> {
     const { data, error } = await supabase
       .from('User')
-      .update(updates as never)
+      .update(updates as Record<string, unknown>)
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw new Error(error.message);
-    return data;
+    if (!data) throw new Error('User not found');
+    return data as unknown as DatabaseUser;
   },
 
   // Get users with their post counts

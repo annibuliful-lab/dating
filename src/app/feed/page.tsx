@@ -13,6 +13,7 @@ import { useUserStatusCheck } from "@/hooks/useUser";
 import { adminService } from "@/services/admin";
 import { messageService } from "@/services/supabase/messages";
 import { postService } from "@/services/supabase/posts";
+import { Carousel } from "@mantine/carousel";
 import {
   Avatar,
   Box,
@@ -32,6 +33,7 @@ import {
   Transition,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import type { EmblaCarouselType } from "embla-carousel";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -77,6 +79,19 @@ function FeedPage() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const isPulling = useRef(false);
+  const emblaApiRef = useRef<EmblaCarouselType | null>(null);
+  const bannerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Banner images - can be replaced with API call later
+  const bannerImages = [
+    // Placeholder URLs - will be replaced when images are uploaded
+    // These can be replaced with actual image URLs from the backend
+    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+1",
+    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+2",
+    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+3",
+    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+4",
+    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+5",
+  ];
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -104,10 +119,10 @@ function FeedPage() {
       } else {
         setLoadingMore(true);
       }
-      
+
       const limit = 20;
       const data = await postService.getPublicPosts(limit, offset);
-      
+
       // Check if we have more posts
       if (data.length < limit) {
         setHasMore(false);
@@ -161,7 +176,10 @@ function FeedPage() {
       if (offset === 0) {
         setPosts(postsWithImageUrls as Post[]);
       } else {
-        setPosts((prevPosts) => [...prevPosts, ...(postsWithImageUrls as Post[])]);
+        setPosts((prevPosts) => [
+          ...prevPosts,
+          ...(postsWithImageUrls as Post[]),
+        ]);
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to fetch posts"));
@@ -179,6 +197,15 @@ function FeedPage() {
       setInfographicModalOpened(true);
     }
   }, [status, fetchPosts]);
+
+  // Clean up banner interval on unmount
+  useEffect(() => {
+    return () => {
+      if (bannerIntervalRef.current) {
+        clearInterval(bannerIntervalRef.current);
+      }
+    };
+  }, []);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -250,7 +277,6 @@ function FeedPage() {
     try {
       setDeleting(true);
       await adminService.deletePost(postToDelete.id);
-
 
       notifications.show({
         title: "สำเร็จ",
@@ -338,23 +364,23 @@ function FeedPage() {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onScrollPositionChange={() => {
-             const scrollElement = viewportRef.current;
-             if (scrollElement) {
-               const { scrollTop, scrollHeight, clientHeight } = scrollElement;
-               if (
-                 scrollHeight - scrollTop <= clientHeight + 100 &&
-                 !loading &&
-                 !isRefreshing &&
-                 !loadingMore &&
-                 hasMore
-               ) {
-                  // Prevent multiple calls
-                  if (posts.length > 0) {
-                     fetchPosts(posts.length);
-                  }
-               }
-             }
-           }}
+            const scrollElement = viewportRef.current;
+            if (scrollElement) {
+              const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+              if (
+                scrollHeight - scrollTop <= clientHeight + 100 &&
+                !loading &&
+                !isRefreshing &&
+                !loadingMore &&
+                hasMore
+              ) {
+                // Prevent multiple calls
+                if (posts.length > 0) {
+                  fetchPosts(posts.length);
+                }
+              }
+            }
+          }}
         >
           <Box
             style={{
@@ -386,6 +412,77 @@ function FeedPage() {
             </Transition>
 
             <Stack gap="lg">
+              {/* Banner Carousel */}
+              {bannerImages.length > 0 && (
+                <Box
+                  style={{
+                    width: rem(200),
+                    height: rem(50),
+                    margin: "0 auto",
+                    borderRadius: rem(4),
+                    overflow: "hidden",
+                  }}
+                >
+                  <Carousel
+                    getEmblaApi={(embla) => {
+                      emblaApiRef.current = embla;
+
+                      // Clear existing interval if any
+                      if (bannerIntervalRef.current) {
+                        clearInterval(bannerIntervalRef.current);
+                      }
+
+                      // Set up auto-rotate interval (6 seconds)
+                      if (bannerImages.length > 1) {
+                        bannerIntervalRef.current = setInterval(() => {
+                          if (emblaApiRef.current) {
+                            emblaApiRef.current.scrollNext();
+                          }
+                        }, 6000);
+                      }
+                    }}
+                    withIndicators={false}
+                    withControls={false}
+                    slideSize="100%"
+                    slideGap={0}
+                    draggable={false}
+                    emblaOptions={{
+                      loop: true,
+                    }}
+                    styles={{
+                      root: {
+                        width: rem(200),
+                        height: rem(50),
+                      },
+                      viewport: {
+                        width: rem(200),
+                        height: rem(50),
+                      },
+                      slide: {
+                        width: rem(200),
+                        height: rem(50),
+                      },
+                    }}
+                  >
+                    {bannerImages.map((imageUrl, index) => (
+                      <Carousel.Slide key={index}>
+                        <Image
+                          src={imageUrl}
+                          alt={`Banner ${index + 1}`}
+                          width={rem(200)}
+                          height={rem(50)}
+                          fit="cover"
+                          style={{
+                            width: rem(200),
+                            height: rem(50),
+                          }}
+                        />
+                      </Carousel.Slide>
+                    ))}
+                  </Carousel>
+                </Box>
+              )}
+
               {posts && posts.length > 0 ? (
                 posts.map((post: Post, index: number) => (
                   <Box key={post.id}>
@@ -489,9 +586,9 @@ function FeedPage() {
                 </Text>
               )}
               {loadingMore && (
-                 <Center py="md">
-                    <Loader color="#D4AF37" size="sm" />
-                 </Center>
+                <Center py="md">
+                  <Loader color="#D4AF37" size="sm" />
+                </Center>
               )}
             </Stack>
           </Box>

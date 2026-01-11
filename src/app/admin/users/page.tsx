@@ -60,10 +60,15 @@ export default function AdminUsersPage() {
     }
   }, [status, router]);
 
-  const { data: usersData, loading: usersLoading, refetch: fetchUsers, updateUserStatus } = useAdminUsers(searchQuery);
+  const {
+    data: usersData,
+    loading: usersLoading,
+    refetch: fetchUsers,
+    updateUserStatus,
+  } = useAdminUsers(searchQuery);
   const users = (usersData as unknown as User[]) || [];
   const loading = usersLoading || initialLoading;
-  
+
   // Clean up initial loading
   useEffect(() => {
     if (!usersLoading) {
@@ -231,7 +236,7 @@ export default function AdminUsersPage() {
                   },
                 }}
               >
-                สถานะการใช้งานบัญชี
+                สถานะบัญชี
               </Button>
             </Stack>
           </Box>
@@ -240,9 +245,14 @@ export default function AdminUsersPage() {
           <Box style={{ flex: 1 }}>
             {/* Title and Search Bar */}
             <Group justify="space-between" mb="md" align="center" gap="md">
-              <Text fw={600} size="lg" c="white">
-                {getStatusTitle()}
-              </Text>
+              <Group gap="xs" align="center">
+                <Text fw={600} size="lg" c="white">
+                  {getStatusTitle()}
+                </Text>
+                <Text size="sm" c="dimmed" fw={500}>
+                  (ทั้งหมด {users.length} คน)
+                </Text>
+              </Group>
               <SearchInput
                 placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์ อีเมล"
                 onSearch={setSearchQuery}

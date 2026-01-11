@@ -1,6 +1,9 @@
 "use client";
 
-import { TopNavbar, TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
+import {
+  TOP_NAVBAR_HEIGHT_PX,
+  TopNavbar,
+} from "@/components/element/TopNavbar";
 import {
   Box,
   Card,
@@ -141,4 +144,3 @@ export default function AdminDashboardPage() {
     </Box>
   );
 }
-

@@ -1,6 +1,5 @@
 'use client';
 
-import { supabase } from '@/client/supabase';
 import {
   Box,
   Button,
@@ -12,10 +11,9 @@ import {
 } from '@mantine/core';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export default function Home() {
-  const [isReady, setIsReady] = useState(false);
   const router = useRouter();
 
   const { status } = useSession();
@@ -33,14 +31,6 @@ export default function Home() {
       router.push('/feed');
     }
   }, [router, status]);
-
-  useEffect(() => {
-    if (status === 'loading' || status === 'unauthenticated') {
-      setIsReady(true);
-    }
-  }, [status]);
-
-  if (isReady) return null;
 
   return (
     <Box>

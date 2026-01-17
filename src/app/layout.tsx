@@ -1,15 +1,16 @@
-import MantineAppProvider from "@/provider/MantineAppProvider";
-import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
-import "@mantine/core/styles.css";
-import "@mantine/dates/styles.css";
-import "@mantine/notifications/styles.css";
-import { SessionProvider } from "next-auth/react";
-import { Inter } from "next/font/google";
-import { ClientLayout } from "@/components/layout/ClientLayout";
+import MantineAppProvider from '@/provider/MantineAppProvider';
+import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core';
+import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
+import '@mantine/notifications/styles.css';
+import { SessionProvider } from 'next-auth/react';
+import { Inter } from 'next/font/google';
+import { ClientLayout } from '@/components/layout/ClientLayout';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
 });
 
 export default function RootLayout({
@@ -28,6 +29,7 @@ export default function RootLayout({
             <ClientLayout>{children}</ClientLayout>
           </MantineAppProvider>
         </SessionProvider>
+        <SpeedInsights />
       </body>
     </html>
   );

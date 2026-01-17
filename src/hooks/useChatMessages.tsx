@@ -369,7 +369,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     )
       return;
 
-    const messageText = message.trim();
+    const messageText = message;
     const messageId = crypto.randomUUID();
     const currentTime = new Date().toISOString();
 

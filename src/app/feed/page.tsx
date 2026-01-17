@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { BUCKET_NAME, supabase } from "@/client/supabase";
-import { NewUserRedirect } from "@/components/auth/NewUserRedirect";
-import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
-import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
+import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { NewUserRedirect } from '@/components/auth/NewUserRedirect';
+import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
+import { BOTTOM_NAVBAR_HEIGHT_PX } from '@/components/element/BottomNavbar';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { useAdminCheck } from "@/hooks/useAdmin";
-import { useUserStatusCheck } from "@/hooks/useUser";
-import { adminService } from "@/services/admin";
-import { messageService } from "@/services/supabase/messages";
-import { postService } from "@/services/supabase/posts";
-import { Carousel } from "@mantine/carousel";
+} from '@/components/element/TopNavbar';
+import { useAdminCheck } from '@/hooks/useAdmin';
+import { useUserStatusCheck } from '@/hooks/useUser';
+import { adminService } from '@/services/admin';
+import { messageService } from '@/services/supabase/messages';
+import { postService } from '@/services/supabase/posts';
+import { Carousel } from '@mantine/carousel';
 import {
   Avatar,
   Box,
@@ -31,12 +31,12 @@ import {
   Stack,
   Text,
   Transition,
-} from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import type { EmblaCarouselType } from "embla-carousel";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+} from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import type { EmblaCarouselType } from 'embla-carousel';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Post = {
   id: string;
@@ -54,7 +54,7 @@ type Post = {
     profileImageUrl?: string | null;
     isVerified?: boolean;
     verifiedByUsername?: string | null;
-    role?: "USER" | "ADMIN";
+    role?: 'USER' | 'ADMIN';
   };
 };
 
@@ -69,7 +69,8 @@ function FeedPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [chatLoading, setChatLoading] = useState<string | null>(null);
-  const [infographicModalOpened, setInfographicModalOpened] = useState(false);
+  const [infographicModalOpened, setInfographicModalOpened] =
+    useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -81,117 +82,132 @@ function FeedPage() {
   const isPulling = useRef(false);
   const emblaApiRef = useRef<EmblaCarouselType | null>(null);
   const bannerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Banner images - can be replaced with API call later
-  const bannerImages = [
-    // Placeholder URLs - will be replaced when images are uploaded
-    // These can be replaced with actual image URLs from the backend
-    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+1",
-    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+2",
-    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+3",
-    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+4",
-    "https://via.placeholder.com/200x50/1a1a1a/ffffff?text=Banner+5",
-  ];
+  const [bannerImages, setBannerImages] = useState<string[]>([]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
     }
   }, [router, status]);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      (async function () {
+        const ads = await supabase.from('Ad').select();
+        console.debug('ads', ads);
+        const images = ads.data?.map((ad) => ad.imageUrl);
+        if (images) {
+          setBannerImages(images);
+        }
+      })();
+    }
+  }, [status]);
+
   const { data: adminData } = useAdminCheck();
   const { data: userStatusData } = useUserStatusCheck();
 
   useEffect(() => {
     if (adminData) {
-      setIsAdmin(adminData.isAdmin || adminData.role === "ADMIN");
+      setIsAdmin(adminData.isAdmin || adminData.role === 'ADMIN');
     }
     if (userStatusData) {
       setIsSuspended(userStatusData.isSuspended);
     }
   }, [adminData, userStatusData]);
 
-  const fetchPosts = useCallback(async (offset = 0, isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setIsRefreshing(true);
-      } else if (offset === 0) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-
-      const limit = 20;
-      const data = await postService.getPublicPosts(limit, offset);
-
-      // Check if we have more posts
-      if (data.length < limit) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
-
-      // Convert profileImageKey to URL for each post
-      const postsWithImageUrls = (data || []).map((post: unknown) => {
-        const postData = post as {
-          User?: {
-            profileImageKey?: string | null;
-            [key: string]: unknown;
-          };
-          imageUrl?: string | string[] | null;
-          content?: unknown;
-          [key: string]: unknown;
-        };
-        let profileImageUrl = null;
-        if (postData.User?.profileImageKey) {
-          const { data: imageData } = supabase.storage
-            .from(BUCKET_NAME)
-            .getPublicUrl(postData.User.profileImageKey);
-          profileImageUrl = imageData.publicUrl;
+  const fetchPosts = useCallback(
+    async (offset = 0, isRefresh = false) => {
+      try {
+        if (isRefresh) {
+          setIsRefreshing(true);
+        } else if (offset === 0) {
+          setLoading(true);
+        } else {
+          setLoadingMore(true);
         }
 
-        // Handle backward compatibility: convert string imageUrl to array
-        let imageUrlArray: string[] | null = null;
-        if (postData.imageUrl) {
-          if (typeof postData.imageUrl === "string") {
-            imageUrlArray = JSON.parse(postData.imageUrl as string);
-          } else if (Array.isArray(postData.imageUrl)) {
-            imageUrlArray = postData.imageUrl;
+        const limit = 20;
+        const data = await postService.getPublicPosts(limit, offset);
+
+        // Check if we have more posts
+        if (data.length < limit) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+
+        // Convert profileImageKey to URL for each post
+        const postsWithImageUrls = (data || []).map(
+          (post: unknown) => {
+            const postData = post as {
+              User?: {
+                profileImageKey?: string | null;
+                [key: string]: unknown;
+              };
+              imageUrl?: string | string[] | null;
+              content?: unknown;
+              [key: string]: unknown;
+            };
+            let profileImageUrl = null;
+            if (postData.User?.profileImageKey) {
+              const { data: imageData } = supabase.storage
+                .from(BUCKET_NAME)
+                .getPublicUrl(postData.User.profileImageKey);
+              profileImageUrl = imageData.publicUrl;
+            }
+
+            // Handle backward compatibility: convert string imageUrl to array
+            let imageUrlArray: string[] | null = null;
+            if (postData.imageUrl) {
+              if (typeof postData.imageUrl === 'string') {
+                imageUrlArray = JSON.parse(
+                  postData.imageUrl as string
+                );
+              } else if (Array.isArray(postData.imageUrl)) {
+                imageUrlArray = postData.imageUrl;
+              }
+            }
+
+            return {
+              ...postData,
+              content: postData.content as {
+                text?: string;
+                [key: string]: unknown;
+              } | null,
+              imageUrl: imageUrlArray,
+              User: {
+                ...postData.User,
+                profileImageUrl,
+              },
+            };
           }
+        );
+
+        if (offset === 0) {
+          setPosts(postsWithImageUrls as Post[]);
+        } else {
+          setPosts((prevPosts) => [
+            ...prevPosts,
+            ...(postsWithImageUrls as Post[]),
+          ]);
         }
-
-        return {
-          ...postData,
-          content: postData.content as {
-            text?: string;
-            [key: string]: unknown;
-          } | null,
-          imageUrl: imageUrlArray,
-          User: {
-            ...postData.User,
-            profileImageUrl,
-          },
-        };
-      });
-
-      if (offset === 0) {
-        setPosts(postsWithImageUrls as Post[]);
-      } else {
-        setPosts((prevPosts) => [
-          ...prevPosts,
-          ...(postsWithImageUrls as Post[]),
-        ]);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err
+            : new Error('Failed to fetch posts')
+        );
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+        setLoadingMore(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to fetch posts"));
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-      setLoadingMore(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (status === 'authenticated') {
       fetchPosts(0);
       // Show infographic modal when entering feed page
       setInfographicModalOpened(true);
@@ -209,9 +225,9 @@ function FeedPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
     });
   };
 
@@ -260,7 +276,7 @@ function FeedPage() {
       // Navigate to the chat page
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
-      console.error("Error creating/finding chat:", err);
+      console.error('Error creating/finding chat:', err);
       // You could show a toast notification here
     } finally {
       setChatLoading(null);
@@ -279,9 +295,9 @@ function FeedPage() {
       await adminService.deletePost(postToDelete.id);
 
       notifications.show({
-        title: "สำเร็จ",
-        message: "ลบโพสต์แล้ว",
-        color: "green",
+        title: 'สำเร็จ',
+        message: 'ลบโพสต์แล้ว',
+        color: 'green',
       });
 
       // Remove post from local state
@@ -290,11 +306,13 @@ function FeedPage() {
       setPostToDelete(null);
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : "ไม่สามารถลบโพสต์ได้";
+        error instanceof Error
+          ? error.message
+          : 'ไม่สามารถลบโพสต์ได้';
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
+        title: 'เกิดข้อผิดพลาด',
         message: errorMessage,
-        color: "red",
+        color: 'red',
       });
     } finally {
       setDeleting(false);
@@ -310,13 +328,13 @@ function FeedPage() {
           pt="md"
           px="md"
           mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-          style={{ marginLeft: "auto", marginRight: "auto" }}
+          style={{ marginLeft: 'auto', marginRight: 'auto' }}
         >
           <Center>
             <Loader
               color="#D4AF37"
               style={{
-                margin: "auto",
+                margin: 'auto',
               }}
             />
           </Center>
@@ -334,7 +352,7 @@ function FeedPage() {
           pt="md"
           px="md"
           mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-          style={{ marginLeft: "auto", marginRight: "auto" }}
+          style={{ marginLeft: 'auto', marginRight: 'auto' }}
         >
           <Text c="red">Error loading posts: {error.message}</Text>
         </Container>
@@ -352,7 +370,7 @@ function FeedPage() {
         pt="md"
         px="md"
         mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-        style={{ marginLeft: "auto", marginRight: "auto" }}
+        style={{ marginLeft: 'auto', marginRight: 'auto' }}
       >
         <ScrollArea
           ref={scrollAreaRef}
@@ -366,7 +384,8 @@ function FeedPage() {
           onScrollPositionChange={() => {
             const scrollElement = viewportRef.current;
             if (scrollElement) {
-              const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+              const { scrollTop, scrollHeight, clientHeight } =
+                scrollElement;
               if (
                 scrollHeight - scrollTop <= clientHeight + 100 &&
                 !loading &&
@@ -385,7 +404,8 @@ function FeedPage() {
           <Box
             style={{
               transform: `translateY(${pullDistance}px)`,
-              transition: pullDistance === 0 ? "transform 0.3s ease" : "none",
+              transition:
+                pullDistance === 0 ? 'transform 0.3s ease' : 'none',
             }}
           >
             <Transition
@@ -397,15 +417,17 @@ function FeedPage() {
                 <Box
                   style={{
                     ...styles,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "16px",
-                    color: "var(--mantine-color-dimmed)",
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '16px',
+                    color: 'var(--mantine-color-dimmed)',
                   }}
                 >
                   <Text size="sm">
-                    {isRefreshing ? "Refreshing..." : "Pull to refresh"}
+                    {isRefreshing
+                      ? 'Refreshing...'
+                      : 'Pull to refresh'}
                   </Text>
                 </Box>
               )}
@@ -418,9 +440,9 @@ function FeedPage() {
                   style={{
                     width: rem(200),
                     height: rem(50),
-                    margin: "0 auto",
+                    margin: '0 auto',
                     borderRadius: rem(4),
-                    overflow: "hidden",
+                    overflow: 'hidden',
                   }}
                 >
                   <Carousel
@@ -434,11 +456,14 @@ function FeedPage() {
 
                       // Set up auto-rotate interval (6 seconds)
                       if (bannerImages.length > 1) {
-                        bannerIntervalRef.current = setInterval(() => {
-                          if (emblaApiRef.current) {
-                            emblaApiRef.current.scrollNext();
-                          }
-                        }, 6000);
+                        bannerIntervalRef.current = setInterval(
+                          () => {
+                            if (emblaApiRef.current) {
+                              emblaApiRef.current.scrollNext();
+                            }
+                          },
+                          6000
+                        );
                       }
                     }}
                     withIndicators={false}
@@ -487,22 +512,32 @@ function FeedPage() {
                 posts.map((post: Post, index: number) => (
                   <Box key={post.id}>
                     <Stack gap={10}>
-                      <Group gap="sm" align="center" justify="space-between">
+                      <Group
+                        gap="sm"
+                        align="center"
+                        justify="space-between"
+                      >
                         <Group gap="sm" align="center">
                           <Avatar
                             radius="xl"
                             color="gray"
-                            src={post.User.profileImageUrl || undefined}
-                            style={{ cursor: "pointer" }}
-                            onClick={() => handleViewProfile(post.User.id)}
+                            src={
+                              post.User.profileImageUrl || undefined
+                            }
+                            style={{ cursor: 'pointer' }}
+                            onClick={() =>
+                              handleViewProfile(post.User.id)
+                            }
                           >
-                            {post.User.fullName?.charAt(0) || "?"}
+                            {post.User.fullName?.charAt(0) || '?'}
                           </Avatar>
                           <Group gap={4} align="center">
                             <Text
                               fw={600}
-                              style={{ cursor: "pointer" }}
-                              onClick={() => handleViewProfile(post.User.id)}
+                              style={{ cursor: 'pointer' }}
+                              onClick={() =>
+                                handleViewProfile(post.User.id)
+                              }
                             >
                               {post.User.username}
                             </Text>
@@ -526,7 +561,7 @@ function FeedPage() {
                               setDeleteModalOpened(true);
                             }}
                             style={{
-                              border: "1px solid red",
+                              border: '1px solid red',
                             }}
                           >
                             X ลบโพส
@@ -561,13 +596,18 @@ function FeedPage() {
                       {!isSuspended && (
                         <Group justify="flex-start" mt="xs">
                           <Box
-                            onClick={() => handleSendClick(post.User.id)}
+                            onClick={() =>
+                              handleSendClick(post.User.id)
+                            }
                             style={{
                               cursor:
                                 chatLoading === post.User.id
-                                  ? "not-allowed"
-                                  : "pointer",
-                              opacity: chatLoading === post.User.id ? 0.6 : 1,
+                                  ? 'not-allowed'
+                                  : 'pointer',
+                              opacity:
+                                chatLoading === post.User.id
+                                  ? 0.6
+                                  : 1,
                             }}
                           >
                             <Text c="yellow">Message</Text>
@@ -604,19 +644,19 @@ function FeedPage() {
         centered
         styles={{
           title: {
-            color: "white",
+            color: 'white',
             fontWeight: 600,
-            textAlign: "center",
-            width: "100%",
+            textAlign: 'center',
+            width: '100%',
             margin: 0,
           },
           header: {
-            justifyContent: "center",
-            position: "relative",
+            justifyContent: 'center',
+            position: 'relative',
           },
           close: {
-            position: "absolute",
-            right: "var(--mantine-spacing-md)",
+            position: 'absolute',
+            right: 'var(--mantine-spacing-md)',
           },
         }}
       >
@@ -640,15 +680,16 @@ function FeedPage() {
         title="ยืนยันการลบโพสต์"
         centered
         styles={{
-          content: { backgroundColor: "#0F0F0F" },
-          header: { backgroundColor: "#0F0F0F" },
-          body: { backgroundColor: "#0F0F0F" },
-          title: { color: "white" },
+          content: { backgroundColor: '#0F0F0F' },
+          header: { backgroundColor: '#0F0F0F' },
+          body: { backgroundColor: '#0F0F0F' },
+          title: { color: 'white' },
         }}
       >
         <Stack gap="md">
           <Text c="white">
-            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้? การกระทำนี้ไม่สามารถยกเลิกได้
+            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้?
+            การกระทำนี้ไม่สามารถยกเลิกได้
           </Text>
           <Group justify="flex-end">
             <Button
@@ -661,7 +702,11 @@ function FeedPage() {
             >
               ยกเลิก
             </Button>
-            <Button color="red" onClick={handleDeletePost} loading={deleting}>
+            <Button
+              color="red"
+              onClick={handleDeletePost}
+              loading={deleting}
+            >
               ลบ
             </Button>
           </Group>

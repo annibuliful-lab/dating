@@ -1,35 +1,46 @@
-"use client";
+'use client';
 
-import { supabase } from "@/client/supabase";
-import { Box, Button, Container, Image, rem, Stack, Text } from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { supabase } from '@/client/supabase';
+import {
+  Box,
+  Button,
+  Container,
+  Image,
+  rem,
+  Stack,
+  Text,
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
+  const [isReady, setIsReady] = useState(false);
   const router = useRouter();
-  useEffect(() => {
-    const getTest = async () => {
-      await supabase.from("_prisma_migrations").select();
-    };
-    getTest();
-  }, []);
 
   const { status } = useSession();
 
   const handleClickLogin = () => {
-    router.push("/signin");
+    router.push('/signin');
   };
 
   const handleClickSignup = () => {
-    router.push("/signup");
+    router.push('/signup');
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
-      router.push("/feed");
+    if (status === 'authenticated') {
+      router.push('/feed');
     }
   }, [router, status]);
+
+  useEffect(() => {
+    if (status === 'loading' || status === 'unauthenticated') {
+      setIsReady(true);
+    }
+  }, [status]);
+
+  if (isReady) return null;
 
   return (
     <Box>
@@ -37,9 +48,9 @@ export default function Home() {
         size="xs"
         px="md"
         style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
           height: rem(812), // iPhone 11 size in your screenshot
           maxWidth: rem(375),
         }}
@@ -47,9 +58,9 @@ export default function Home() {
         <Box
           style={{
             flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <Image
@@ -57,7 +68,7 @@ export default function Home() {
             src="https://wcjxna7kg9rqnf7r.public.blob.vercel-storage.com/IMG_9165.PNG"
             fit="contain"
             w={rem(250)}
-            style={{ display: "block", margin: "auto" }}
+            style={{ display: 'block', margin: 'auto' }}
           />
         </Box>
 
@@ -67,7 +78,7 @@ export default function Home() {
           </Button>
           <Text
             style={{
-              cursor: "pointer",
+              cursor: 'pointer',
             }}
             c="cloud.4"
             ta="center"

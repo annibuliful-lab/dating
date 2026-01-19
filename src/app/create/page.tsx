@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { CameraIcon } from "@/components/icons/CameraIcon";
-import { compressImage } from "@/lib/image-compression";
-import { mediaService } from "@/services/supabase/media";
-import { postService } from "@/services/supabase/posts";
+} from '@/components/element/TopNavbar';
+import { CameraIcon } from '@/components/icons/CameraIcon';
+import { compressImage } from '@/lib/image-compression';
+import { mediaService } from '@/services/supabase/media';
+import { postService } from '@/services/supabase/posts';
 import {
   ActionIcon,
   Avatar,
@@ -22,11 +22,11 @@ import {
   Stack,
   Text,
   Textarea,
-} from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+} from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
 
 const MAX_IMAGES = 5;
 const MAX_CHARACTERS = 300;
@@ -34,7 +34,7 @@ const MAX_CHARACTERS = 300;
 function CreatePostPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -49,9 +49,9 @@ function CreatePostPage() {
     // Check if adding these files would exceed the limit
     if (selectedImages.length + files.length > MAX_IMAGES) {
       notifications.show({
-        title: "Too Many Images",
+        title: 'Too Many Images',
         message: `You can only add up to ${MAX_IMAGES} images`,
-        color: "red",
+        color: 'red',
       });
       return;
     }
@@ -65,21 +65,27 @@ function CreatePostPage() {
       const validation = mediaService.validateFile(file);
       if (!validation.valid) {
         notifications.show({
-          title: "Invalid File",
-          message: validation.error || "Please select a valid image file",
-          color: "red",
+          title: 'Invalid File',
+          message:
+            validation.error || 'Please select a valid image file',
+          color: 'red',
         });
         continue;
       }
 
       // Compress image
       try {
-        const compressedFile = await compressImage(file, 1920, 1920, 0.8);
+        const compressedFile = await compressImage(
+          file,
+          1920,
+          1920,
+          0.8
+        );
         validFiles.push(compressedFile);
         const preview = mediaService.createPreviewUrl(compressedFile);
         previews.push(preview);
       } catch (error) {
-        console.error("Error compressing image:", error);
+        console.error('Error compressing image:', error);
         // Use original file if compression fails
         validFiles.push(file);
         const preview = mediaService.createPreviewUrl(file);
@@ -93,7 +99,7 @@ function CreatePostPage() {
 
     // Reset file input
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   };
 
@@ -110,27 +116,28 @@ function CreatePostPage() {
   const handleSubmit = async () => {
     if (!content.trim() && selectedImages.length === 0) {
       notifications.show({
-        title: "Error",
-        message: "Please enter some content or select an image for your post",
-        color: "red",
+        title: 'Error',
+        message:
+          'Please enter some content or select an image for your post',
+        color: 'red',
       });
       return;
     }
 
     if (content.length > MAX_CHARACTERS) {
       notifications.show({
-        title: "Error",
+        title: 'Error',
         message: `Content must be ${MAX_CHARACTERS} characters or less`,
-        color: "red",
+        color: 'red',
       });
       return;
     }
 
     if (!session?.user?.id) {
       notifications.show({
-        title: "Error",
-        message: "You must be logged in to create a post",
-        color: "red",
+        title: 'Error',
+        message: 'You must be logged in to create a post',
+        color: 'red',
       });
       return;
     }
@@ -143,8 +150,8 @@ function CreatePostPage() {
       if (selectedImages.length > 0) {
         const uploadResults = await mediaService.uploadMultipleMedia(
           selectedImages,
-          "dating",
-          "posts"
+          'dating',
+          'posts'
         );
         imageUrls = uploadResults.map((result) => result.publicUrl);
       }
@@ -153,7 +160,7 @@ function CreatePostPage() {
         id: crypto.randomUUID(),
         authorId: session.user.id,
         content: { text: content.trim() },
-        visibility: "PUBLIC" as const,
+        visibility: 'PUBLIC' as const,
         imageUrl: imageUrls.length > 0 ? imageUrls : null,
         updatedAt: new Date().toISOString(),
       };
@@ -161,9 +168,9 @@ function CreatePostPage() {
       await postService.createPost(postData);
 
       notifications.show({
-        title: "Success",
-        message: "Post created successfully!",
-        color: "green",
+        title: 'Success',
+        message: 'Post created successfully!',
+        color: 'green',
       });
 
       // Clean up preview URLs
@@ -171,32 +178,39 @@ function CreatePostPage() {
         mediaService.revokePreviewUrl(preview);
       });
 
-      router.push("/feed");
+      router.push('/feed');
     } catch (error) {
       notifications.show({
-        title: "Error",
+        title: 'Error',
         message:
-          error instanceof Error ? error.message : "Failed to create post",
-        color: "red",
+          error instanceof Error
+            ? error.message
+            : 'Failed to create post',
+        color: 'red',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (status === "loading") {
+  if (status === 'loading') {
     return (
       <Box>
         <TopNavbar title="Create post" showBack />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
           <Text>Loading...</Text>
         </Container>
       </Box>
     );
   }
 
-  if (status === "unauthenticated") {
-    router.push("/signin");
+  if (status === 'unauthenticated') {
+    router.push('/signin');
     return null;
   }
 
@@ -222,7 +236,12 @@ function CreatePostPage() {
         }
       />
 
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
         <Stack gap="lg">
           {/* User Profile Section */}
           <Group gap="sm" align="center">
@@ -232,10 +251,10 @@ function CreatePostPage() {
               size="md"
               src={session?.user?.image}
             >
-              {session?.user?.name?.charAt(0) || "U"}
+              {session?.user?.name?.charAt(0) || 'U'}
             </Avatar>
             <Text fw={600} c="white">
-              {session?.user?.name || "User"}
+              {session?.user?.name || 'User'}
             </Text>
           </Group>
 
@@ -244,24 +263,31 @@ function CreatePostPage() {
             <Textarea
               placeholder="Your heart has something to say?"
               value={content}
-              onChange={(event) => setContent(event.currentTarget.value)}
+              onChange={(event) =>
+                setContent(event.currentTarget.value)
+              }
               minRows={6}
               maxRows={12}
               autosize
               maxLength={MAX_CHARACTERS}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
               styles={{
                 input: {
-                  backgroundColor: "transparent",
-                  border: "none",
-                  color: "white",
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'white',
                   fontSize: rem(16),
                   lineHeight: 1.6,
-                  "&::placeholder": {
-                    color: "#989898",
+                  '&::placeholder': {
+                    color: '#989898',
                   },
-                  "&:focus": {
-                    border: "none",
-                    outline: "none",
+                  '&:focus': {
+                    border: 'none',
+                    outline: 'none',
                   },
                 },
               }}
@@ -273,7 +299,10 @@ function CreatePostPage() {
 
           {/* Image Previews */}
           {imagePreviews.length > 0 && (
-            <SimpleGrid cols={imagePreviews.length === 1 ? 1 : 2} spacing="sm">
+            <SimpleGrid
+              cols={imagePreviews.length === 1 ? 1 : 2}
+              spacing="sm"
+            >
               {imagePreviews.map((preview, index) => (
                 <Box key={index} pos="relative">
                   <Image
@@ -292,8 +321,8 @@ function CreatePostPage() {
                     variant="filled"
                     onClick={() => handleRemoveImage(index)}
                     style={{
-                      backgroundColor: "rgba(0, 0, 0, 0.6)",
-                      color: "white",
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
                     }}
                   />
                 </Box>
@@ -308,7 +337,7 @@ function CreatePostPage() {
             accept="image/*"
             multiple
             onChange={handleImageSelect}
-            style={{ display: "none" }}
+            style={{ display: 'none' }}
           />
           {selectedImages.length < MAX_IMAGES && (
             <Group>
@@ -321,7 +350,8 @@ function CreatePostPage() {
                 <CameraIcon color="#989898" />
               </ActionIcon>
               <Text size="sm" c="dimmed">
-                Add photos to your post ({selectedImages.length}/{MAX_IMAGES})
+                Add photos to your post ({selectedImages.length}/
+                {MAX_IMAGES})
               </Text>
             </Group>
           )}

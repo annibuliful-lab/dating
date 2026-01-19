@@ -194,6 +194,11 @@ export const MessageInput = forwardRef<
               radius="xl"
               size="md"
               disabled={sending}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
             <ActionIcon
               size={40}

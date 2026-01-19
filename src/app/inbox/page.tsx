@@ -1,36 +1,36 @@
-"use client";
+'use client';
 
-import { BUCKET_NAME, supabase } from "@/client/supabase";
+import { BUCKET_NAME, supabase } from '@/client/supabase';
 import {
-    TOP_NAVBAR_HEIGHT_PX,
-    TopNavbar,
-} from "@/components/element/TopNavbar";
-import { UserPlusIcon } from "@/components/icons/UserPlusIcon";
+  TOP_NAVBAR_HEIGHT_PX,
+  TopNavbar,
+} from '@/components/element/TopNavbar';
+import { UserPlusIcon } from '@/components/icons/UserPlusIcon';
 // Using a simple refresh icon from Mantine
-import { SuspendedUserRedirect } from "@/components/auth/SuspendedUserRedirect";
-import { messageService } from "@/services/supabase/messages";
-import { userService } from "@/services/supabase/users";
+import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
+import { messageService } from '@/services/supabase/messages';
+import { userService } from '@/services/supabase/users';
 import {
-    ActionIcon,
-    Avatar,
-    Box,
-    Button,
-    Center,
-    Container,
-    Divider,
-    Flex,
-    Group,
-    Loader,
-    Modal,
-    Stack,
-    Text,
-    TextInput,
-    rem,
-} from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+  ActionIcon,
+  Avatar,
+  Box,
+  Button,
+  Center,
+  Container,
+  Divider,
+  Flex,
+  Group,
+  Loader,
+  Modal,
+  Stack,
+  Text,
+  TextInput,
+  rem,
+} from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 type ChatPreview = {
   id: string;
@@ -68,13 +68,15 @@ function InboxPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<
+    UserSearchResult[]
+  >([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [creatingChat, setCreatingChat] = useState(false);
   const [isGroupChatMode, setIsGroupChatMode] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [groupChatName, setGroupChatName] = useState("");
+  const [groupChatName, setGroupChatName] = useState('');
 
   const fetchUserChats = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -83,7 +85,9 @@ function InboxPage() {
       setLoading(true);
       setError(null);
 
-      const userChats = await messageService.getUserChats(session.user.id);
+      const userChats = await messageService.getUserChats(
+        session.user.id
+      );
 
       // Transform the data to match our ChatPreview type
       const transformedChats: ChatPreview[] = userChats.map(
@@ -100,28 +104,28 @@ function InboxPage() {
             ) || [];
 
           // Generate chat name based on participants
-          let chatName = "Unknown";
+          let chatName = 'Unknown';
           if (chat.isGroup && chat.name) {
             chatName = chat.name;
           } else if (otherParticipants.length > 0) {
             chatName = otherParticipants
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .map((p: any) => p.User?.fullName || "Unknown")
-              .join(", ");
+              .map((p: any) => p.User?.fullName || 'Unknown')
+              .join(', ');
           } else {
             chatName = `Chat ${chat.id.slice(0, 8)}`;
           }
 
           // Generate preview text
-          let preview = "No messages yet";
+          let preview = 'No messages yet';
           if (latestMessage) {
-            preview = latestMessage.text || "Media message";
+            preview = latestMessage.text || 'Media message';
           }
 
           // Format date
           const dateLabel = latestMessage
             ? formatRelativeDate(new Date(latestMessage.createdAt))
-            : "New";
+            : 'New';
 
           // Determine if unread based on lastReadAt vs latest message
           const unread = chat.hasUnread || false;
@@ -144,7 +148,7 @@ function InboxPage() {
                 }
                 return {
                   id: p.userId,
-                  fullName: p.User?.fullName || "Unknown",
+                  fullName: p.User?.fullName || 'Unknown',
                   profileImageKey: p.User?.profileImageKey || null,
                   profileImageUrl,
                 };
@@ -162,8 +166,10 @@ function InboxPage() {
 
       setChats(transformedChats);
     } catch (err) {
-      console.error("Error fetching chats:", err);
-      setError(err instanceof Error ? err.message : "Failed to load chats");
+      console.error('Error fetching chats:', err);
+      setError(
+        err instanceof Error ? err.message : 'Failed to load chats'
+      );
     } finally {
       setLoading(false);
     }
@@ -181,30 +187,31 @@ function InboxPage() {
   }, [session?.user?.id, fetchUserChats]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
       return;
     }
 
-    if (status === "authenticated" && session?.user?.id) {
+    if (status === 'authenticated' && session?.user?.id) {
       fetchUserChats();
     }
   }, [status, session, router, fetchUserChats]);
 
   const formatRelativeDate = (date: Date): string => {
     const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInHours =
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 1) {
-      return "Just now";
+      return 'Just now';
     } else if (diffInHours < 24) {
       return `${Math.floor(diffInHours)}h ago`;
     } else if (diffInHours < 48) {
-      return "Yesterday";
+      return 'Yesterday';
     } else {
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
       });
     }
   };
@@ -213,9 +220,12 @@ function InboxPage() {
     // Mark messages as read when opening chat
     if (session?.user?.id) {
       try {
-        await messageService.markMessagesAsRead(chatId, session.user.id);
+        await messageService.markMessagesAsRead(
+          chatId,
+          session.user.id
+        );
       } catch (err) {
-        console.error("Error marking messages as read:", err);
+        console.error('Error marking messages as read:', err);
       }
     }
     router.push(`/inbox/${chatId}`);
@@ -251,7 +261,7 @@ function InboxPage() {
             });
           setSearchResults(filteredUsers);
         } catch (err) {
-          console.error("Error fetching users:", err);
+          console.error('Error fetching users:', err);
         } finally {
           setSearchLoading(false);
         }
@@ -279,7 +289,7 @@ function InboxPage() {
           });
         setSearchResults(filteredResults);
       } catch (err) {
-        console.error("Error searching users:", err);
+        console.error('Error searching users:', err);
         setSearchResults([]);
       } finally {
         setSearchLoading(false);
@@ -312,8 +322,8 @@ function InboxPage() {
       close();
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
-      console.error("Error creating chat:", err);
-      alert("Failed to start chat. Please try again.");
+      console.error('Error creating chat:', err);
+      alert('Failed to start chat. Please try again.');
     } finally {
       setCreatingChat(false);
     }
@@ -321,12 +331,12 @@ function InboxPage() {
 
   const handleCreateGroupChat = async () => {
     if (!session?.user?.id || selectedUsers.length === 0) {
-      alert("Please select at least one user to create a group chat");
+      alert('Please select at least one user to create a group chat');
       return;
     }
 
     if (!groupChatName.trim()) {
-      alert("Please enter a group name");
+      alert('Please enter a group name');
       return;
     }
 
@@ -341,36 +351,36 @@ function InboxPage() {
       close();
       setIsGroupChatMode(false);
       setSelectedUsers([]);
-      setGroupChatName("");
+      setGroupChatName('');
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
-      console.error("Error creating group chat:", err);
-      alert("Failed to create group chat. Please try again.");
+      console.error('Error creating group chat:', err);
+      alert('Failed to create group chat. Please try again.');
     } finally {
       setCreatingChat(false);
     }
   };
 
   const handleOpenModal = () => {
-    setSearchQuery("");
+    setSearchQuery('');
     setSearchResults([]);
     setIsGroupChatMode(false);
     setSelectedUsers([]);
-    setGroupChatName("");
+    setGroupChatName('');
     open();
   };
 
   const handleToggleGroupChatMode = () => {
     setIsGroupChatMode(!isGroupChatMode);
     setSelectedUsers([]);
-    setGroupChatName("");
+    setGroupChatName('');
   };
 
   const handleRemoveSelectedUser = (userId: string) => {
     setSelectedUsers(selectedUsers.filter((id) => id !== userId));
   };
 
-  if (status === "loading" || loading) {
+  if (status === 'loading' || loading) {
     return (
       <Box>
         <TopNavbar
@@ -380,13 +390,18 @@ function InboxPage() {
               variant="subtle"
               size="lg"
               onClick={handleOpenModal}
-              disabled={status !== "authenticated"}
+              disabled={status !== 'authenticated'}
             >
               <UserPlusIcon />
             </ActionIcon>
           }
         />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
           <Center py="xl">
             <Loader size="lg" />
           </Center>
@@ -405,13 +420,18 @@ function InboxPage() {
               variant="subtle"
               size="lg"
               onClick={handleOpenModal}
-              disabled={status !== "authenticated"}
+              disabled={status !== 'authenticated'}
             >
               <UserPlusIcon />
             </ActionIcon>
           }
         />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
           <Center py="xl">
             <Stack align="center" gap="md">
               <Text c="red" ta="center">
@@ -419,7 +439,7 @@ function InboxPage() {
               </Text>
               <Text
                 c="blue"
-                style={{ cursor: "pointer" }}
+                style={{ cursor: 'pointer' }}
                 onClick={fetchUserChats}
               >
                 Try again
@@ -446,13 +466,22 @@ function InboxPage() {
             >
               <Text size="lg">↻</Text>
             </ActionIcon>
-            <ActionIcon variant="subtle" size="lg" onClick={handleOpenModal}>
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={handleOpenModal}
+            >
               <UserPlusIcon />
             </ActionIcon>
           </Group>
         }
       />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
         <Stack gap="lg">
           {chats.length === 0 ? (
             <Center py="xl">
@@ -461,7 +490,8 @@ function InboxPage() {
                   No conversations yet
                 </Text>
                 <Text size="sm" c="dimmed" ta="center">
-                  Start chatting with other users to see conversations here
+                  Start chatting with other users to see conversations
+                  here
                 </Text>
               </Stack>
             </Center>
@@ -470,18 +500,31 @@ function InboxPage() {
               <Box
                 key={chat.id}
                 onClick={() => handleChatClick(chat.id)}
-                style={{ cursor: "pointer" }}
+                style={{ cursor: 'pointer' }}
               >
-                <Group align="flex-start" wrap="nowrap" justify="space-between">
-                  <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
+                <Group
+                  align="flex-start"
+                  wrap="nowrap"
+                  justify="space-between"
+                >
+                  <Group
+                    wrap="nowrap"
+                    align="flex-start"
+                    gap="md"
+                    w="100%"
+                  >
                     {/* Avatar - show first participant's avatar or default */}
                     <Avatar
                       radius="xl"
                       color="gray"
                       size={62}
-                      src={chat.participants[0]?.profileImageUrl || undefined}
+                      src={
+                        chat.participants[0]?.profileImageUrl ||
+                        undefined
+                      }
                     >
-                      {chat.participants[0]?.fullName?.charAt(0) || "?"}
+                      {chat.participants[0]?.fullName?.charAt(0) ||
+                        '?'}
                     </Avatar>
 
                     <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
@@ -495,22 +538,26 @@ function InboxPage() {
                           style={{
                             flex: 1,
                             minWidth: 0,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                           }}
                           title={chat.name}
                           w={200}
                         >
                           {chat.name}
                         </Text>
-                        <Flex justify="end" direction="column" align="end">
+                        <Flex
+                          justify="end"
+                          direction="column"
+                          align="end"
+                        >
                           <Text
                             c="dimmed"
                             size="sm"
                             style={{
                               flexShrink: 0,
-                              marginLeft: "8px",
+                              marginLeft: '8px',
                             }}
                           >
                             {chat.dateLabel}
@@ -523,8 +570,8 @@ function InboxPage() {
                             style={{
                               borderRadius: 9999,
                               background: chat.unread
-                                ? "#ef4444"
-                                : "transparent",
+                                ? '#ef4444'
+                                : 'transparent',
                             }}
                           />
                         </Flex>
@@ -535,7 +582,9 @@ function InboxPage() {
                     </Stack>
                   </Group>
                 </Group>
-                {index < chats.length - 1 && <Divider mt="lg" color="dark.4" />}
+                {index < chats.length - 1 && (
+                  <Divider mt="lg" color="dark.4" />
+                )}
               </Box>
             ))
           )}
@@ -546,21 +595,23 @@ function InboxPage() {
       <Modal
         opened={opened}
         onClose={close}
-        title={isGroupChatMode ? "Create Group Chat" : "Start New Chat"}
+        title={
+          isGroupChatMode ? 'Create Group Chat' : 'Start New Chat'
+        }
         size="md"
         centered
       >
         <Stack gap="md">
           <Group justify="space-between">
             <Text size="sm" fw={500}>
-              {isGroupChatMode ? "Group Chat" : "Direct Chat"}
+              {isGroupChatMode ? 'Group Chat' : 'Direct Chat'}
             </Text>
             <Button
-              variant={isGroupChatMode ? "filled" : "outline"}
+              variant={isGroupChatMode ? 'filled' : 'outline'}
               size="xs"
               onClick={handleToggleGroupChatMode}
             >
-              {isGroupChatMode ? "Switch to Direct" : "Create Group"}
+              {isGroupChatMode ? 'Switch to Direct' : 'Create Group'}
             </Button>
           </Group>
 
@@ -568,8 +619,15 @@ function InboxPage() {
             <TextInput
               placeholder="Enter group name..."
               value={groupChatName}
-              onChange={(e) => setGroupChatName(e.currentTarget.value)}
+              onChange={(e) =>
+                setGroupChatName(e.currentTarget.value)
+              }
               required
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
           )}
 
@@ -580,7 +638,9 @@ function InboxPage() {
               </Text>
               <Stack gap="xs">
                 {selectedUsers.map((userId) => {
-                  const user = searchResults.find((u) => u.id === userId);
+                  const user = searchResults.find(
+                    (u) => u.id === userId
+                  );
                   if (!user) return null;
                   return (
                     <Group key={userId} justify="space-between">
@@ -591,7 +651,7 @@ function InboxPage() {
                           radius="xl"
                           size={30}
                         >
-                          {user.fullName?.charAt(0) || "?"}
+                          {user.fullName?.charAt(0) || '?'}
                         </Avatar>
                         <Text size="sm">{user.fullName}</Text>
                       </Group>
@@ -599,7 +659,9 @@ function InboxPage() {
                         color="red"
                         variant="subtle"
                         size="sm"
-                        onClick={() => handleRemoveSelectedUser(userId)}
+                        onClick={() =>
+                          handleRemoveSelectedUser(userId)
+                        }
                       >
                         ✕
                       </ActionIcon>
@@ -614,6 +676,11 @@ function InboxPage() {
             placeholder="Search users by name or username..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="text"
           />
 
           {searchLoading ? (
@@ -624,70 +691,76 @@ function InboxPage() {
             <Center py="xl">
               <Text c="dimmed" size="sm">
                 {searchQuery.trim()
-                  ? "No users found"
-                  : "No active users available"}
+                  ? 'No users found'
+                  : 'No active users available'}
               </Text>
             </Center>
           ) : (
-            <Stack gap="xs" mah={400} style={{ overflowY: "auto" }}>
-                  {searchResults.map((user) => (
-                    <Box
-                      key={user.id}
-                      p="sm"
-                      style={{
-                        cursor: "pointer",
-                        borderRadius: "8px",
-                        border: "1px solid #373A40",
-                        transition: "background-color 0.2s",
-                        opacity: isGroupChatMode && selectedUsers.includes(user.id) ? 0.5 : 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "#25262b";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                      }}
-                      onClick={() => handleStartChat(user.id)}
-                    >
-                      <Group wrap="nowrap" justify="space-between">
-                        <Group wrap="nowrap">
-                          <Avatar
-                            src={user.profileImageUrl || undefined}
-                            alt={user.fullName}
-                            radius="xl"
-                            size={50}
-                          >
-                            {user.fullName?.charAt(0) || "?"}
-                          </Avatar>
-                          <Stack gap={2}>
-                            <Text fw={600}>{user.fullName}</Text>
-                            <Group gap="xs">
-                              {user.username && (
-                                <Text c="dimmed" size="sm">
-                                  @{user.username}
-                                </Text>
-                              )}
-                              {user.age && (
-                                <Text c="dimmed" size="sm">
-                                  • {user.age} years
-                                </Text>
-                              )}
-                              {user.gender && (
-                                <Text c="dimmed" size="sm">
-                                  • {user.gender}
-                                </Text>
-                              )}
-                            </Group>
-                          </Stack>
+            <Stack gap="xs" mah={400} style={{ overflowY: 'auto' }}>
+              {searchResults.map((user) => (
+                <Box
+                  key={user.id}
+                  p="sm"
+                  style={{
+                    cursor: 'pointer',
+                    borderRadius: '8px',
+                    border: '1px solid #373A40',
+                    transition: 'background-color 0.2s',
+                    opacity:
+                      isGroupChatMode &&
+                      selectedUsers.includes(user.id)
+                        ? 0.5
+                        : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#25262b';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      'transparent';
+                  }}
+                  onClick={() => handleStartChat(user.id)}
+                >
+                  <Group wrap="nowrap" justify="space-between">
+                    <Group wrap="nowrap">
+                      <Avatar
+                        src={user.profileImageUrl || undefined}
+                        alt={user.fullName}
+                        radius="xl"
+                        size={50}
+                      >
+                        {user.fullName?.charAt(0) || '?'}
+                      </Avatar>
+                      <Stack gap={2}>
+                        <Text fw={600}>{user.fullName}</Text>
+                        <Group gap="xs">
+                          {user.username && (
+                            <Text c="dimmed" size="sm">
+                              @{user.username}
+                            </Text>
+                          )}
+                          {user.age && (
+                            <Text c="dimmed" size="sm">
+                              • {user.age} years
+                            </Text>
+                          )}
+                          {user.gender && (
+                            <Text c="dimmed" size="sm">
+                              • {user.gender}
+                            </Text>
+                          )}
                         </Group>
-                        {isGroupChatMode && selectedUsers.includes(user.id) && (
-                          <Text c="blue" size="sm" fw={600}>
-                            ✓
-                          </Text>
-                        )}
-                      </Group>
-                    </Box>
-                  ))}
+                      </Stack>
+                    </Group>
+                    {isGroupChatMode &&
+                      selectedUsers.includes(user.id) && (
+                        <Text c="blue" size="sm" fw={600}>
+                          ✓
+                        </Text>
+                      )}
+                  </Group>
+                </Box>
+              ))}
             </Stack>
           )}
 
@@ -695,7 +768,9 @@ function InboxPage() {
             <Button
               onClick={handleCreateGroupChat}
               loading={creatingChat}
-              disabled={!groupChatName.trim() || selectedUsers.length === 0}
+              disabled={
+                !groupChatName.trim() || selectedUsers.length === 0
+              }
               fullWidth
             >
               Create Group Chat ({selectedUsers.length} members)

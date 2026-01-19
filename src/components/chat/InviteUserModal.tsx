@@ -101,6 +101,11 @@ export function InviteUserModal({
     >
       <Stack gap="md">
         <TextInput
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          inputMode="text"
           placeholder="Search by name or username..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.currentTarget.value)}

@@ -1,6 +1,12 @@
-"use client";
+'use client';
 
-import { Button, Group, Modal, Stack, TextInput } from "@mantine/core";
+import {
+  Button,
+  Group,
+  Modal,
+  Stack,
+  TextInput,
+} from '@mantine/core';
 
 interface EditMessageModalProps {
   opened: boolean;
@@ -18,13 +24,23 @@ export function EditMessageModal({
   onSave,
 }: EditMessageModalProps) {
   return (
-    <Modal opened={opened} onClose={onClose} title="Edit Message" size="md">
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title="Edit Message"
+      size="md"
+    >
       <Stack gap="md">
         <TextInput
           value={editText}
           onChange={(e) => setEditText(e.currentTarget.value)}
           placeholder="Edit your message..."
           size="md"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          inputMode="text"
         />
         <Group justify="flex-end" gap="sm">
           <Button variant="subtle" onClick={onClose}>

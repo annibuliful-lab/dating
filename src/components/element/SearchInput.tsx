@@ -1,11 +1,16 @@
-import { SearchIcon } from "@/components/icons/SearchIcon";
-import { CloseButton, TextInput, TextInputProps, rem } from "@mantine/core";
-import { useDebouncedCallback } from "@mantine/hooks";
-import { memo, useCallback, useState } from "react";
+import { SearchIcon } from '@/components/icons/SearchIcon';
+import {
+  CloseButton,
+  TextInput,
+  TextInputProps,
+  rem,
+} from '@mantine/core';
+import { useDebouncedCallback } from '@mantine/hooks';
+import { memo, useCallback, useState } from 'react';
 
 type SearchInputProps = Omit<
   TextInputProps,
-  "leftSection" | "value" | "onChange"
+  'leftSection' | 'value' | 'onChange'
 > & {
   placeholder?: string;
   onSearch?: (value: string) => void;
@@ -15,18 +20,21 @@ type SearchInputProps = Omit<
 
 export const SearchInput = memo(
   ({
-    placeholder = "Search...",
+    placeholder = 'Search...',
     style,
     onSearch,
     debounce = 300,
-    defaultValue = "",
+    defaultValue = '',
     ...textInputProps
   }: SearchInputProps) => {
     const [internalValue, setInternalValue] = useState(defaultValue);
 
-    const debouncedSearch = useDebouncedCallback((searchValue: string) => {
-      onSearch?.(searchValue);
-    }, debounce);
+    const debouncedSearch = useDebouncedCallback(
+      (searchValue: string) => {
+        onSearch?.(searchValue);
+      },
+      debounce
+    );
 
     const handleChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,14 +46,21 @@ export const SearchInput = memo(
     );
 
     const handleClear = useCallback(() => {
-      setInternalValue("");
-      onSearch?.("");
+      setInternalValue('');
+      onSearch?.('');
     }, [onSearch]);
 
     return (
       <TextInput
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        inputMode="text"
         placeholder={placeholder}
-        leftSection={<SearchIcon size={18} color="rgba(255, 255, 255, 0.4)" />}
+        leftSection={
+          <SearchIcon size={18} color="rgba(255, 255, 255, 0.4)" />
+        }
         rightSection={
           internalValue && (
             <CloseButton
@@ -63,20 +78,20 @@ export const SearchInput = memo(
             flex: 1,
           },
           input: {
-            backgroundColor: "#131313",
+            backgroundColor: '#131313',
             paddingLeft: rem(30),
-            borderColor: "#333",
-            color: "white",
+            borderColor: '#333',
+            color: 'white',
             fontSize: rem(14),
             height: rem(42),
             borderRadius: rem(8),
-            transition: "all 0.2s ease",
-            "&:focus": {
-              borderColor: "#FFD700",
-              backgroundColor: "#1a1a1a",
+            transition: 'all 0.2s ease',
+            '&:focus': {
+              borderColor: '#FFD700',
+              backgroundColor: '#1a1a1a',
             },
-            "&::placeholder": {
-              color: "#666",
+            '&::placeholder': {
+              color: '#666',
             },
           },
         })}

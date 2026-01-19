@@ -6,15 +6,15 @@ import { LineSignIn } from '@/components/social-button/LineSignIn';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { isValidEmail } from '@/shared/validation';
 import {
-    Button,
-    Container,
-    Image,
-    PasswordInput,
-    rem,
-    SegmentedControl,
-    Stack,
-    Text,
-    TextInput,
+  Button,
+  Container,
+  Image,
+  PasswordInput,
+  rem,
+  SegmentedControl,
+  Stack,
+  Text,
+  TextInput,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import Link from 'next/link';
@@ -155,6 +155,10 @@ export default function SignupPage() {
                   height: '50px',
                 },
               }}
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
 
             <PasswordInput

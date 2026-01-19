@@ -1,60 +1,60 @@
-"use client";
+'use client';
 
-import { ProfileImage } from "@/@types/user";
-import { supabase } from "@/client/supabase";
-import { TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
-import { CalendarIcon } from "@/components/icons/CalendarIcon";
-import { CameraIcon } from "@/components/icons/CameraIcon";
-import { compressImage } from "@/lib/image-compression";
-import { getUserProfile } from "@/services/profile/get";
-import { saveProfileImages } from "@/services/profile/images";
-import { updateUserProfile } from "@/services/profile/update";
+import { ProfileImage } from '@/@types/user';
+import { supabase } from '@/client/supabase';
+import { TOP_NAVBAR_HEIGHT_PX } from '@/components/element/TopNavbar';
+import { CalendarIcon } from '@/components/icons/CalendarIcon';
+import { CameraIcon } from '@/components/icons/CameraIcon';
+import { compressImage } from '@/lib/image-compression';
+import { getUserProfile } from '@/services/profile/get';
+import { saveProfileImages } from '@/services/profile/images';
+import { updateUserProfile } from '@/services/profile/update';
 import {
-    Badge,
-    Box,
-    Button,
-    Container,
-    Group,
-    Image,
-    LoadingOverlay,
-    Modal,
-    PasswordInput,
-    Select,
-    SimpleGrid,
-    Stack,
-    Text,
-    TextInput,
-    Textarea,
-    ThemeIcon,
-    rem,
-} from "@mantine/core";
-import { DateInput } from "@mantine/dates";
-import { notifications } from "@mantine/notifications";
-import { format } from "date-fns";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+  Badge,
+  Box,
+  Button,
+  Container,
+  Group,
+  Image,
+  LoadingOverlay,
+  Modal,
+  PasswordInput,
+  Select,
+  SimpleGrid,
+  Stack,
+  Text,
+  TextInput,
+  Textarea,
+  ThemeIcon,
+  rem,
+} from '@mantine/core';
+import { DateInput } from '@mantine/dates';
+import { notifications } from '@mantine/notifications';
+import { format } from 'date-fns';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 function EditProfilePage() {
   const { data } = useSession();
   const router = useRouter();
 
   // Profile states
-  const [username, setUsername] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [lineId, setLineId] = useState("");
-  const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [lineId, setLineId] = useState('');
+  const [phone, setPhone] = useState('');
   const [gender, setGender] = useState<string | null>(null);
   const [birthday, setBirthday] = useState<Date | null>(null);
   const [age, setAge] = useState<number | null>(null);
-  const [height, setHeight] = useState("");
-  const [weight, setWeight] = useState("");
-  const [bio, setBio] = useState("");
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+  const [bio, setBio] = useState('');
   const [userStatus, setUserStatus] = useState<
-    "ACTIVE" | "INACTIVE" | "SUSPENDED"
-  >("ACTIVE");
+    'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+  >('ACTIVE');
   const [isVerified, setIsVerified] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
@@ -63,9 +63,9 @@ function EditProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [checkingUsername, setCheckingUsername] = useState(false);
-  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(
-    null
-  );
+  const [usernameAvailable, setUsernameAvailable] = useState<
+    boolean | null
+  >(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -77,10 +77,11 @@ function EditProfilePage() {
   const profileImagesInputRef = useRef<HTMLInputElement | null>(null);
 
   const userId = data?.user?.id;
-  const BUCKET = "dating";
+  const BUCKET = 'dating';
 
   const openFilePicker = () => fileInputRef.current?.click();
-  const openProfileImagesPicker = () => profileImagesInputRef.current?.click();
+  const openProfileImagesPicker = () =>
+    profileImagesInputRef.current?.click();
 
   // Calculate age from birthday
   const calculateAge = (birthDate: Date | null): number | null => {
@@ -107,9 +108,9 @@ function EditProfilePage() {
 
     setCheckingUsername(true);
     try {
-      const response = await fetch("/api/users/check-username", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/users/check-username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: usernameToCheck,
           excludeUserId: userId,
@@ -121,13 +122,13 @@ function EditProfilePage() {
 
       if (!data.available) {
         notifications.show({
-          color: "red",
-          title: "Username taken",
-          message: "This username is already in use",
+          color: 'red',
+          title: 'Username taken',
+          message: 'This username is already in use',
         });
       }
     } catch (error) {
-      console.error("Error checking username:", error);
+      console.error('Error checking username:', error);
     } finally {
       setCheckingUsername(false);
     }
@@ -141,31 +142,40 @@ function EditProfilePage() {
     (async () => {
       try {
         const profile = await getUserProfile(userId);
-        setUsername(profile.username ?? "");
-        setFullName(profile.fullName ?? "");
-        setEmail(profile.email ?? "");
-        setLineId(profile.lineId ?? "");
-        setPhone(profile.phone ?? "");
+        setUsername(profile.username ?? '');
+        setFullName(profile.fullName ?? '');
+        setEmail(profile.email ?? '');
+        setLineId(profile.lineId ?? '');
+        setPhone(profile.phone ?? '');
         setGender(profile.gender ?? null);
-        setBirthday(profile.birthday ? new Date(profile.birthday) : null);
+        setBirthday(
+          profile.birthday ? new Date(profile.birthday) : null
+        );
         setAge(
           profile.age ??
-            calculateAge(profile.birthday ? new Date(profile.birthday) : null)
+            calculateAge(
+              profile.birthday ? new Date(profile.birthday) : null
+            )
         );
-        setHeight(profile.height != null ? String(profile.height) : "");
-        setWeight(profile.weight != null ? String(profile.weight) : "");
-        setBio(profile.bio ?? "");
+        setHeight(
+          profile.height != null ? String(profile.height) : ''
+        );
+        setWeight(
+          profile.weight != null ? String(profile.weight) : ''
+        );
+        setBio(profile.bio ?? '');
         setAvatarUrl(profile.avatarUrl ?? null);
         setProfileImages(profile.profileImages || []);
-        setUserStatus(profile.userStatus ?? "ACTIVE");
+        setUserStatus(profile.userStatus ?? 'ACTIVE');
         setIsVerified(profile.isVerified ?? false);
         setUpdatedAt(profile.updatedAt ?? null);
       } catch (err) {
         console.error(err);
         notifications.show({
-          color: "red",
-          title: "Load failed",
-          message: (err as Error).message ?? "Could not load your profile.",
+          color: 'red',
+          title: 'Load failed',
+          message:
+            (err as Error).message ?? 'Could not load your profile.',
         });
       }
     })();
@@ -195,25 +205,27 @@ function EditProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, userId]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Basic validation
-    const validTypes = ["image/png", "image/jpeg", "image/webp"];
+    const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       notifications.show({
-        color: "red",
-        title: "Invalid file type",
-        message: "Only PNG, JPG, or WEBP allowed.",
+        color: 'red',
+        title: 'Invalid file type',
+        message: 'Only PNG, JPG, or WEBP allowed.',
       });
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
       notifications.show({
-        color: "red",
-        title: "File too large",
-        message: "Max 5MB.",
+        color: 'red',
+        title: 'File too large',
+        message: 'Max 5MB.',
       });
       return;
     }
@@ -221,11 +233,16 @@ function EditProfilePage() {
     setUploading(true);
     try {
       // Compress image before upload
-      const compressedFile = await compressImage(file, 1920, 1920, 0.8);
+      const compressedFile = await compressImage(
+        file,
+        1920,
+        1920,
+        0.8
+      );
 
-      const ext = compressedFile.name.split(".").pop() || "jpg";
+      const ext = compressedFile.name.split('.').pop() || 'jpg';
       const key = `users/${
-        userId || "anon"
+        userId || 'anon'
       }/avatar-${userId}-${new Date().toISOString()}.${ext}`;
 
       // Upload compressed file
@@ -234,26 +251,28 @@ function EditProfilePage() {
         .upload(key, compressedFile, {
           upsert: true,
           contentType: compressedFile.type,
-          cacheControl: "3600",
+          cacheControl: '3600',
         });
 
       if (uploadErr) throw uploadErr;
 
       // Get public URL
-      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(key);
+      const { data: pub } = supabase.storage
+        .from(BUCKET)
+        .getPublicUrl(key);
 
       setAvatarUrl(pub.publicUrl);
       setAvatarKey(key);
     } catch (err) {
       console.error(err);
       notifications.show({
-        color: "red",
-        title: "Upload failed",
-        message: (err as Error).message ?? "Upload failed",
+        color: 'red',
+        title: 'Upload failed',
+        message: (err as Error).message ?? 'Upload failed',
       });
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -266,24 +285,25 @@ function EditProfilePage() {
     // Check if adding these files would exceed the limit
     if (profileImages.length + files.length > 5) {
       notifications.show({
-        color: "red",
-        title: "Error",
-        message: "Maximum 5 images allowed",
+        color: 'red',
+        title: 'Error',
+        message: 'Maximum 5 images allowed',
       });
       return;
     }
 
     // Validate files
-    const validTypes = ["image/png", "image/jpeg", "image/webp"];
+    const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
     const invalidFiles = files.filter(
-      (file) => !validTypes.includes(file.type) || file.size > 5 * 1024 * 1024
+      (file) =>
+        !validTypes.includes(file.type) || file.size > 5 * 1024 * 1024
     );
 
     if (invalidFiles.length > 0) {
       notifications.show({
-        color: "red",
-        title: "Error",
-        message: "Only PNG, JPG, or WEBP allowed. Max 5MB per file.",
+        color: 'red',
+        title: 'Error',
+        message: 'Only PNG, JPG, or WEBP allowed. Max 5MB per file.',
       });
       return;
     }
@@ -294,11 +314,16 @@ function EditProfilePage() {
 
       for (const file of files) {
         // Compress image before upload
-        const compressedFile = await compressImage(file, 1920, 1920, 0.8);
+        const compressedFile = await compressImage(
+          file,
+          1920,
+          1920,
+          0.8
+        );
 
-        const ext = compressedFile.name.split(".").pop() || "jpg";
+        const ext = compressedFile.name.split('.').pop() || 'jpg';
         const key = `users/${
-          userId || "anon"
+          userId || 'anon'
         }/profile-images/${userId}-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2)}.${ext}`;
@@ -309,13 +334,15 @@ function EditProfilePage() {
           .upload(key, compressedFile, {
             upsert: false,
             contentType: compressedFile.type,
-            cacheControl: "3600",
+            cacheControl: '3600',
           });
 
         if (uploadErr) throw uploadErr;
 
         // Get public URL
-        const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(key);
+        const { data: pub } = supabase.storage
+          .from(BUCKET)
+          .getPublicUrl(key);
 
         newImages.push({
           id: `temp-${Date.now()}-${Math.random()}`,
@@ -330,14 +357,14 @@ function EditProfilePage() {
     } catch (err) {
       console.error(err);
       notifications.show({
-        color: "red",
-        title: "Upload failed",
-        message: (err as Error).message ?? "Could not upload images",
+        color: 'red',
+        title: 'Upload failed',
+        message: (err as Error).message ?? 'Could not upload images',
       });
     } finally {
       setUploadingImages(false);
       if (profileImagesInputRef.current)
-        profileImagesInputRef.current.value = "";
+        profileImagesInputRef.current.value = '';
     }
   };
 
@@ -350,7 +377,9 @@ function EditProfilePage() {
       supabase.storage
         .from(BUCKET)
         .remove([image.imageKey])
-        .catch((err) => console.error("Error deleting temp image:", err));
+        .catch((err) =>
+          console.error('Error deleting temp image:', err)
+        );
     }
   };
 
@@ -365,9 +394,9 @@ function EditProfilePage() {
     if (!fullName.trim()) {
       setShowConfirmModal(false);
       notifications.show({
-        color: "red",
-        title: "Error",
-        message: "ชื่อ-นามสกุลจำเป็นต้องกรอก",
+        color: 'red',
+        title: 'Error',
+        message: 'ชื่อ-นามสกุลจำเป็นต้องกรอก',
       });
       return;
     }
@@ -375,9 +404,9 @@ function EditProfilePage() {
     if (!username.trim()) {
       setShowConfirmModal(false);
       notifications.show({
-        color: "red",
-        title: "Error",
-        message: "ชื่อผู้ใช้จำเป็นต้องกรอก",
+        color: 'red',
+        title: 'Error',
+        message: 'ชื่อผู้ใช้จำเป็นต้องกรอก',
       });
       return;
     }
@@ -385,9 +414,9 @@ function EditProfilePage() {
     if (usernameAvailable === false) {
       setShowConfirmModal(false);
       notifications.show({
-        color: "red",
-        title: "Error",
-        message: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น",
+        color: 'red',
+        title: 'Error',
+        message: 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น',
       });
       return;
     }
@@ -395,9 +424,9 @@ function EditProfilePage() {
     if (!gender) {
       setShowConfirmModal(false);
       notifications.show({
-        color: "red",
-        title: "Error",
-        message: "เพศจำเป็นต้องเลือก",
+        color: 'red',
+        title: 'Error',
+        message: 'เพศจำเป็นต้องเลือก',
       });
       return;
     }
@@ -405,9 +434,9 @@ function EditProfilePage() {
     if (!birthday) {
       setShowConfirmModal(false);
       notifications.show({
-        color: "red",
-        title: "Error",
-        message: "วันเกิดจำเป็นต้องกรอก",
+        color: 'red',
+        title: 'Error',
+        message: 'วันเกิดจำเป็นต้องกรอก',
       });
       return;
     }
@@ -449,40 +478,42 @@ function EditProfilePage() {
       }
 
       notifications.show({
-        color: "green",
-        title: "Success",
-        message: "Profile saved successfully",
+        color: 'green',
+        title: 'Success',
+        message: 'Profile saved successfully',
       });
 
       // Refresh profile data
       const updatedProfile = await getUserProfile(data.user.id);
       setUpdatedAt(updatedProfile.updatedAt ?? null);
     } catch (err) {
-      console.error("Error saving profile:", err);
+      console.error('Error saving profile:', err);
       notifications.show({
-        color: "red",
-        title: "Error",
-        message: (err as Error).message ?? "Failed to save profile",
+        color: 'red',
+        title: 'Error',
+        message: (err as Error).message ?? 'Failed to save profile',
       });
     } finally {
       setSaving(false);
     }
   };
 
-  const getStatusLabel = (status: "ACTIVE" | "INACTIVE" | "SUSPENDED") => {
+  const getStatusLabel = (
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+  ) => {
     const labels = {
-      ACTIVE: "การใช้งานปกติ",
-      INACTIVE: "ไม่มีการใช้งาน",
-      SUSPENDED: "พักการใช้งานชั่วคราว",
+      ACTIVE: 'การใช้งานปกติ',
+      INACTIVE: 'ไม่มีการใช้งาน',
+      SUSPENDED: 'พักการใช้งานชั่วคราว',
     };
     return labels[status];
   };
 
   const getVerificationStatusLabel = () => {
     if (isVerified) {
-      return "ยืนยันตัวตนแล้ว";
+      return 'ยืนยันตัวตนแล้ว';
     }
-    return "รอยืนยันตัวตน";
+    return 'รอยืนยันตัวตน';
   };
 
   return (
@@ -495,19 +526,23 @@ function EditProfilePage() {
         right={0}
         bg="#0F0F0F"
         style={{
-          borderBottom: "1px solid var(--mantine-color-dark-4)",
+          borderBottom: '1px solid var(--mantine-color-dark-4)',
           height: `calc(${rem(
             TOP_NAVBAR_HEIGHT_PX
           )} + env(safe-area-inset-top))`,
-          paddingTop: "env(safe-area-inset-top)",
+          paddingTop: 'env(safe-area-inset-top)',
           zIndex: 100,
         }}
       >
-        <Group h={rem(TOP_NAVBAR_HEIGHT_PX)} px="md" justify="space-between">
+        <Group
+          h={rem(TOP_NAVBAR_HEIGHT_PX)}
+          px="md"
+          justify="space-between"
+        >
           <Text
             c="white"
             onClick={() => router.back()}
-            style={{ cursor: "pointer" }}
+            style={{ cursor: 'pointer' }}
           >
             ← Back
           </Text>
@@ -518,20 +553,25 @@ function EditProfilePage() {
             c="gold.5"
             fw={600}
             onClick={handleSaveClick}
-            style={{ cursor: "pointer" }}
+            style={{ cursor: 'pointer' }}
           >
             บันทึก
           </Text>
         </Group>
       </Box>
 
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
         <Stack gap="lg" pb="xl">
           {/* Profile Image */}
-          <Box style={{ display: "grid", placeItems: "center" }}>
+          <Box style={{ display: 'grid', placeItems: 'center' }}>
             <Box
               style={{
-                position: "relative",
+                position: 'relative',
                 width: rem(150),
                 height: rem(150),
               }}
@@ -539,20 +579,20 @@ function EditProfilePage() {
               <LoadingOverlay
                 visible={uploading}
                 zIndex={2}
-                overlayProps={{ radius: "lg", blur: 2 }}
+                overlayProps={{ radius: 'lg', blur: 2 }}
               />
               <Box
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                  border: "1px solid var(--mantine-color-dark-4)",
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '1px solid var(--mantine-color-dark-4)',
                   background: avatarUrl
                     ? `center/cover no-repeat url(${avatarUrl})`
-                    : "repeating-conic-gradient(#333 0% 25%, transparent 0% 50%) 50% / 20px 20px",
+                    : 'repeating-conic-gradient(#333 0% 25%, transparent 0% 50%) 50% / 20px 20px',
                   opacity: avatarUrl ? 1 : 0.8,
-                  cursor: "pointer",
+                  cursor: 'pointer',
                 }}
                 onClick={openFilePicker}
                 title="Change avatar"
@@ -562,14 +602,14 @@ function EditProfilePage() {
                 radius="xl"
                 size={34}
                 style={{
-                  position: "absolute",
+                  position: 'absolute',
                   right: rem(4),
                   bottom: rem(4),
-                  backgroundColor: "white",
-                  border: "1px solid var(--mantine-color-dark-4)",
-                  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.35)",
+                  backgroundColor: 'white',
+                  border: '1px solid var(--mantine-color-dark-4)',
+                  boxShadow: '0 8px 20px rgba(0, 0, 0, 0.35)',
                   zIndex: 3,
-                  cursor: "pointer",
+                  cursor: 'pointer',
                 }}
                 variant="light"
                 color="dark.4"
@@ -584,7 +624,7 @@ function EditProfilePage() {
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={handleFileChange}
-                style={{ display: "none" }}
+                style={{ display: 'none' }}
               />
             </Box>
           </Box>
@@ -593,17 +633,20 @@ function EditProfilePage() {
           <Group gap="sm" justify="center">
             <Badge
               color={
-                userStatus === "ACTIVE"
-                  ? "green"
-                  : userStatus === "SUSPENDED"
-                  ? "red"
-                  : "gray"
+                userStatus === 'ACTIVE'
+                  ? 'green'
+                  : userStatus === 'SUSPENDED'
+                  ? 'red'
+                  : 'gray'
               }
               variant="light"
             >
               {getStatusLabel(userStatus)}
             </Badge>
-            <Badge color={isVerified ? "blue" : "yellow"} variant="light">
+            <Badge
+              color={isVerified ? 'blue' : 'yellow'}
+              variant="light"
+            >
               {getVerificationStatusLabel()}
             </Badge>
           </Group>
@@ -611,7 +654,8 @@ function EditProfilePage() {
           {/* Last Updated */}
           {updatedAt && (
             <Text c="dimmed" fz="xs" ta="center">
-              แก้ไขล่าสุด: {format(new Date(updatedAt), "dd/MM/yyyy HH:mm")}
+              แก้ไขล่าสุด:{' '}
+              {format(new Date(updatedAt), 'dd/MM/yyyy HH:mm')}
             </Text>
           )}
 
@@ -625,19 +669,29 @@ function EditProfilePage() {
               placeholder="ชื่อ-นามสกุล"
               value={fullName}
               onChange={(e) => setFullName(e.currentTarget.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
 
             {/* Username - Editable */}
             <TextInput
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
               label="ชื่อผู้ใช้ *"
               placeholder="ชื่อผู้ใช้"
               value={username}
               onChange={(e) => setUsername(e.currentTarget.value)}
               error={
                 usernameAvailable === false
-                  ? "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว"
+                  ? 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว'
                   : checkingUsername
-                  ? "กำลังตรวจสอบ..."
+                  ? 'กำลังตรวจสอบ...'
                   : null
               }
               rightSection={
@@ -659,6 +713,11 @@ function EditProfilePage() {
               placeholder="เบอร์โทร"
               value={phone}
               onChange={(e) => setPhone(e.currentTarget.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
 
             {/* Email - Editable */}
@@ -668,6 +727,11 @@ function EditProfilePage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.currentTarget.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
 
             {/* Password - Editable */}
@@ -676,6 +740,11 @@ function EditProfilePage() {
               placeholder="Leave blank to keep current password"
               value={password}
               onChange={(e) => setPassword(e.currentTarget.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
 
             {/* Line ID - Editable */}
@@ -684,13 +753,18 @@ function EditProfilePage() {
               placeholder="Line ID"
               value={lineId}
               onChange={(e) => setLineId(e.currentTarget.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
 
             {/* Gender - Dropdown */}
             <Select
               label="เพศ *"
               placeholder="เลือกเพศ"
-              data={["Male", "Female", "Other"]}
+              data={['Male', 'Female', 'Other']}
               value={gender}
               onChange={setGender}
               rightSection={<Text>›</Text>}
@@ -710,8 +784,12 @@ function EditProfilePage() {
                     setBirthday(null);
                   } else {
                     const dateValue =
-                      typeof value === "string" ? new Date(value) : value;
-                    setBirthday(dateValue instanceof Date ? dateValue : null);
+                      typeof value === 'string'
+                        ? new Date(value)
+                        : value;
+                    setBirthday(
+                      dateValue instanceof Date ? dateValue : null
+                    );
                   }
                 }}
                 rightSection={<CalendarIcon />}
@@ -765,11 +843,11 @@ function EditProfilePage() {
                 <Box
                   key={img.id || img.tempId}
                   style={{
-                    position: "relative",
-                    aspectRatio: "1",
+                    position: 'relative',
+                    aspectRatio: '1',
                     borderRadius: rem(8),
-                    overflow: "hidden",
-                    border: "1px solid var(--mantine-color-dark-4)",
+                    overflow: 'hidden',
+                    border: '1px solid var(--mantine-color-dark-4)',
                   }}
                 >
                   <Image
@@ -781,17 +859,17 @@ function EditProfilePage() {
                   />
                   <Box
                     style={{
-                      position: "absolute",
+                      position: 'absolute',
                       top: rem(4),
                       right: rem(4),
-                      backgroundColor: "rgba(0, 0, 0, 0.7)",
-                      borderRadius: "50%",
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                      borderRadius: '50%',
                       width: rem(24),
                       height: rem(24),
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
                     }}
                     onClick={() => handleDeleteProfileImage(index)}
                   >
@@ -804,14 +882,14 @@ function EditProfilePage() {
               {profileImages.length < 5 && (
                 <Box
                   style={{
-                    aspectRatio: "1",
+                    aspectRatio: '1',
                     borderRadius: rem(8),
-                    border: "2px dashed var(--mantine-color-red-6)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    backgroundColor: "var(--mantine-color-dark-7)",
+                    border: '2px dashed var(--mantine-color-red-6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    backgroundColor: 'var(--mantine-color-dark-7)',
                   }}
                   onClick={openProfileImagesPicker}
                 >
@@ -827,7 +905,7 @@ function EditProfilePage() {
               accept="image/png,image/jpeg,image/webp"
               multiple
               onChange={handleProfileImagesChange}
-              style={{ display: "none" }}
+              style={{ display: 'none' }}
             />
             {uploadingImages && (
               <Text c="dimmed" fz="xs" ta="center">

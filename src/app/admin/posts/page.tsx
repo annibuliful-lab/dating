@@ -1,7 +1,10 @@
-"use client";
+'use client';
 
-import { TopNavbar, TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
-import { BUCKET_NAME, supabase } from "@/client/supabase";
+import {
+  TopNavbar,
+  TOP_NAVBAR_HEIGHT_PX,
+} from '@/components/element/TopNavbar';
+import { BUCKET_NAME, supabase } from '@/client/supabase';
 import {
   Avatar,
   Badge,
@@ -17,11 +20,11 @@ import {
   ScrollArea,
   Stack,
   Text,
-} from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { notifications } from "@mantine/notifications";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { notifications } from '@mantine/notifications';
 
 type Post = {
   id: string;
@@ -54,8 +57,8 @@ export default function AdminPostsPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
     }
   }, [status, router]);
 
@@ -67,22 +70,22 @@ export default function AdminPostsPage() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/posts");
+      const response = await fetch('/api/admin/posts');
       if (!response.ok) {
         if (response.status === 403) {
-          router.push("/feed");
+          router.push('/feed');
           return;
         }
-        throw new Error("Failed to fetch posts");
+        throw new Error('Failed to fetch posts');
       }
       const data = await response.json();
       setPosts(data);
     } catch (error) {
-      console.error("Error fetching posts:", error);
+      console.error('Error fetching posts:', error);
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
-        message: "ไม่สามารถโหลดรายการโพสต์ได้",
-        color: "red",
+        title: 'เกิดข้อผิดพลาด',
+        message: 'ไม่สามารถโหลดรายการโพสต์ได้',
+        color: 'red',
       });
     } finally {
       setLoading(false);
@@ -94,30 +97,36 @@ export default function AdminPostsPage() {
 
     try {
       setDeleting(true);
-      const response = await fetch(`/api/admin/posts/${selectedPost.id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/admin/posts/${selectedPost.id}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to delete post");
+        throw new Error(error.error || 'Failed to delete post');
       }
 
       notifications.show({
-        title: "สำเร็จ",
-        message: "ลบโพสต์แล้ว",
-        color: "green",
+        title: 'สำเร็จ',
+        message: 'ลบโพสต์แล้ว',
+        color: 'green',
       });
 
       setDeleteModalOpened(false);
       setSelectedPost(null);
       fetchPosts();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถลบโพสต์ได้";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'ไม่สามารถลบโพสต์ได้';
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
+        title: 'เกิดข้อผิดพลาด',
         message: errorMessage,
-        color: "red",
+        color: 'red',
       });
     } finally {
       setDeleting(false);
@@ -134,7 +143,7 @@ export default function AdminPostsPage() {
 
   const getPostImageUrl = (imageUrl: string | string[] | null) => {
     if (!imageUrl) return null;
-    if (typeof imageUrl === "string") {
+    if (typeof imageUrl === 'string') {
       return imageUrl;
     }
     if (Array.isArray(imageUrl) && imageUrl.length > 0) {
@@ -144,12 +153,12 @@ export default function AdminPostsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("th-TH", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(dateString).toLocaleString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -157,7 +166,12 @@ export default function AdminPostsPage() {
     return (
       <Box>
         <TopNavbar title="จัดการโพสต์" showBack />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
           <Group justify="center" py="xl">
             <Loader size="lg" />
           </Group>
@@ -169,8 +183,15 @@ export default function AdminPostsPage() {
   return (
     <Box>
       <TopNavbar title="จัดการโพสต์" showBack />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
-        <ScrollArea h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + 100)})`}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
+        <ScrollArea
+          h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + 100)})`}
+        >
           <Stack gap="md" pb="xl">
             {posts.length === 0 ? (
               <Text c="dimmed" ta="center" py="xl">
@@ -183,8 +204,8 @@ export default function AdminPostsPage() {
                   padding="md"
                   radius="md"
                   style={{
-                    backgroundColor: "#1a1a1a",
-                    border: "1px solid #333",
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #333',
                   }}
                 >
                   <Stack gap="md">
@@ -192,7 +213,9 @@ export default function AdminPostsPage() {
                     <Group justify="space-between">
                       <Group gap="xs">
                         <Avatar
-                          src={getProfileImageUrl(post.User.profileImageKey)}
+                          src={getProfileImageUrl(
+                            post.User.profileImageKey
+                          )}
                           size="sm"
                           radius="xl"
                         />
@@ -228,17 +251,31 @@ export default function AdminPostsPage() {
                     {/* Post Content */}
                     {post.content?.text && (
                       <Text size="sm" c="white">
-                        {post.content.text}
+                        <span
+                          lang="th"
+                          translate="no"
+                          suppressHydrationWarning
+                          style={{
+                            display: 'block',
+                            WebkitTextSizeAdjust: 'none',
+                            textSizeAdjust: 'none',
+                          }}
+                        >
+                          {post.content.text}
+                        </span>
                       </Text>
                     )}
 
                     {/* Post Image */}
                     {getPostImageUrl(post.imageUrl) && (
                       <Image
-                        src={getPostImageUrl(post.imageUrl) || ""}
+                        src={getPostImageUrl(post.imageUrl) || ''}
                         alt="Post image"
                         radius="md"
-                        style={{ maxHeight: "300px", objectFit: "cover" }}
+                        style={{
+                          maxHeight: '300px',
+                          objectFit: 'cover',
+                        }}
                       />
                     )}
 
@@ -271,14 +308,15 @@ export default function AdminPostsPage() {
         }}
         title="ยืนยันการลบโพสต์"
         styles={{
-          content: { backgroundColor: "#0F0F0F" },
-          header: { backgroundColor: "#0F0F0F" },
-          body: { backgroundColor: "#0F0F0F" },
+          content: { backgroundColor: '#0F0F0F' },
+          header: { backgroundColor: '#0F0F0F' },
+          body: { backgroundColor: '#0F0F0F' },
         }}
       >
         <Stack gap="md">
           <Text c="white">
-            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้? การกระทำนี้ไม่สามารถยกเลิกได้
+            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้?
+            การกระทำนี้ไม่สามารถยกเลิกได้
           </Text>
           <Group justify="flex-end">
             <Button
@@ -304,4 +342,3 @@ export default function AdminPostsPage() {
     </Box>
   );
 }
-

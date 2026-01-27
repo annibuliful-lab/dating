@@ -1,4 +1,4 @@
-import { Text, Group } from '@mantine/core';
+import { Text, Box } from '@mantine/core';
 import { ActiveCheckCircle, CheckCircle } from '../icons/CheckCircle';
 
 type Props = {
@@ -14,14 +14,28 @@ export function PasswordChecklist({ password, validations }: Props) {
     <>
       {validations.map(({ label, validator }) => {
         const passed = validator(password);
-        return (
-          <Group key={label} gap="xs">
-            {passed ? <ActiveCheckCircle /> : <CheckCircle />}
 
-            <Text size="sm" c={passed ? 'dimmed' : 'gray'}>
+        return (
+          <Box
+            key={label}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '22px 1fr',
+              alignItems: 'center',
+              columnGap: 8,
+              marginBottom: 6,
+            }}
+          >
+            {passed ? (
+              <ActiveCheckCircle />
+            ) : (
+              <span style={{ display: 'inline-block', width: 22 }} />
+            )}
+
+            <Text size="sm" c={!passed ? 'dimmed' : 'gray'}>
               {label}
             </Text>
-          </Group>
+          </Box>
         );
       })}
     </>

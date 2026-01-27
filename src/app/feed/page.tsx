@@ -99,6 +99,10 @@ function FeedPage() {
         if (images) {
           setBannerImages(images);
         }
+
+        fetchPosts(0);
+        // Show infographic modal when entering feed page
+        setInfographicModalOpened(true);
       })();
     }
   }, [status]);
@@ -115,104 +119,89 @@ function FeedPage() {
     }
   }, [adminData, userStatusData]);
 
-  const fetchPosts = useCallback(
-    async (offset = 0, isRefresh = false) => {
-      try {
-        if (isRefresh) {
-          setIsRefreshing(true);
-        } else if (offset === 0) {
-          setLoading(true);
-        } else {
-          setLoadingMore(true);
-        }
-
-        const limit = 20;
-        const data = await postService.getPublicPosts(limit, offset);
-
-        // Check if we have more posts
-        if (data.length < limit) {
-          setHasMore(false);
-        } else {
-          setHasMore(true);
-        }
-
-        // Convert profileImageKey to URL for each post
-        const postsWithImageUrls = (data || []).map(
-          (post: unknown) => {
-            const postData = post as {
-              User?: {
-                profileImageKey?: string | null;
-                [key: string]: unknown;
-              };
-              imageUrl?: string | string[] | null;
-              content?: unknown;
-              [key: string]: unknown;
-            };
-            let profileImageUrl = null;
-            if (postData.User?.profileImageKey) {
-              const { data: imageData } = supabase.storage
-                .from(BUCKET_NAME)
-                .getPublicUrl(postData.User.profileImageKey);
-              profileImageUrl = imageData.publicUrl;
-            }
-
-            // Handle backward compatibility: convert string imageUrl to array
-            let imageUrlArray: string[] | null = null;
-            if (postData.imageUrl) {
-              if (typeof postData.imageUrl === 'string') {
-                imageUrlArray = JSON.parse(
-                  postData.imageUrl as string
-                );
-              } else if (Array.isArray(postData.imageUrl)) {
-                imageUrlArray = postData.imageUrl;
-              }
-            }
-
-            return {
-              ...postData,
-              content: postData.content as {
-                text?: string;
-                [key: string]: unknown;
-              } | null,
-              imageUrl: imageUrlArray,
-              User: {
-                ...postData.User,
-                profileImageUrl,
-              },
-            };
-          }
-        );
-
-        if (offset === 0) {
-          setPosts(postsWithImageUrls as Post[]);
-        } else {
-          setPosts((prevPosts) => [
-            ...prevPosts,
-            ...(postsWithImageUrls as Post[]),
-          ]);
-        }
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err
-            : new Error('Failed to fetch posts')
-        );
-      } finally {
-        setLoading(false);
-        setIsRefreshing(false);
-        setLoadingMore(false);
+  const fetchPosts = async (offset = 0, isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else if (offset === 0) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
       }
-    },
-    []
-  );
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetchPosts(0);
-      // Show infographic modal when entering feed page
-      setInfographicModalOpened(true);
+      const limit = 20;
+      const data = await postService.getPublicPosts(limit, offset);
+
+      // Check if we have more posts
+      if (data.length < limit) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
+      // Convert profileImageKey to URL for each post
+      const postsWithImageUrls = (data || []).map((post: unknown) => {
+        const postData = post as {
+          User?: {
+            profileImageKey?: string | null;
+            [key: string]: unknown;
+          };
+          imageUrl?: string | string[] | null;
+          content?: unknown;
+          [key: string]: unknown;
+        };
+        let profileImageUrl = null;
+        if (postData.User?.profileImageKey) {
+          const { data: imageData } = supabase.storage
+            .from(BUCKET_NAME)
+            .getPublicUrl(postData.User.profileImageKey);
+          profileImageUrl = imageData.publicUrl;
+        }
+
+        // Handle backward compatibility: convert string imageUrl to array
+        let imageUrlArray: string[] | null = null;
+        if (postData.imageUrl) {
+          if (typeof postData.imageUrl === 'string') {
+            imageUrlArray = JSON.parse(postData.imageUrl as string);
+          } else if (Array.isArray(postData.imageUrl)) {
+            imageUrlArray = postData.imageUrl;
+          }
+        }
+
+        return {
+          ...postData,
+          content: postData.content as {
+            text?: string;
+            [key: string]: unknown;
+          } | null,
+          imageUrl: imageUrlArray,
+          User: {
+            ...postData.User,
+            profileImageUrl,
+          },
+        };
+      });
+
+      if (offset === 0) {
+        setPosts(postsWithImageUrls as Post[]);
+      } else {
+        setPosts((prevPosts) => [
+          ...prevPosts,
+          ...(postsWithImageUrls as Post[]),
+        ]);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err
+          : new Error('Failed to fetch posts'),
+      );
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+      setLoadingMore(false);
     }
-  }, [status, fetchPosts]);
+  };
 
   // Clean up banner interval on unmount
   useEffect(() => {
@@ -270,7 +259,7 @@ function FeedPage() {
       // Get or create a direct chat between current user and post author
       const chat = await messageService.getOrCreateDirectChat(
         session.user.id,
-        postAuthorId
+        postAuthorId,
       );
 
       // Navigate to the chat page
@@ -462,7 +451,7 @@ function FeedPage() {
                               emblaApiRef.current.scrollNext();
                             }
                           },
-                          6000
+                          6000,
                         );
                       }
                     }}

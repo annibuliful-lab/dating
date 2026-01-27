@@ -149,19 +149,19 @@ function EditProfilePage() {
         setPhone(profile.phone ?? '');
         setGender(profile.gender ?? null);
         setBirthday(
-          profile.birthday ? new Date(profile.birthday) : null
+          profile.birthday ? new Date(profile.birthday) : null,
         );
         setAge(
           profile.age ??
             calculateAge(
-              profile.birthday ? new Date(profile.birthday) : null
-            )
+              profile.birthday ? new Date(profile.birthday) : null,
+            ),
         );
         setHeight(
-          profile.height != null ? String(profile.height) : ''
+          profile.height != null ? String(profile.height) : '',
         );
         setWeight(
-          profile.weight != null ? String(profile.weight) : ''
+          profile.weight != null ? String(profile.weight) : '',
         );
         setBio(profile.bio ?? '');
         setAvatarUrl(profile.avatarUrl ?? null);
@@ -206,7 +206,7 @@ function EditProfilePage() {
   }, [username, userId]);
 
   const handleFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -237,7 +237,7 @@ function EditProfilePage() {
         file,
         1920,
         1920,
-        0.8
+        0.8,
       );
 
       const ext = compressedFile.name.split('.').pop() || 'jpg';
@@ -277,7 +277,7 @@ function EditProfilePage() {
   };
 
   const handleProfileImagesChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -296,7 +296,8 @@ function EditProfilePage() {
     const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
     const invalidFiles = files.filter(
       (file) =>
-        !validTypes.includes(file.type) || file.size > 5 * 1024 * 1024
+        !validTypes.includes(file.type) ||
+        file.size > 5 * 1024 * 1024,
     );
 
     if (invalidFiles.length > 0) {
@@ -318,7 +319,7 @@ function EditProfilePage() {
           file,
           1920,
           1920,
-          0.8
+          0.8,
         );
 
         const ext = compressedFile.name.split('.').pop() || 'jpg';
@@ -378,7 +379,7 @@ function EditProfilePage() {
         .from(BUCKET)
         .remove([image.imageKey])
         .catch((err) =>
-          console.error('Error deleting temp image:', err)
+          console.error('Error deleting temp image:', err),
         );
     }
   };
@@ -473,7 +474,7 @@ function EditProfilePage() {
             id: img.id,
             imageKey: img.imageKey,
             order: index,
-          }))
+          })),
         );
       }
 
@@ -499,7 +500,7 @@ function EditProfilePage() {
   };
 
   const getStatusLabel = (
-    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
   ) => {
     const labels = {
       ACTIVE: 'การใช้งานปกติ',
@@ -528,7 +529,7 @@ function EditProfilePage() {
         style={{
           borderBottom: '1px solid var(--mantine-color-dark-4)',
           height: `calc(${rem(
-            TOP_NAVBAR_HEIGHT_PX
+            TOP_NAVBAR_HEIGHT_PX,
           )} + env(safe-area-inset-top))`,
           paddingTop: 'env(safe-area-inset-top)',
           zIndex: 100,
@@ -636,8 +637,8 @@ function EditProfilePage() {
                 userStatus === 'ACTIVE'
                   ? 'green'
                   : userStatus === 'SUSPENDED'
-                  ? 'red'
-                  : 'gray'
+                    ? 'red'
+                    : 'gray'
               }
               variant="light"
             >
@@ -691,8 +692,8 @@ function EditProfilePage() {
                 usernameAvailable === false
                   ? 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว'
                   : checkingUsername
-                  ? 'กำลังตรวจสอบ...'
-                  : null
+                    ? 'กำลังตรวจสอบ...'
+                    : null
               }
               rightSection={
                 usernameAvailable === true ? (
@@ -788,7 +789,7 @@ function EditProfilePage() {
                         ? new Date(value)
                         : value;
                     setBirthday(
-                      dateValue instanceof Date ? dateValue : null
+                      dateValue instanceof Date ? dateValue : null,
                     );
                   }
                 }}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useTransition, useState, useRef } from 'react';
 import { HomeIcon } from '@/components/icons/HomeIcon';
 import { InboxIcon } from '@/components/icons/InboxIcon';
 import { ProfileIcon } from '@/components/icons/ProfileIcon';
@@ -24,6 +24,9 @@ export const BOTTOM_NAVBAR_HEIGHT_PX = 72;
 export function BottomNavbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [targetHref, setTargetHref] = useState<string | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: adminData } = useAdminCheck();
   const { data: statusData } = useUserStatusCheck();
@@ -31,25 +34,55 @@ export function BottomNavbar() {
   const isAdmin = adminData?.isAdmin ?? false;
   const isSuspended = statusData?.isSuspended ?? false;
 
-  const [loadingHref, setLoadingHref] = useState<string | null>(null);
-
   const isActive = (href: string) => pathname === href;
-  const isLoading = (href: string) => loadingHref === href;
-
-  const handleClick = (href: string) => {
-    if (loadingHref) return;
-
-    if (href === pathname) return;
-
-    setLoadingHref(href);
-    router.push(href);
-  };
+  const isLoading = (href: string) =>
+    isPending && targetHref === href;
 
   useEffect(() => {
-    if (loadingHref && pathname === loadingHref) {
-      setLoadingHref(null);
+    if (!isPending) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      setTargetHref(null);
     }
-  }, [pathname, loadingHref]);
+  }, [isPending]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleClick = (href: string) => {
+    if (isPending) return;
+    if (href === pathname) return;
+
+    setTargetHref(href);
+
+    // Safety timeout: clear loading state after 5 seconds if navigation doesn't complete
+    timeoutRef.current = setTimeout(() => {
+      console.warn(
+        `Navigation to ${href} did not complete within 5 seconds`,
+      );
+      setTargetHref(null);
+    }, 5000);
+
+    startTransition(() => {
+      try {
+        router.push(href);
+      } catch (error) {
+        console.error(`Navigation to ${href} failed:`, error);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        setTargetHref(null);
+      }
+    });
+  };
 
   const navItems = isSuspended
     ? [
@@ -127,7 +160,7 @@ export function BottomNavbar() {
       style={{
         borderTop: '1px solid var(--mantine-color-dark-4)',
         height: `calc(${rem(
-          BOTTOM_NAVBAR_HEIGHT_PX
+          BOTTOM_NAVBAR_HEIGHT_PX,
         )} + env(safe-area-inset-bottom))`,
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
@@ -149,6 +182,8 @@ export function BottomNavbar() {
                   : 'var(--mantine-color-gray-4)',
                 cursor: loading ? 'default' : 'pointer',
                 opacity: loading ? 0.6 : 1,
+                paddingBottom: rem(8),
+                borderBottom: active ? '2px solid white' : 'none',
               }}
               onClick={() => handleClick(item.href)}
             >

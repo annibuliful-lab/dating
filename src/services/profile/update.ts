@@ -28,13 +28,18 @@ function toDateString(d?: Date | null) {
   return d ? formatISO(d, { representation: 'date' }) : null; // 'YYYY-MM-DD'
 }
 
-function calculateAge(birthday: Date | null | undefined): number | null {
+function calculateAge(
+  birthday: Date | null | undefined,
+): number | null {
   if (!birthday) return null;
   const today = new Date();
   const birthDate = new Date(birthday);
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
     age--;
   }
   return age;
@@ -52,11 +57,13 @@ function clean<T extends Record<string, any>>(obj: T): Partial<T> {
 
 export async function updateUserProfile(
   userId: string,
-  input: ProfileInput
+  input: ProfileInput,
 ) {
   if (!userId) throw new Error('Missing userId');
 
-  const birthdayDate = input.birthday ? new Date(input.birthday) : null;
+  const birthdayDate = input.birthday
+    ? new Date(input.birthday)
+    : null;
   const age = calculateAge(birthdayDate);
 
   const payload = clean({
@@ -93,5 +100,6 @@ export async function updateUserProfile(
     .single();
 
   if (error) throw error;
+
   return data;
 }

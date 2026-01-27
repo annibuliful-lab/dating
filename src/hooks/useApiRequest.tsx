@@ -3,20 +3,32 @@ import {
   buildQueryString,
   fetchWithRetry,
 } from '@/shared/query-string';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function useApiRequest<TResponse, TBody = unknown>(
   url: string,
-  options?: FetchOptions<TBody>
+  options?: FetchOptions<TBody>,
 ) {
   const [state, setState] = useState<ApiState<TResponse>>({
     data: null,
     loading: true,
     error: null,
   });
+  const prevCallRef = useRef<{ url: string; optionsString: string }>({
+    url,
+    optionsString: JSON.stringify(options),
+  });
 
   useEffect(() => {
     const controller = new AbortController();
+    const optionsString = JSON.stringify(options);
+    const callKey = JSON.stringify({ url, optionsString });
+
+    // Skip if this is the same call as the previous render
+    if (JSON.stringify(prevCallRef.current) === callKey) {
+      return;
+    }
+    prevCallRef.current = { url, optionsString };
 
     const run = async () => {
       setState({ data: null, loading: true, error: null });
@@ -46,7 +58,7 @@ export function useApiRequest<TResponse, TBody = unknown>(
                 : undefined,
             signal: controller.signal,
           },
-          { retries, timeoutMs }
+          { retries, timeoutMs },
         );
 
         setState({ data, loading: false, error: null });
@@ -63,7 +75,7 @@ export function useApiRequest<TResponse, TBody = unknown>(
     run();
 
     return () => controller.abort(); // cancel on unmount
-  }, [options, url]);
+  }, [url, options]);
 
   return state;
 }

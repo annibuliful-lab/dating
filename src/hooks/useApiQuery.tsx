@@ -1,8 +1,14 @@
 import {
-    buildQueryString,
-    fetchWithRetry,
+  buildQueryString,
+  fetchWithRetry,
 } from '@/shared/query-string';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 type QueryOptions<TBody, TResponse> = {
   method?: 'GET' | 'POST';
@@ -19,7 +25,7 @@ type QueryOptions<TBody, TResponse> = {
 
 export function useApiQuery<TResponse, TBody = unknown>(
   url: string,
-  options?: QueryOptions<TBody, TResponse>
+  options?: QueryOptions<TBody, TResponse>,
 ) {
   const {
     method = 'GET',
@@ -37,14 +43,13 @@ export function useApiQuery<TResponse, TBody = unknown>(
   const [data, setData] = useState<TResponse | null>(null);
   const [loading, setLoading] = useState(!lazy && enabled);
   const [error, setError] = useState<Error | null>(null);
-  const lastCallRef = useRef({ url, options });
+  const prevCallKeyRef = useRef<string>('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     const fullUrl = url + buildQueryString(queryParams);
-    lastCallRef.current = { url, options };
 
     try {
       const res = await fetchWithRetry<TResponse>(
@@ -60,7 +65,7 @@ export function useApiQuery<TResponse, TBody = unknown>(
               ? JSON.stringify(body)
               : undefined,
         },
-        { retries, timeoutMs }
+        { retries, timeoutMs },
       );
 
       setData(res);
@@ -75,14 +80,32 @@ export function useApiQuery<TResponse, TBody = unknown>(
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, JSON.stringify(options)]);
+  }, [
+    url,
+    method,
+    body,
+    headers,
+    queryParams,
+    retries,
+    timeoutMs,
+    onCompleted,
+    onError,
+  ]);
 
   const refetch = useCallback(() => fetchData(), [fetchData]);
 
+  // Generate a stable call key to detect actual changes
+  const callKey = useMemo(() => {
+    return JSON.stringify({ url, lazy, enabled, options });
+  }, [url, lazy, enabled, options]);
+
   useEffect(() => {
-    if (!lazy && enabled) fetchData();
-  }, [fetchData, lazy, enabled]);
+    // Only call fetchData if the call key has changed AND lazy is false and enabled is true
+    if (!lazy && enabled && callKey !== prevCallKeyRef.current) {
+      prevCallKeyRef.current = callKey;
+      fetchData();
+    }
+  }, [callKey, lazy, enabled, fetchData]);
 
   return { data, loading, error, refetch, fetch: fetchData };
 }

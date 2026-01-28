@@ -571,11 +571,11 @@ function FeedPage() {
                         >
                           {post.imageUrl.map((url, imgIndex) => (
                             <Image
-                              key={imgIndex}
+                              key={url}
                               src={url}
                               alt={`Post image ${imgIndex + 1}`}
                               radius="md"
-                              fit="cover"
+                              fit="contain"
                               mah={500}
                             />
                           ))}

@@ -193,7 +193,26 @@ export const messageService = {
       })
     );
 
-    return chatsWithMessages as never;
+    // Sort chats by latest message createdAt (newest first)
+    // Chats without messages go to the bottom
+    const sortedChats = chatsWithMessages.sort((a, b) => {
+      const aMessageTime = a.Chat.latestMessage?.createdAt;
+      const bMessageTime = b.Chat.latestMessage?.createdAt;
+
+      // If both have messages, sort by createdAt descending (newest first)
+      if (aMessageTime && bMessageTime) {
+        return new Date(bMessageTime).getTime() - new Date(aMessageTime).getTime();
+      }
+
+      // If only one has a message, prioritize it
+      if (aMessageTime && !bMessageTime) return -1;
+      if (!aMessageTime && bMessageTime) return 1;
+
+      // If neither has messages, maintain original order (by chat id)
+      return 0;
+    });
+
+    return sortedChats as never;
   },
 
   // Create a new chat

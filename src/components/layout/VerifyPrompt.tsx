@@ -15,7 +15,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-export default function VerifyPage() {
+export function VerifyPrompt() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { userProfile } = useUserProfile();

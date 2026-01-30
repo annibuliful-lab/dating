@@ -4,9 +4,10 @@ import {
   BottomNavbar,
   BOTTOM_NAVBAR_HEIGHT_PX,
 } from '@/components/element/BottomNavbar';
+import { VerifyPrompt } from '@/components/layout/VerifyPrompt';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { Box } from '@mantine/core';
-import { stat } from 'fs';
-import { useSession } from 'next-auth/react';
+
 import { usePathname } from 'next/navigation';
 
 const ROUTES_WITHOUT_NAVBAR = ['/signin', '/signup', '/auth/error'];
@@ -17,7 +18,8 @@ export function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { status } = useSession();
+  const { status, userProfile } = useUserProfile();
+
   console.debug('pathname', pathname);
   // Check if current route should not show navbar
   const shouldShowNavbar = !ROUTES_WITHOUT_NAVBAR.some((route) =>
@@ -26,6 +28,11 @@ export function ClientLayout({
 
   if (!shouldShowNavbar) {
     return <>{children}</>;
+  }
+
+  // Show verification prompt if user is not verified
+  if (!userProfile?.isVerified) {
+    return <VerifyPrompt />;
   }
 
   return (

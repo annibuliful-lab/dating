@@ -11,6 +11,8 @@ export const useUserProfile = () => {
   const [error, setError] = useState<Error>();
 
   useEffect(() => {
+    if (status === 'loading') return;
+
     if (!userId) {
       setLoading(false);
       return;

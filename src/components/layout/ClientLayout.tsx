@@ -18,7 +18,7 @@ export function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { status, userProfile } = useUserProfile();
+  const { status, userProfile, loading } = useUserProfile();
 
   console.debug('pathname', pathname);
   // Check if current route should not show navbar
@@ -30,8 +30,11 @@ export function ClientLayout({
     return <>{children}</>;
   }
 
-  // Show verification prompt if user is not verified
-  if (!userProfile?.isVerified) {
+  if (status === 'loading' || loading) {
+    return null;
+  }
+
+  if (status === 'authenticated' && !userProfile?.isVerified) {
     return <VerifyPrompt />;
   }
 

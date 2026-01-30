@@ -1,30 +1,31 @@
-"use client";
+'use client';
 
-import { LineIcon } from "@/components/icons/LineIcon";
+import { LineIcon } from '@/components/icons/LineIcon';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import {
-    Box,
-    Button,
-    Container,
-    Image,
-    Modal,
-    rem,
-    Stack,
-    Text,
-} from "@mantine/core";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+  Box,
+  Button,
+  Container,
+  Image,
+  Modal,
+  rem,
+  Stack,
+  Text,
+} from '@mantine/core';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function VerifyPage() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const { userProfile } = useUserProfile();
   const handleSkip = () => {
     // When user skips verification:
     // - They can still use the app (status remains ACTIVE)
     // - isVerified remains false (no verify mark will be shown)
     // - Verification status will remain as "รอยืนยันตัวตน" (waiting for verification)
     // - No changes are made to the user's verification status
-    router.push("/feed");
+    // router.push('/feed');
   };
 
   const handleAddLineOA = () => {
@@ -39,7 +40,7 @@ export default function VerifyPage() {
   const handleCompleteVerification = () => {
     // Close modal and redirect to feed
     setIsModalOpen(false);
-    router.push("/feed");
+    router.push('/feed');
   };
 
   return (
@@ -47,24 +48,24 @@ export default function VerifyPage() {
       <Container
         px="md"
         style={{
-          display: "flex",
-          flexDirection: "column",
+          display: 'flex',
+          flexDirection: 'column',
           height: rem(812),
           maxWidth: rem(375),
-          justifyContent: "center",
+          justifyContent: 'center',
         }}
       >
         <Stack gap="xl" align="center">
           <Box
             style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
               width: rem(120),
               height: rem(120),
-              borderRadius: "50%",
-              backgroundColor: "#131313",
-              border: "2px solid #FFD400",
+              borderRadius: '50%',
+              backgroundColor: '#131313',
+              border: '2px solid #FFD400',
             }}
           >
             <LineIcon />
@@ -90,24 +91,26 @@ export default function VerifyPage() {
               เพิ่ม Line OA
             </Button>
 
-            <Button
-              fullWidth
-              variant="subtle"
-              onClick={handleSkip}
-              styles={{
-                root: {
-                  color: "white",
-                },
-              }}
-            >
-              ข้าม
-            </Button>
+            {userProfile?.isVerified && (
+              <Button
+                fullWidth
+                variant="subtle"
+                onClick={handleSkip}
+                styles={{
+                  root: {
+                    color: 'white',
+                  },
+                }}
+              >
+                ข้าม
+              </Button>
+            )}
           </Stack>
 
-          <Text size="xs" c="dimmed" ta="center">
+          {/* <Text size="xs" c="dimmed" ta="center">
             หากข้าม คุณสามารถใช้งานได้ แต่จะไม่มีเครื่องหมาย verify
             และสถานะจะยังเป็นรอยืนยันตัวตน
-          </Text>
+          </Text> */}
         </Stack>
       </Container>
 
@@ -124,19 +127,19 @@ export default function VerifyPage() {
         size="md"
         styles={{
           content: {
-            backgroundColor: "#1a1a1a",
+            backgroundColor: '#1a1a1a',
           },
           header: {
-            backgroundColor: "#1a1a1a",
-            borderBottom: "1px solid #333",
+            backgroundColor: '#1a1a1a',
+            borderBottom: '1px solid #333',
           },
           title: {
-            color: "white",
+            color: 'white',
           },
           close: {
-            color: "white",
-            "&:hover": {
-              backgroundColor: "#333",
+            color: 'white',
+            '&:hover': {
+              backgroundColor: '#333',
             },
           },
         }}
@@ -144,7 +147,7 @@ export default function VerifyPage() {
         <Stack gap="lg" align="center" py="md">
           <Box
             style={{
-              backgroundColor: "white",
+              backgroundColor: 'white',
               padding: rem(16),
               borderRadius: rem(12),
             }}
@@ -163,7 +166,8 @@ export default function VerifyPage() {
               เปิดแอป LINE แล้วสแกน QR Code นี้
             </Text>
             <Text size="xs" ta="center" c="dimmed">
-              หลังจากเพิ่มเพื่อนแล้ว กรุณากด &quot;เสร็จสิ้น&quot; ด้านล่าง
+              หลังจากเพิ่มเพื่อนแล้ว กรุณากด &quot;เสร็จสิ้น&quot;
+              ด้านล่าง
             </Text>
           </Stack>
 
@@ -181,7 +185,7 @@ export default function VerifyPage() {
               onClick={handleCloseModal}
               styles={{
                 root: {
-                  color: "white",
+                  color: 'white',
                 },
               }}
             >

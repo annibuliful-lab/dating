@@ -1,8 +1,11 @@
 import { UserProfile } from '@/@types/user';
 import { getUserProfile } from '@/services/profile/get';
+import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
-export const useUserProfile = (userId: string) => {
+export const useUserProfile = () => {
+  const { data, status } = useSession();
+  const userId = data?.user.id;
   const [userProfile, setUserProfile] = useState<UserProfile>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error>();
@@ -30,5 +33,6 @@ export const useUserProfile = (userId: string) => {
     userProfile,
     loading,
     error,
+    status,
   };
 };

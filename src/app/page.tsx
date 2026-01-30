@@ -1,5 +1,6 @@
 'use client';
 
+import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   Box,
   Button,
@@ -9,14 +10,13 @@ import {
   Stack,
   Text,
 } from '@mantine/core';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function Home() {
   const router = useRouter();
 
-  const { status } = useSession();
+  const { status, userProfile } = useUserProfile();
 
   const handleClickLogin = () => {
     router.push('/signin');

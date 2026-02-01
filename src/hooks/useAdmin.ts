@@ -1,12 +1,12 @@
 import { useInfiniteQuery } from '@/hooks/useInfiniteQuery';
 import { adminService } from '@/services/admin';
 import { useCallback } from 'react';
+import { useApiQuery } from './useApiQuery';
 
 export function useAdminCheck() {
-  const result = useInfiniteQuery<Record<string, unknown>[]>(
+  return useApiQuery<{ isAdmin: boolean; role: 'USER' | 'ADMIN' }>(
     '/api/admin/check',
   );
-  return result;
 }
 
 export function useAdminUsers(searchQuery?: string) {

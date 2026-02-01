@@ -5,6 +5,7 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
 } from '@/components/element/TopNavbar';
 import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { useAdminPosts } from '@/hooks/useAdminPosts';
 import {
   Avatar,
   Badge,
@@ -23,7 +24,7 @@ import {
 } from '@mantine/core';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
 
 type Post = {
@@ -50,11 +51,20 @@ type Post = {
 export default function AdminPostsPage() {
   const router = useRouter();
   const { status } = useSession();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const {
+    data: postsData,
+    loading,
+    loadingMore,
+    loadMore,
+    hasMore,
+    refetch: fetchPosts,
+  } = useAdminPosts();
+  const posts = (postsData as unknown as Post[]) || [];
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -62,35 +72,31 @@ export default function AdminPostsPage() {
     }
   }, [status, router]);
 
+  // Handle infinite scroll
   useEffect(() => {
-    fetchPosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
 
-  const fetchPosts = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/admin/posts');
-      if (!response.ok) {
-        if (response.status === 403) {
-          router.push('/feed');
-          return;
-        }
-        throw new Error('Failed to fetch posts');
+    // Find the actual scrollable viewport element in Mantine's ScrollArea
+    const viewport =
+      scrollArea.querySelector('[data-radix-scroll-area-viewport]') ||
+      scrollArea.querySelector('[class*="ScrollArea-viewport"]');
+
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      const { scrollHeight, scrollTop, clientHeight } = viewport;
+      const isNearBottom =
+        scrollHeight - scrollTop - clientHeight < 100;
+
+      if (isNearBottom && !loadingMore && hasMore) {
+        loadMore();
       }
-      const data = await response.json();
-      setPosts(data);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      notifications.show({
-        title: 'เกิดข้อผิดพลาด',
-        message: 'ไม่สามารถโหลดรายการโพสต์ได้',
-        color: 'red',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [loadMore, loadingMore, hasMore]);
 
   const handleDeletePost = async () => {
     if (!selectedPost) return;
@@ -101,7 +107,7 @@ export default function AdminPostsPage() {
         `/api/admin/posts/${selectedPost.id}`,
         {
           method: 'DELETE',
-        }
+        },
       );
 
       if (!response.ok) {
@@ -162,7 +168,7 @@ export default function AdminPostsPage() {
     });
   };
 
-  if (loading) {
+  if (loading && posts.length === 0) {
     return (
       <Box>
         <TopNavbar title="จัดการโพสต์" showBack />
@@ -191,109 +197,117 @@ export default function AdminPostsPage() {
       >
         <ScrollArea
           h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + 100)})`}
+          ref={scrollAreaRef}
         >
           <Stack gap="md" pb="xl">
-            {posts.length === 0 ? (
+            {posts.length === 0 && !loading ? (
               <Text c="dimmed" ta="center" py="xl">
                 ไม่มีโพสต์
               </Text>
             ) : (
-              posts.map((post) => (
-                <Card
-                  key={post.id}
-                  padding="md"
-                  radius="md"
-                  style={{
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333',
-                  }}
-                >
-                  <Stack gap="md">
-                    {/* Author Info */}
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <Avatar
-                          src={getProfileImageUrl(
-                            post.User.profileImageKey
-                          )}
-                          size="sm"
-                          radius="xl"
-                        />
-                        <Stack gap={0}>
-                          <Group gap="xs">
-                            <Text size="sm" fw={600} c="white">
-                              {post.User.fullName}
-                            </Text>
-                            {post.User.isVerified && (
-                              <Badge size="xs" color="blue">
-                                ยืนยันแล้ว
-                              </Badge>
+              <>
+                {posts.map((post) => (
+                  <Card
+                    key={post.id}
+                    padding="md"
+                    radius="md"
+                    style={{
+                      backgroundColor: '#1a1a1a',
+                      border: '1px solid #333',
+                    }}
+                  >
+                    <Stack gap="md">
+                      {/* Author Info */}
+                      <Group justify="space-between">
+                        <Group gap="xs">
+                          <Avatar
+                            src={getProfileImageUrl(
+                              post.User.profileImageKey,
                             )}
-                          </Group>
-                          <Text size="xs" c="dimmed">
-                            @{post.User.username}
-                          </Text>
-                        </Stack>
-                      </Group>
-                      <Button
-                        size="xs"
-                        color="red"
-                        variant="light"
-                        onClick={() => {
-                          setSelectedPost(post);
-                          setDeleteModalOpened(true);
-                        }}
-                      >
-                        ลบ
-                      </Button>
-                    </Group>
-
-                    {/* Post Content */}
-                    {post.content?.text && (
-                      <Text size="sm" c="white">
-                        <span
-                          lang="th"
-                          translate="no"
-                          suppressHydrationWarning
-                          style={{
-                            display: 'block',
-                            WebkitTextSizeAdjust: 'none',
-                            textSizeAdjust: 'none',
+                            size="sm"
+                            radius="xl"
+                          />
+                          <Stack gap={0}>
+                            <Group gap="xs">
+                              <Text size="sm" fw={600} c="white">
+                                {post.User.fullName}
+                              </Text>
+                              {post.User.isVerified && (
+                                <Badge size="xs" color="blue">
+                                  ยืนยันแล้ว
+                                </Badge>
+                              )}
+                            </Group>
+                            <Text size="xs" c="dimmed">
+                              @{post.User.username}
+                            </Text>
+                          </Stack>
+                        </Group>
+                        <Button
+                          size="xs"
+                          color="red"
+                          variant="light"
+                          onClick={() => {
+                            setSelectedPost(post);
+                            setDeleteModalOpened(true);
                           }}
                         >
-                          {post.content.text}
-                        </span>
-                      </Text>
-                    )}
+                          ลบ
+                        </Button>
+                      </Group>
 
-                    {/* Post Image */}
-                    {getPostImageUrl(post.imageUrl) && (
-                      <Image
-                        src={getPostImageUrl(post.imageUrl) || ''}
-                        alt="Post image"
-                        radius="md"
-                        style={{
-                          maxHeight: '300px',
-                          objectFit: 'cover',
-                        }}
-                      />
-                    )}
+                      {/* Post Content */}
+                      {post.content?.text && (
+                        <Text size="sm" c="white">
+                          <span
+                            lang="th"
+                            translate="no"
+                            suppressHydrationWarning
+                            style={{
+                              display: 'block',
+                              WebkitTextSizeAdjust: 'none',
+                              textSizeAdjust: 'none',
+                            }}
+                          >
+                            {post.content.text}
+                          </span>
+                        </Text>
+                      )}
 
-                    {/* Post Stats */}
-                    <Group gap="md">
-                      <Text size="xs" c="dimmed">
-                        {post.PostLike?.[0]?.count || 0} ไลค์
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {post.PostSave?.[0]?.count || 0} บันทึก
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {formatDate(post.createdAt)}
-                      </Text>
-                    </Group>
-                  </Stack>
-                </Card>
-              ))
+                      {/* Post Image */}
+                      {getPostImageUrl(post.imageUrl) && (
+                        <Image
+                          src={getPostImageUrl(post.imageUrl) || ''}
+                          alt="Post image"
+                          radius="md"
+                          style={{
+                            maxHeight: '300px',
+                            objectFit: 'cover',
+                          }}
+                        />
+                      )}
+
+                      {/* Post Stats */}
+                      <Group gap="md">
+                        <Text size="xs" c="dimmed">
+                          {post.PostLike?.[0]?.count || 0} ไลค์
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {post.PostSave?.[0]?.count || 0} บันทึก
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {formatDate(post.createdAt)}
+                        </Text>
+                      </Group>
+                    </Stack>
+                  </Card>
+                ))}
+                {loadingMore && (
+                  <Group justify="center" py="md">
+                    <Loader size="sm" />
+                  </Group>
+                )}
+              </>
             )}
           </Stack>
         </ScrollArea>

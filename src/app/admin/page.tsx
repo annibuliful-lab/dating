@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
+} from '@/components/element/TopNavbar';
 import {
   Box,
   Card,
@@ -14,10 +14,10 @@ import {
   Stack,
   Text,
   Title,
-} from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -26,12 +26,12 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
       return;
     }
 
-    if (status === "authenticated" && session?.user?.id) {
+    if (status === 'authenticated' && session?.user?.id) {
       checkAdminStatus();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -41,18 +41,18 @@ export default function AdminDashboardPage() {
     if (!session?.user?.id) return;
 
     try {
-      const response = await fetch("/api/admin/check");
+      const response = await fetch('/api/admin/check');
       if (!response.ok) {
-        throw new Error("Failed to check admin status");
+        throw new Error('Failed to check admin status');
       }
       const data = await response.json();
-      setIsUserAdmin(data.isAdmin || data.role === "ADMIN");
-      if (!data.isAdmin && data.role !== "ADMIN") {
-        router.push("/feed");
+      setIsUserAdmin(data.isAdmin || data.role === 'ADMIN');
+      if (!data.isAdmin && data.role !== 'ADMIN') {
+        router.push('/feed');
       }
     } catch (error) {
-      console.error("Error checking admin status:", error);
-      router.push("/feed");
+      console.error('Error checking admin status:', error);
+      router.push('/feed');
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,12 @@ export default function AdminDashboardPage() {
     return (
       <Box>
         <TopNavbar title="Admin Dashboard" />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
           <Group justify="center" py="xl">
             <Loader size="lg" />
           </Group>
@@ -74,7 +79,12 @@ export default function AdminDashboardPage() {
   return (
     <Box>
       <TopNavbar title="แดชบอร์ดแอดมิน" />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
         <Stack gap="lg" py="xl">
           <Title order={2} c="white">
             จัดการระบบ
@@ -84,11 +94,11 @@ export default function AdminDashboardPage() {
             padding="lg"
             radius="md"
             style={{
-              backgroundColor: "#1a1a1a",
-              border: "1px solid #333",
-              cursor: "pointer",
+              backgroundColor: '#1a1a1a',
+              border: '1px solid #333',
+              cursor: 'pointer',
             }}
-            onClick={() => router.push("/admin/chats")}
+            onClick={() => router.push('/admin/chats')}
           >
             <Stack gap="xs">
               <Text fw={600} size="lg" c="white">
@@ -104,18 +114,19 @@ export default function AdminDashboardPage() {
             padding="lg"
             radius="md"
             style={{
-              backgroundColor: "#1a1a1a",
-              border: "1px solid #333",
-              cursor: "pointer",
+              backgroundColor: '#1a1a1a',
+              border: '1px solid #333',
+              cursor: 'pointer',
             }}
-            onClick={() => router.push("/admin/users")}
+            onClick={() => router.push('/admin/users')}
           >
             <Stack gap="xs">
               <Text fw={600} size="lg" c="white">
                 จัดการผู้ใช้
               </Text>
               <Text size="sm" c="dimmed">
-                ดูรายการผู้ใช้ทั้งหมด ปรับสถานะการใช้งานและสถานะการยืนยันตัวตน
+                ดูรายการผู้ใช้ทั้งหมด
+                ปรับสถานะการใช้งานและสถานะการยืนยันตัวตน
               </Text>
             </Stack>
           </Card>
@@ -124,11 +135,11 @@ export default function AdminDashboardPage() {
             padding="lg"
             radius="md"
             style={{
-              backgroundColor: "#1a1a1a",
-              border: "1px solid #333",
-              cursor: "pointer",
+              backgroundColor: '#1a1a1a',
+              border: '1px solid #333',
+              cursor: 'pointer',
             }}
-            onClick={() => router.push("/admin/posts")}
+            onClick={() => router.push('/admin/posts')}
           >
             <Stack gap="xs">
               <Text fw={600} size="lg" c="white">

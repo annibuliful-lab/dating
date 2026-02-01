@@ -1,7 +1,11 @@
-"use client";
+'use client';
 
-import { TopNavbar, TOP_NAVBAR_HEIGHT_PX } from "@/components/element/TopNavbar";
-import { BUCKET_NAME, supabase } from "@/client/supabase";
+import {
+  TopNavbar,
+  TOP_NAVBAR_HEIGHT_PX,
+} from '@/components/element/TopNavbar';
+import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { useAdminChats } from '@/hooks/useAdminChats';
 import {
   Avatar,
   Badge,
@@ -19,11 +23,11 @@ import {
   Stack,
   Text,
   TextInput,
-} from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { notifications } from "@mantine/notifications";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { notifications } from '@mantine/notifications';
 
 type ChatParticipant = {
   id: string;
@@ -63,74 +67,86 @@ type Chat = {
 export default function AdminChatsPage() {
   const router = useRouter();
   const { status } = useSession();
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [filterType, setFilterType] = useState<"all" | "group" | "direct">("all");
+  const [filterType, setFilterType] = useState<
+    'all' | 'group' | 'direct'
+  >('all');
   const [modalOpened, setModalOpened] = useState(false);
-  const [messages, setMessages] = useState<Array<{
-    id: string;
-    text: string | null;
-    createdAt: string;
-    User?: {
-      fullName: string;
-    };
-  }>>([]);
+  const [messages, setMessages] = useState<
+    Array<{
+      id: string;
+      text: string | null;
+      createdAt: string;
+      User?: {
+        fullName: string;
+      };
+    }>
+  >([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [addUserModalOpened, setAddUserModalOpened] = useState(false);
-  const [removeUserModalOpened, setRemoveUserModalOpened] = useState(false);
-  const [userIdToAdd, setUserIdToAdd] = useState("");
-  const [userIdToRemove, setUserIdToRemove] = useState("");
+  const [removeUserModalOpened, setRemoveUserModalOpened] =
+    useState(false);
+  const [userIdToAdd, setUserIdToAdd] = useState('');
+  const [userIdToRemove, setUserIdToRemove] = useState('');
+
+  const {
+    data: chatsData,
+    loading,
+    loadingMore,
+    loadMore,
+    hasMore,
+    refetch: fetchChats,
+  } = useAdminChats();
+  const chats = (chatsData as unknown as Chat[]) || [];
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
+    if (status === 'unauthenticated') {
+      router.push('/');
     }
   }, [status, router]);
 
+  // Handle infinite scroll
   useEffect(() => {
-    fetchChats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
 
-  const fetchChats = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/admin/chats");
-      if (!response.ok) {
-        if (response.status === 403) {
-          router.push("/feed");
-          return;
-        }
-        throw new Error("Failed to fetch chats");
+    // Find the actual scrollable viewport element in Mantine's ScrollArea
+    const viewport =
+      scrollArea.querySelector('[data-radix-scroll-area-viewport]') ||
+      scrollArea.querySelector("[class*='ScrollArea-viewport']");
+
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      const { scrollHeight, scrollTop, clientHeight } = viewport;
+      const isNearBottom =
+        scrollHeight - scrollTop - clientHeight < 100;
+
+      if (isNearBottom && !loadingMore && hasMore) {
+        loadMore();
       }
-      const data = await response.json();
-      setChats(data);
-    } catch (error) {
-      console.error("Error fetching chats:", error);
-      notifications.show({
-        title: "เกิดข้อผิดพลาด",
-        message: "ไม่สามารถโหลดรายการแชทได้",
-        color: "red",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [loadMore, loadingMore, hasMore]);
 
   const fetchMessages = async (chatId: string) => {
     try {
       setLoadingMessages(true);
-      const response = await fetch(`/api/admin/chats/${chatId}/messages`);
-      if (!response.ok) throw new Error("Failed to fetch messages");
+      const response = await fetch(
+        `/api/admin/chats/${chatId}/messages`,
+      );
+      if (!response.ok) throw new Error('Failed to fetch messages');
       const data = await response.json();
       setMessages(data);
     } catch (error) {
-      console.error("Error fetching messages:", error);
+      console.error('Error fetching messages:', error);
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
-        message: "ไม่สามารถโหลดข้อความได้",
-        color: "red",
+        title: 'เกิดข้อผิดพลาด',
+        message: 'ไม่สามารถโหลดข้อความได้',
+        color: 'red',
       });
     } finally {
       setLoadingMessages(false);
@@ -146,9 +162,9 @@ export default function AdminChatsPage() {
   const handleAddUser = async () => {
     if (!selectedChat || !userIdToAdd.trim()) {
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
-        message: "กรุณากรอก User ID",
-        color: "red",
+        title: 'เกิดข้อผิดพลาด',
+        message: 'กรุณากรอก User ID',
+        color: 'red',
       });
       return;
     }
@@ -157,32 +173,35 @@ export default function AdminChatsPage() {
       const response = await fetch(
         `/api/admin/chats/${selectedChat.id}/add-member`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: userIdToAdd.trim() }),
-        }
+        },
       );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to add user");
+        throw new Error(error.error || 'Failed to add user');
       }
 
       notifications.show({
-        title: "สำเร็จ",
-        message: "เพิ่มผู้ใช้เข้าห้องแชทแล้ว",
-        color: "green",
+        title: 'สำเร็จ',
+        message: 'เพิ่มผู้ใช้เข้าห้องแชทแล้ว',
+        color: 'green',
       });
 
-      setUserIdToAdd("");
+      setUserIdToAdd('');
       setAddUserModalOpened(false);
       fetchChats();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถเพิ่มผู้ใช้ได้";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'ไม่สามารถเพิ่มผู้ใช้ได้';
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
+        title: 'เกิดข้อผิดพลาด',
         message: errorMessage,
-        color: "red",
+        color: 'red',
       });
     }
   };
@@ -190,9 +209,9 @@ export default function AdminChatsPage() {
   const handleRemoveUser = async () => {
     if (!selectedChat || !userIdToRemove.trim()) {
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
-        message: "กรุณาเลือกผู้ใช้",
-        color: "red",
+        title: 'เกิดข้อผิดพลาด',
+        message: 'กรุณาเลือกผู้ใช้',
+        color: 'red',
       });
       return;
     }
@@ -201,32 +220,35 @@ export default function AdminChatsPage() {
       const response = await fetch(
         `/api/admin/chats/${selectedChat.id}/remove-member`,
         {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: userIdToRemove.trim() }),
-        }
+        },
       );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to remove user");
+        throw new Error(error.error || 'Failed to remove user');
       }
 
       notifications.show({
-        title: "สำเร็จ",
-        message: "ลบผู้ใช้ออกจากห้องแชทแล้ว",
-        color: "green",
+        title: 'สำเร็จ',
+        message: 'ลบผู้ใช้ออกจากห้องแชทแล้ว',
+        color: 'green',
       });
 
-      setUserIdToRemove("");
+      setUserIdToRemove('');
       setRemoveUserModalOpened(false);
       fetchChats();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถลบผู้ใช้ได้";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'ไม่สามารถลบผู้ใช้ได้';
       notifications.show({
-        title: "เกิดข้อผิดพลาด",
+        title: 'เกิดข้อผิดพลาด',
         message: errorMessage,
-        color: "red",
+        color: 'red',
       });
     }
   };
@@ -240,20 +262,25 @@ export default function AdminChatsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("th-TH", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(dateString).toLocaleString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
-  if (loading) {
+  if (loading && chats.length === 0) {
     return (
       <Box>
         <TopNavbar title="จัดการแชท" showBack />
-        <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
           <Group justify="center" py="xl">
             <Loader size="lg" />
           </Group>
@@ -265,97 +292,120 @@ export default function AdminChatsPage() {
   return (
     <Box>
       <TopNavbar title="จัดการแชท" showBack />
-      <Container size="xs" pt="md" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
+      <Container
+        size="xs"
+        pt="md"
+        px="md"
+        mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+      >
         <Stack gap="md" mb="md">
           <SegmentedControl
             value={filterType}
-            onChange={(value) => setFilterType(value as "all" | "group" | "direct")}
+            onChange={(value) =>
+              setFilterType(value as 'all' | 'group' | 'direct')
+            }
             data={[
-              { label: "ทั้งหมด", value: "all" },
-              { label: "แชทกลุ่ม", value: "group" },
-              { label: "แชทเดี่ยว", value: "direct" },
+              { label: 'ทั้งหมด', value: 'all' },
+              { label: 'แชทกลุ่ม', value: 'group' },
+              { label: 'แชทเดี่ยว', value: 'direct' },
             ]}
             fullWidth
             styles={{
-              root: { backgroundColor: "#1a1a1a" },
+              root: { backgroundColor: '#1a1a1a' },
             }}
           />
         </Stack>
-        <ScrollArea h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + 160)})`}>
+        <ScrollArea
+          h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX + 160)})`}
+          ref={scrollAreaRef}
+        >
           <Stack gap="md" pb="xl">
             {(() => {
               const filteredChats = chats.filter((chat) => {
-                if (filterType === "all") return true;
-                if (filterType === "group") return chat.isGroup;
-                if (filterType === "direct") return !chat.isGroup;
+                if (filterType === 'all') return true;
+                if (filterType === 'group') return chat.isGroup;
+                if (filterType === 'direct') return !chat.isGroup;
                 return true;
               });
 
-              if (filteredChats.length === 0) {
+              if (filteredChats.length === 0 && !loading) {
                 return (
                   <Text c="dimmed" ta="center" py="xl">
-                    {filterType === "all"
-                      ? "ไม่มีแชท"
-                      : filterType === "group"
-                      ? "ไม่มีแชทกลุ่ม"
-                      : "ไม่มีแชทเดี่ยว"}
+                    {filterType === 'all'
+                      ? 'ไม่มีแชท'
+                      : filterType === 'group'
+                        ? 'ไม่มีแชทกลุ่ม'
+                        : 'ไม่มีแชทเดี่ยว'}
                   </Text>
                 );
               }
 
-              return filteredChats.map((chat) => {
-                // For direct chats, show participant names
-                let chatDisplayName = chat.name;
-                if (!chat.isGroup && !chat.name) {
-                  const participantNames = chat.ChatParticipant.map(
-                    (p) => p.User.fullName || p.User.username
-                  ).join(", ");
-                  chatDisplayName = participantNames || "แชทเดี่ยว";
-                }
+              return (
+                <>
+                  {filteredChats.map((chat) => {
+                    // For direct chats, show participant names
+                    let chatDisplayName = chat.name;
+                    if (!chat.isGroup && !chat.name) {
+                      const participantNames =
+                        chat.ChatParticipant.map(
+                          (p) => p.User.fullName || p.User.username,
+                        ).join(', ');
+                      chatDisplayName =
+                        participantNames || 'แชทเดี่ยว';
+                    }
 
-                return (
-                <Card
-                  key={chat.id}
-                  padding="md"
-                  radius="md"
-                  style={{
-                    backgroundColor: "#1a1a1a",
-                    border: "1px solid #333",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => handleViewChat(chat)}
-                >
-                  <Stack gap="xs">
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <Text fw={600} size="lg" c="white">
-                          {chatDisplayName}
-                        </Text>
-                        <Badge
-                          size="sm"
-                          color={chat.isGroup ? "blue" : "gray"}
-                          variant="light"
-                        >
-                          {chat.isGroup ? "แชทกลุ่ม" : "แชทเดี่ยว"}
-                        </Badge>
-                      </Group>
-                      <Badge color="blue" variant="light">
-                        {chat.ChatParticipant.length} คน
-                      </Badge>
+                    return (
+                      <Card
+                        key={chat.id}
+                        padding="md"
+                        radius="md"
+                        style={{
+                          backgroundColor: '#1a1a1a',
+                          border: '1px solid #333',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => handleViewChat(chat)}
+                      >
+                        <Stack gap="xs">
+                          <Group justify="space-between">
+                            <Group gap="xs">
+                              <Text fw={600} size="lg" c="white">
+                                {chatDisplayName}
+                              </Text>
+                              <Badge
+                                size="sm"
+                                color={chat.isGroup ? 'blue' : 'gray'}
+                                variant="light"
+                              >
+                                {chat.isGroup
+                                  ? 'แชทกลุ่ม'
+                                  : 'แชทเดี่ยว'}
+                              </Badge>
+                            </Group>
+                            <Badge color="blue" variant="light">
+                              {chat.ChatParticipant.length} คน
+                            </Badge>
+                          </Group>
+                          {chat.latestMessage && (
+                            <Text size="sm" c="dimmed" lineClamp={1}>
+                              {chat.latestMessage.User.fullName}:{' '}
+                              {chat.latestMessage.text || '[รูปภาพ]'}
+                            </Text>
+                          )}
+                          <Text size="xs" c="dimmed">
+                            สร้างเมื่อ: {formatDate(chat.createdAt)}
+                          </Text>
+                        </Stack>
+                      </Card>
+                    );
+                  })}
+                  {loadingMore && (
+                    <Group justify="center" py="md">
+                      <Loader size="sm" />
                     </Group>
-                    {chat.latestMessage && (
-                      <Text size="sm" c="dimmed" lineClamp={1}>
-                        {chat.latestMessage.User.fullName}:{" "}
-                        {chat.latestMessage.text || "[รูปภาพ]"}
-                      </Text>
-                    )}
-                    <Text size="xs" c="dimmed">
-                      สร้างเมื่อ: {formatDate(chat.createdAt)}
-                    </Text>
-                    </Stack>
-                </Card>
-                );
-              });
+                  )}
+                </>
+              );
             })()}
           </Stack>
         </ScrollArea>
@@ -369,12 +419,12 @@ export default function AdminChatsPage() {
           setSelectedChat(null);
           setMessages([]);
         }}
-        title={selectedChat?.name || "รายละเอียดแชท"}
+        title={selectedChat?.name || 'รายละเอียดแชท'}
         size="lg"
         styles={{
-          content: { backgroundColor: "#0F0F0F" },
-          header: { backgroundColor: "#0F0F0F" },
-          body: { backgroundColor: "#0F0F0F" },
+          content: { backgroundColor: '#0F0F0F' },
+          header: { backgroundColor: '#0F0F0F' },
+          body: { backgroundColor: '#0F0F0F' },
         }}
       >
         <Stack gap="md">
@@ -409,7 +459,9 @@ export default function AdminChatsPage() {
                 <Group key={participant.id} justify="space-between">
                   <Group gap="xs">
                     <Avatar
-                      src={getProfileImageUrl(participant.User.profileImageKey)}
+                      src={getProfileImageUrl(
+                        participant.User.profileImageKey,
+                      )}
                       size="sm"
                       radius="xl"
                     />
@@ -425,18 +477,18 @@ export default function AdminChatsPage() {
                   <Badge
                     size="xs"
                     color={
-                      participant.User.status === "ACTIVE"
-                        ? "green"
-                        : participant.User.status === "SUSPENDED"
-                        ? "red"
-                        : "gray"
+                      participant.User.status === 'ACTIVE'
+                        ? 'green'
+                        : participant.User.status === 'SUSPENDED'
+                          ? 'red'
+                          : 'gray'
                     }
                   >
-                    {participant.User.status === "ACTIVE"
-                      ? "ใช้งาน"
-                      : participant.User.status === "SUSPENDED"
-                      ? "พักการใช้งาน"
-                      : "ไม่ใช้งาน"}
+                    {participant.User.status === 'ACTIVE'
+                      ? 'ใช้งาน'
+                      : participant.User.status === 'SUSPENDED'
+                        ? 'พักการใช้งาน'
+                        : 'ไม่ใช้งาน'}
                   </Badge>
                 </Group>
               ))}
@@ -468,20 +520,20 @@ export default function AdminChatsPage() {
                         key={message.id}
                         p="xs"
                         style={{
-                          backgroundColor: "#1a1a1a",
-                          borderRadius: "8px",
+                          backgroundColor: '#1a1a1a',
+                          borderRadius: '8px',
                         }}
                       >
                         <Group gap="xs" mb={4}>
                           <Text size="xs" fw={600} c="white">
-                            {message.User?.fullName || "Unknown"}
+                            {message.User?.fullName || 'Unknown'}
                           </Text>
                           <Text size="xs" c="dimmed">
                             {formatDate(message.createdAt)}
                           </Text>
                         </Group>
                         <Text size="sm" c="white">
-                          {message.text || "[รูปภาพ]"}
+                          {message.text || '[รูปภาพ]'}
                         </Text>
                       </Box>
                     ))
@@ -497,13 +549,13 @@ export default function AdminChatsPage() {
         opened={addUserModalOpened}
         onClose={() => {
           setAddUserModalOpened(false);
-          setUserIdToAdd("");
+          setUserIdToAdd('');
         }}
         title="เพิ่มผู้ใช้เข้าห้องแชท"
         styles={{
-          content: { backgroundColor: "#0F0F0F" },
-          header: { backgroundColor: "#0F0F0F" },
-          body: { backgroundColor: "#0F0F0F" },
+          content: { backgroundColor: '#0F0F0F' },
+          header: { backgroundColor: '#0F0F0F' },
+          body: { backgroundColor: '#0F0F0F' },
         }}
       >
         <Stack gap="md">
@@ -513,7 +565,10 @@ export default function AdminChatsPage() {
             value={userIdToAdd}
             onChange={(e) => setUserIdToAdd(e.target.value)}
             styles={{
-              input: { backgroundColor: "#131313", borderColor: "#333" },
+              input: {
+                backgroundColor: '#131313',
+                borderColor: '#333',
+              },
             }}
           />
           <Group justify="flex-end">
@@ -521,7 +576,7 @@ export default function AdminChatsPage() {
               variant="subtle"
               onClick={() => {
                 setAddUserModalOpened(false);
-                setUserIdToAdd("");
+                setUserIdToAdd('');
               }}
             >
               ยกเลิก
@@ -536,13 +591,13 @@ export default function AdminChatsPage() {
         opened={removeUserModalOpened}
         onClose={() => {
           setRemoveUserModalOpened(false);
-          setUserIdToRemove("");
+          setUserIdToRemove('');
         }}
         title="ลบผู้ใช้ออกจากห้องแชท"
         styles={{
-          content: { backgroundColor: "#0F0F0F" },
-          header: { backgroundColor: "#0F0F0F" },
-          body: { backgroundColor: "#0F0F0F" },
+          content: { backgroundColor: '#0F0F0F' },
+          header: { backgroundColor: '#0F0F0F' },
+          body: { backgroundColor: '#0F0F0F' },
         }}
       >
         <Stack gap="md">
@@ -552,7 +607,10 @@ export default function AdminChatsPage() {
             value={userIdToRemove}
             onChange={(e) => setUserIdToRemove(e.target.value)}
             styles={{
-              input: { backgroundColor: "#131313", borderColor: "#333" },
+              input: {
+                backgroundColor: '#131313',
+                borderColor: '#333',
+              },
             }}
           />
           <Group justify="flex-end">
@@ -560,7 +618,7 @@ export default function AdminChatsPage() {
               variant="subtle"
               onClick={() => {
                 setRemoveUserModalOpened(false);
-                setUserIdToRemove("");
+                setUserIdToRemove('');
               }}
             >
               ยกเลิก
@@ -574,4 +632,3 @@ export default function AdminChatsPage() {
     </Box>
   );
 }
-

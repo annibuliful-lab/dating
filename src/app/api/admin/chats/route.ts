@@ -1,18 +1,29 @@
-import { supabase } from "@/client/supabase";
-import { requireAdmin } from "@/lib/admin";
-import { NextResponse } from "next/server";
+import { supabase } from '@/client/supabase';
+import { requireAdmin } from '@/lib/admin';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * GET /api/admin/chats
- * Get all chats (both direct and group chats) for admin management
+ * Get chats (both direct and group chats) for admin management with pagination
+ * Query params: limit, offset
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const adminCheck = await requireAdmin();
     if (adminCheck) return adminCheck;
 
+    const searchParams = req.nextUrl.searchParams;
+    const limit = Math.min(
+      parseInt(searchParams.get('limit') || '20'),
+      100,
+    );
+    const offset = Math.max(
+      parseInt(searchParams.get('offset') || '0'),
+      0,
+    );
+
     const { data: chats, error } = await supabase
-      .from("Chat")
+      .from('Chat')
       .select(
         `
         *,
@@ -39,15 +50,16 @@ export async function GET() {
           id,
           createdAt
         )
-      `
+      `,
       )
-      .order("createdAt", { ascending: false });
+      .order('createdAt', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error("Error fetching group chats:", error);
+      console.error('Error fetching group chats:', error);
       return NextResponse.json(
-        { error: "Failed to fetch group chats" },
-        { status: 500 }
+        { error: 'Failed to fetch group chats' },
+        { status: 500 },
       );
     }
 
@@ -55,7 +67,7 @@ export async function GET() {
     const chatsWithLatestMessage = await Promise.all(
       (chats || []).map(async (chat) => {
         const { data: latestMessage } = await supabase
-          .from("Message")
+          .from('Message')
           .select(
             `
             *,
@@ -66,10 +78,10 @@ export async function GET() {
               profileImageKey,
               role
             )
-          `
+          `,
           )
-          .eq("chatId", chat.id)
-          .order("createdAt", { ascending: false })
+          .eq('chatId', chat.id)
+          .order('createdAt', { ascending: false })
           .limit(1)
           .single();
 
@@ -77,15 +89,15 @@ export async function GET() {
           ...chat,
           latestMessage: latestMessage || null,
         };
-      })
+      }),
     );
 
     return NextResponse.json(chatsWithLatestMessage);
   } catch (error) {
-    console.error("Error in GET /api/admin/chats:", error);
+    console.error('Error in GET /api/admin/chats:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: 'Internal server error' },
+      { status: 500 },
     );
   }
 }

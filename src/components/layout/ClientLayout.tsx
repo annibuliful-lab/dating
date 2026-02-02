@@ -19,7 +19,7 @@ export function ClientLayout({
 }) {
   const pathname = usePathname();
   const { status, userProfile, loading } = useUserProfile();
-  console.log('aaa', userProfile);
+
   console.debug('pathname', pathname);
   // Check if current route should not show navbar
   const shouldShowNavbar = !ROUTES_WITHOUT_NAVBAR.some((route) =>

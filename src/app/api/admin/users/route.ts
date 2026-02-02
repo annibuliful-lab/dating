@@ -50,9 +50,15 @@ export async function GET(req: NextRequest) {
 
     // Apply search filter
     if (search) {
-      query = query.or(
-        `username.ilike.%${search}%,name.ilike.%${search}%,lastname.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`,
-      );
+      const searchPattern = `%${search}%`;
+      const searchFields = [
+        `username.ilike.${searchPattern}`,
+        `name.ilike.${searchPattern}`,
+        `lastname.ilike.${searchPattern}`,
+        `phone.ilike.${searchPattern}`,
+        `email.ilike.${searchPattern}`,
+      ];
+      query = query.or(searchFields.join(','));
     }
 
     // Apply status filter

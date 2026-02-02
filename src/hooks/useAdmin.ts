@@ -11,10 +11,11 @@ export function useAdminCheck() {
 
 export function useAdminUsers(searchQuery?: string) {
   const result = useInfiniteQuery<Record<string, unknown>[]>(
-    `/api/admin/users${searchQuery ? `?search=${searchQuery}` : ''}`,
+    '/api/admin/users',
     {
       retries: 1,
       pageSize: 20,
+      queryParams: searchQuery ? { search: searchQuery } : undefined,
     },
   );
 

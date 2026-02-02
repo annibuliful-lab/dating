@@ -13,7 +13,7 @@ export const useUserProfile = () => {
   useEffect(() => {
     if (status === 'loading') return;
 
-    if (!userId) {
+    if (!userId || status === 'unauthenticated') {
       setLoading(false);
       return;
     }
@@ -29,7 +29,7 @@ export const useUserProfile = () => {
         setLoading(false);
       }
     })();
-  }, [userId]);
+  }, [userId, status]);
 
   return {
     userProfile,

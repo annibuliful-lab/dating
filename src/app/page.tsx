@@ -16,7 +16,7 @@ import { useEffect } from 'react';
 export default function Home() {
   const router = useRouter();
 
-  const { status, userProfile } = useUserProfile();
+  const { status } = useUserProfile();
 
   const handleClickLogin = () => {
     router.push('/signin');

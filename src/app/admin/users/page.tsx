@@ -383,6 +383,7 @@ export default function AdminUsersPage() {
                       <Table.Th>ชื่อ</Table.Th>
                       <Table.Th>นามสกุล</Table.Th>
                       <Table.Th>เบอร์โทร</Table.Th>
+                      <Table.Th>อีเมล</Table.Th>
                       <Table.Th>สถานะ</Table.Th>
                       <Table.Th>อัพเดทล่าสุด</Table.Th>
                     </Table.Tr>
@@ -391,7 +392,7 @@ export default function AdminUsersPage() {
                     {users.length === 0 ? (
                       <Table.Tr>
                         <Table.Td
-                          colSpan={6}
+                          colSpan={7}
                           style={{ textAlign: 'center' }}
                         >
                           <Text c="dimmed" py="xl">
@@ -409,6 +410,7 @@ export default function AdminUsersPage() {
                               {user.lastname || '-'}
                             </Table.Td>
                             <Table.Td>{user.phone || '-'}</Table.Td>
+                            <Table.Td>{user.email || '-'}</Table.Td>
                             <Table.Td>
                               <Select
                                 value={getCurrentStatusValue(user)}
@@ -441,7 +443,7 @@ export default function AdminUsersPage() {
                         {loadingMore && (
                           <Table.Tr>
                             <Table.Td
-                              colSpan={6}
+                              colSpan={7}
                               style={{ textAlign: 'center' }}
                             >
                               <Group justify="center" py="md">

@@ -15,12 +15,14 @@ This checklist helps you systematically migrate your existing API routes and com
 RLS policies are most effective when enforced at API boundaries.
 
 ### User APIs
+
 - [ ] `/api/user/profile` - GET current user profile
 - [ ] `/api/user/profile` - PUT update profile
 - [ ] `/api/user/login` - POST (if using API auth)
 - [ ] `/api/users/[id]` - GET user by ID (respects status)
 
 ### Post APIs
+
 - [ ] `/api/posts` - GET all posts (filters by visibility)
 - [ ] `/api/posts` - POST create post (enforces authorId)
 - [ ] `/api/posts/[id]` - PUT update post (checks ownership)
@@ -29,6 +31,7 @@ RLS policies are most effective when enforced at API boundaries.
 - [ ] `/api/posts/[id]/save` - POST save post
 
 ### Chat APIs
+
 - [ ] `/api/chats` - GET user's chats
 - [ ] `/api/chats` - POST create chat
 - [ ] `/api/chats/[id]/messages` - GET messages (checks membership)
@@ -36,6 +39,7 @@ RLS policies are most effective when enforced at API boundaries.
 - [ ] `/api/chats/[id]/participants` - GET participants
 
 ### Admin APIs
+
 - [ ] `/api/admin/users` - GET all users (admin only)
 - [ ] `/api/admin/posts` - GET all posts (admin only)
 - [ ] `/api/admin/chats` - GET all chats (admin only)
@@ -45,18 +49,22 @@ RLS policies are most effective when enforced at API boundaries.
 Server Components can use `getSupabaseServerClient()` for RLS.
 
 ### User Pages
+
 - [ ] `src/app/profile/[userId]/page.tsx` - User profile view
 - [ ] `src/app/profile/edit/page.tsx` - Edit own profile
 
 ### Feed/Discovery
+
 - [ ] `src/app/feed/page.tsx` - Main feed (visibility filtering)
 - [ ] `src/app/users/page.tsx` - Discover users (active only)
 
 ### Messaging
+
 - [ ] `src/app/inbox/page.tsx` - List user's chats
 - [ ] `src/app/chats/[id]/page.tsx` - Chat messages (membership check)
 
 ### Admin
+
 - [ ] `src/app/admin/users/page.tsx` - User management
 - [ ] `src/app/admin/posts/page.tsx` - Post moderation
 - [ ] `src/app/admin/chats/page.tsx` - Chat moderation
@@ -66,16 +74,19 @@ Server Components can use `getSupabaseServerClient()` for RLS.
 Use `useSupabaseClient()` hook for client-side queries.
 
 ### Feed Components
+
 - [ ] Like button component (liking posts)
 - [ ] Save button component (saving posts)
 - [ ] Delete post component (checking ownership)
 
 ### Chat Components
+
 - [ ] Message list (scrolling/infinite scroll)
 - [ ] Send message component
 - [ ] Chat list (real-time updates)
 
 ### User Components
+
 - [ ] User card (profile preview)
 - [ ] Follow/block actions
 - [ ] Profile image gallery
@@ -106,27 +117,29 @@ Custom hooks that use Supabase.
 ### Pattern 1: Simple GET Endpoint
 
 Before (Prisma):
+
 ```typescript
 export async function GET(req: Request, { params }) {
   const { data: post } = await supabase
-    .from("Post")
-    .select("*")
-    .eq("id", params.id)
+    .from('Post')
+    .select('*')
+    .eq('id', params.id)
     .single();
   return Response.json(post);
 }
 ```
 
 After (RLS - same code!):
+
 ```typescript
 const session = await auth();
 const token = generateShortLivedToken(session.user.id);
 const supabase = getSupabaseClientWithToken(token);
 
 const { data: post } = await supabase
-  .from("Post")
-  .select("*")
-  .eq("id", params.id)
+  .from('Post')
+  .select('*')
+  .eq('id', params.id)
   .single();
 // RLS automatically filters by visibility
 return Response.json(post);
@@ -135,30 +148,34 @@ return Response.json(post);
 ### Pattern 2: Create/Modify Endpoint
 
 Before (Prisma):
+
 ```typescript
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) return Response.json({ error: "Unauthorized" });
-  
+  if (!session?.user?.id)
+    return Response.json({ error: 'Unauthorized' });
+
   const body = await req.json();
   const post = await prisma.post.create({
-    data: { ...body, authorId: session.user.id }
+    data: { ...body, authorId: session.user.id },
   });
   return Response.json(post);
 }
 ```
 
 After (RLS):
+
 ```typescript
 const session = await auth();
-if (!session?.user?.id) return Response.json({ error: "Unauthorized" });
+if (!session?.user?.id)
+  return Response.json({ error: 'Unauthorized' });
 
 const token = generateShortLivedToken(session.user.id);
 const supabase = getSupabaseClientWithToken(token);
 
 const body = await req.json();
 const { data: post } = await supabase
-  .from("Post")
+  .from('Post')
   .insert({ ...body, authorId: session.user.id })
   .select()
   .single();
@@ -169,29 +186,35 @@ return Response.json(post);
 ### Pattern 3: Update Own Resource
 
 Before (Prisma):
+
 ```typescript
 const post = await prisma.post.findUnique({ where: { id: postId } });
 if (post.authorId !== session.user.id) {
-  return Response.json({ error: "Forbidden" }, { status: 403 });
+  return Response.json({ error: 'Forbidden' }, { status: 403 });
 }
-const updated = await prisma.post.update({ where: { id: postId }, data: body });
+const updated = await prisma.post.update({
+  where: { id: postId },
+  data: body,
+});
 return Response.json(updated);
 ```
 
 After (RLS - much simpler!):
+
 ```typescript
 const token = generateShortLivedToken(session.user.id);
 const supabase = getSupabaseClientWithToken(token);
 
 const { data: updated } = await supabase
-  .from("Post")
+  .from('Post')
   .update(body)
-  .eq("id", postId)
+  .eq('id', postId)
   .select()
   .single();
 // RLS "Users can update own posts" enforces ownership
 // If user isn't the author, updated will be null
-if (!updated) return Response.json({ error: "Forbidden" }, { status: 403 });
+if (!updated)
+  return Response.json({ error: 'Forbidden' }, { status: 403 });
 return Response.json(updated);
 ```
 
@@ -214,18 +237,18 @@ For each endpoint/component, test:
 ```typescript
 // 1. Test as User A
 const supabase = await getSupabaseServerClient();
-const { data } = await supabase.from("Post").select("*");
+const { data } = await supabase.from('Post').select('*');
 // Should see only posts User A can view
 
 // 2. Test as User B (switch user)
-const { data } = await supabase.from("Post").select("*");
+const { data } = await supabase.from('Post').select('*');
 // Should see only posts User B can view (different results)
 
 // 3. Test unauthorized query
 const { data } = await supabase
-  .from("User")
-  .update({ status: "SUSPENDED" })
-  .eq("id", "some-other-user-id");
+  .from('User')
+  .update({ status: 'SUSPENDED' })
+  .eq('id', 'some-other-user-id');
 // Should return 0 rows updated (RLS prevents it)
 ```
 
@@ -273,12 +296,14 @@ ALTER TABLE "User" DISABLE ROW LEVEL SECURITY;
 ```
 
 Then re-enable:
+
 ```sql
 ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
 -- ... repeat for other tables
 ```
 
 Or drop all policies and start over:
+
 ```sql
 DROP POLICY IF EXISTS "Users can view active users" ON "User";
 -- ... etc

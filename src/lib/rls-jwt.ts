@@ -3,7 +3,7 @@
  * This allows next-auth users to enforce Row Level Security policies
  */
 
-import * as jwt from "jsonwebtoken";
+import * as jwt from 'jsonwebtoken';
 
 export interface JWTPayload {
   sub: string; // user id
@@ -25,13 +25,13 @@ export interface JWTPayload {
 export function generateSupabaseJWT(
   userId: string,
   email?: string,
-  expiresIn: number = 3600
+  expiresIn: number = 3600,
 ): string {
   const secret = process.env.SUPABASE_JWT_SECRET;
 
   if (!secret) {
     throw new Error(
-      "SUPABASE_JWT_SECRET is not set. Please add it to your environment variables."
+      'SUPABASE_JWT_SECRET is not set. Please add it to your environment variables.',
     );
   }
 
@@ -41,13 +41,13 @@ export function generateSupabaseJWT(
     email,
     iat: now,
     exp: now + expiresIn,
-    iss: "supabase",
-    aud: "authenticated",
-    role: "authenticated", // required for RLS to work
+    iss: 'supabase',
+    aud: 'authenticated',
+    role: 'authenticated', // required for RLS to work
   };
 
   return jwt.sign(payload, secret, {
-    algorithm: "HS256",
+    algorithm: 'HS256',
     noTimestamp: false,
   });
 }
@@ -58,7 +58,7 @@ export function generateSupabaseJWT(
  */
 export function generateShortLivedToken(
   userId: string,
-  email?: string
+  email?: string,
 ): string {
   return generateSupabaseJWT(userId, email, 300); // 5 minutes
 }
@@ -72,16 +72,16 @@ export function verifySupabaseJWT(token: string): JWTPayload | null {
   const secret = process.env.SUPABASE_JWT_SECRET;
 
   if (!secret) {
-    throw new Error("SUPABASE_JWT_SECRET is not set");
+    throw new Error('SUPABASE_JWT_SECRET is not set');
   }
 
   try {
     const decoded = jwt.verify(token, secret, {
-      algorithms: ["HS256"],
+      algorithms: ['HS256'],
     }) as JWTPayload;
     return decoded;
   } catch (error) {
-    console.error("JWT verification failed:", error);
+    console.error('JWT verification failed:', error);
     return null;
   }
 }

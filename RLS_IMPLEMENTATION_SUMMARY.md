@@ -7,21 +7,25 @@ You now have a complete RLS implementation that integrates with your existing ne
 ## Core Utilities Created
 
 ### 1. **JWT Token Generation** (`src/lib/rls-jwt.ts`)
+
 - `generateSupabaseJWT()` - Create long-lived tokens for server components
 - `generateShortLivedToken()` - Create 5-minute tokens for API routes
 - `verifySupabaseJWT()` - Verify token signatures
 
 ### 2. **Server-Side Client** (`src/lib/supabase-server.ts`)
+
 - `getSupabaseServerClient()` - Use in Server Components and Server Actions
 - `getSupabaseClientWithToken()` - Use in API routes with explicit token
 - Automatically attaches JWT to requests
 
 ### 3. **Client-Side Hook** (`src/hooks/useSupabaseClient.ts`)
+
 - `useSupabaseClient()` - Use in Client Components
 - Fetches JWT from `/api/auth/jwt` endpoint
 - Automatically refreshes tokens
 
 ### 4. **JWT Endpoint** (`src/app/api/auth/jwt/route.ts`)
+
 - GET `/api/auth/jwt` - Returns JWT token for current user
 - Used by client components
 - Secure - requires authentication
@@ -31,6 +35,7 @@ You now have a complete RLS implementation that integrates with your existing ne
 ### File: `prisma/migrations/20250204000000_enable_rls_policies/migration.sql`
 
 Creates RLS policies for:
+
 - **User** - Public profiles, own profile editing, admin access
 - **Post** - Public/member visibility, author editing
 - **Chat** - Only participants can view
@@ -67,25 +72,33 @@ Creates RLS policies for:
 ### Quick Start (3 Steps)
 
 1. **Add environment variable to `.env.local`:**
+
    ```env
    SUPABASE_JWT_SECRET=your_jwt_secret_from_supabase
    ```
 
 2. **Apply database migration:**
+
    ```bash
    npx prisma migrate deploy
    ```
 
 3. **Use in your code:**
+
    ```typescript
    // Server Component
    const supabase = await getSupabaseServerClient();
-   const { data } = await supabase.from("Post").select("*");
-   
+   const { data } = await supabase.from('Post').select('*');
+
    // Client Component
    const supabase = useSupabaseClient();
-   supabase.from("Post").select("*").then(({ data }) => { /* ... */ });
-   
+   supabase
+     .from('Post')
+     .select('*')
+     .then(({ data }) => {
+       /* ... */
+     });
+
    // API Route
    const token = generateShortLivedToken(userId);
    const supabase = getSupabaseClientWithToken(token);
@@ -133,12 +146,14 @@ Install with: `pnpm install`
 ## Key Insights
 
 **Before (Prisma only):**
+
 - No database-level security
 - Need to manually check permissions in every route
 - Easy to miss authorization checks
 - Vulnerable to attacks
 
 **After (Prisma + RLS):**
+
 - Database enforces all access control
 - RLS policies are the single source of truth
 - Impossible to bypass with code

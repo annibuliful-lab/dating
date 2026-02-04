@@ -35,20 +35,24 @@ Your Supabase Row Level Security (RLS) setup is now ready to use!
 ## 🚀 Get Started in 3 Steps
 
 ### Step 1: Add JWT Secret
+
 Get your JWT secret from Supabase Dashboard → Settings → API → JWT Secret
 
 Add to `.env.local`:
+
 ```env
 SUPABASE_JWT_SECRET=your_jwt_secret_here
 ```
 
 ### Step 2: Install & Deploy
+
 ```bash
 pnpm install
 npx prisma migrate deploy
 ```
 
 ### Step 3: Restart & Test
+
 ```bash
 # Restart dev server, then test:
 curl http://localhost:3000/api/auth/jwt
@@ -58,20 +62,21 @@ curl http://localhost:3000/api/auth/jwt
 
 ## 📖 Documentation Guide
 
-| Goal | File | Time |
-|------|------|------|
-| Quick setup | QUICK_START_RLS.md | 5 min |
-| Understand architecture | RLS_ARCHITECTURE.md | 15 min |
-| See code examples | RLS_BEFORE_AFTER.md | 10 min |
-| Detailed guide | RLS_SETUP.md | 20 min |
-| Migrate your code | RLS_MIGRATION_CHECKLIST.md | 30 min |
-| Navigate all docs | RLS_INDEX.md | 5 min |
+| Goal                    | File                       | Time   |
+| ----------------------- | -------------------------- | ------ |
+| Quick setup             | QUICK_START_RLS.md         | 5 min  |
+| Understand architecture | RLS_ARCHITECTURE.md        | 15 min |
+| See code examples       | RLS_BEFORE_AFTER.md        | 10 min |
+| Detailed guide          | RLS_SETUP.md               | 20 min |
+| Migrate your code       | RLS_MIGRATION_CHECKLIST.md | 30 min |
+| Navigate all docs       | RLS_INDEX.md               | 5 min  |
 
 ---
 
 ## 🎯 Usage Patterns
 
 ### Server Components
+
 ```typescript
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
@@ -83,35 +88,38 @@ export default async function Page() {
 ```
 
 ### Client Components
+
 ```typescript
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 
 export function Posts() {
   const supabase = useSupabaseClient();
   const [posts, setPosts] = useState([]);
-  
+
   useEffect(() => {
     supabase?.from("Post").select("*").then(({ data }) => setPosts(data || []));
   }, [supabase]);
-  
+
   return <div>{posts.map(p => <div key={p.id}>{p.content}</div>)}</div>;
 }
 ```
 
 ### API Routes
+
 ```typescript
-import { auth } from "@/auth";
-import { generateShortLivedToken } from "@/lib/rls-jwt";
-import { getSupabaseClientWithToken } from "@/lib/supabase-server";
+import { auth } from '@/auth';
+import { generateShortLivedToken } from '@/lib/rls-jwt';
+import { getSupabaseClientWithToken } from '@/lib/supabase-server';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
-  
+  if (!session?.user?.id)
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
   const token = generateShortLivedToken(session.user.id);
   const supabase = getSupabaseClientWithToken(token);
-  
-  const { data } = await supabase.from("Post").select("*");
+
+  const { data } = await supabase.from('Post').select('*');
   return Response.json(data);
 }
 ```
@@ -144,27 +152,27 @@ export async function GET() {
 
 ## ✨ Benefits
 
-| Before | After |
-|--------|-------|
-| Manual authorization in code | Automatic database enforcement |
-| Easy to miss checks | Impossible to bypass |
-| Authorization scattered everywhere | Single source of truth |
-| Vulnerable to mistakes | Secure by default |
-| Need to validate permissions | Database validates automatically |
+| Before                             | After                            |
+| ---------------------------------- | -------------------------------- |
+| Manual authorization in code       | Automatic database enforcement   |
+| Easy to miss checks                | Impossible to bypass             |
+| Authorization scattered everywhere | Single source of truth           |
+| Vulnerable to mistakes             | Secure by default                |
+| Need to validate permissions       | Database validates automatically |
 
 ---
 
 ## 📁 File Reference
 
-| File | Purpose |
-|------|---------|
-| `src/lib/rls-jwt.ts` | Generate JWT tokens |
-| `src/lib/supabase-server.ts` | Authenticated server client |
-| `src/hooks/useSupabaseClient.ts` | Client-side hook |
-| `src/app/api/auth/jwt/route.ts` | JWT endpoint |
-| `prisma/migrations/.../migration.sql` | RLS policies |
-| `src/lib/api-route-examples.ts` | API examples |
-| `src/lib/server-component-examples.tsx` | Component examples |
+| File                                    | Purpose                     |
+| --------------------------------------- | --------------------------- |
+| `src/lib/rls-jwt.ts`                    | Generate JWT tokens         |
+| `src/lib/supabase-server.ts`            | Authenticated server client |
+| `src/hooks/useSupabaseClient.ts`        | Client-side hook            |
+| `src/app/api/auth/jwt/route.ts`         | JWT endpoint                |
+| `prisma/migrations/.../migration.sql`   | RLS policies                |
+| `src/lib/api-route-examples.ts`         | API examples                |
+| `src/lib/server-component-examples.tsx` | Component examples          |
 
 ---
 

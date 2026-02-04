@@ -18,6 +18,7 @@ SUPABASE_JWT_SECRET=your_jwt_secret_here
 ```
 
 To get the JWT secret:
+
 1. Go to Supabase dashboard
 2. Navigate to Project Settings → API
 3. Copy the "JWT Secret" value
@@ -44,12 +45,12 @@ import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 export default async function MyPage() {
   const supabase = await getSupabaseServerClient();
-  
+
   // RLS will automatically enforce based on the current user
   const { data: posts } = await supabase
     .from("Post")
     .select("*");
-  
+
   return <div>{/* ... */}</div>;
 }
 ```
@@ -59,22 +60,22 @@ export default async function MyPage() {
 For API routes, get the token and use the helper:
 
 ```typescript
-import { auth } from "@/auth";
-import { generateShortLivedToken } from "@/lib/rls-jwt";
-import { getSupabaseClientWithToken } from "@/lib/supabase-server";
+import { auth } from '@/auth';
+import { generateShortLivedToken } from '@/lib/rls-jwt';
+import { getSupabaseClientWithToken } from '@/lib/supabase-server';
 
 export async function GET(req: Request) {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
+
   const token = generateShortLivedToken(session.user.id);
   const supabase = getSupabaseClientWithToken(token);
-  
-  const { data } = await supabase.from("Post").select("*");
-  
+
+  const { data } = await supabase.from('Post').select('*');
+
   return Response.json(data);
 }
 ```
@@ -92,16 +93,16 @@ import { useEffect, useState } from "react";
 export function PostList() {
   const supabase = useSupabaseClient();
   const [posts, setPosts] = useState([]);
-  
+
   useEffect(() => {
     if (!supabase) return;
-    
+
     supabase
       .from("Post")
       .select("*")
       .then(({ data }) => setPosts(data || []));
   }, [supabase]);
-  
+
   return <div>{/* ... */}</div>;
 }
 ```
@@ -111,22 +112,26 @@ export function PostList() {
 The migration enables these RLS policies:
 
 ### User Table
+
 - Users can view active users and their own profile
 - Users can update their own profile
 - Admins can view and update all users
 
 ### Post Table
+
 - Users can view public posts
 - Users can view member-only posts if logged in
 - Users can create, update, delete their own posts
 - Admins can manage all posts
 
 ### Chat & Messages
+
 - Users can only view/access chats they participate in
 - Users can only see messages in their chats
 - Users can only create messages in chats they're part of
 
 ### Post Likes & Saves
+
 - Users can like/save posts they can view
 - Users can only manage their own likes and saves
 
@@ -139,6 +144,7 @@ The migration enables these RLS policies:
 5. **Database enforces access control** at the row level
 
 This ensures:
+
 - ✅ Users can only see data they should see
 - ✅ No need to check permissions in application code
 - ✅ Attacks are prevented at the database level
@@ -149,19 +155,21 @@ This ensures:
 Since you now have RLS, you can replace direct Prisma queries with Supabase queries:
 
 **Before (Prisma):**
+
 ```typescript
 const user = await prisma.user.findUnique({
-  where: { id: userId }
+  where: { id: userId },
 });
 ```
 
 **After (Supabase with RLS):**
+
 ```typescript
 const supabase = await getSupabaseServerClient();
 const { data: user } = await supabase
-  .from("User")
-  .select("*")
-  .eq("id", userId)
+  .from('User')
+  .select('*')
+  .eq('id', userId)
   .single();
 ```
 
@@ -174,9 +182,7 @@ To verify RLS is working:
 ```typescript
 // This should only return posts the user can see
 const supabase = await getSupabaseServerClient();
-const { data: posts } = await supabase
-  .from("Post")
-  .select("*");
+const { data: posts } = await supabase.from('Post').select('*');
 
 // Try with a different user's token - it should return different data
 ```
@@ -184,15 +190,18 @@ const { data: posts } = await supabase
 ## Troubleshooting
 
 ### "SUPABASE_JWT_SECRET is not set"
+
 - Add the JWT secret to `.env.local`
 - Restart your development server
 
 ### "No rows returned" when data exists
+
 - Check that RLS policies are enabled
 - Verify the user has permission to view that data
 - Check the policy conditions match your use case
 
 ### Token expiration
+
 - Short-lived tokens (5 min) are used in API routes
 - Long-lived tokens (1 hour) are used in server components
 - Tokens refresh automatically in client components via useSupabaseClient hook

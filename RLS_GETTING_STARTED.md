@@ -5,12 +5,14 @@
 Your Supabase Row Level Security (RLS) implementation is now ready to use. Here's what was created:
 
 ### ✅ Core Infrastructure
+
 - **JWT Token Generation** - Creates Supabase-compatible JWT tokens from next-auth sessions
 - **Server-Side Client** - Authenticated Supabase client for server components and actions
 - **Client-Side Hook** - React hook for client components with automatic JWT handling
 - **JWT Endpoint** - API route to provide tokens to frontend
 
 ### ✅ Database Layer
+
 - **RLS Policies** - Comprehensive row-level security policies for all tables
 - **User Table** - Control profile visibility and self-editing
 - **Post Table** - Enforce post visibility (public/members/private)
@@ -19,6 +21,7 @@ Your Supabase Row Level Security (RLS) implementation is now ready to use. Here'
 - **Admin Access** - Admin users can see all data
 
 ### ✅ Documentation
+
 - **QUICK_START_RLS.md** - 3-step setup guide
 - **RLS_SETUP.md** - Detailed configuration and usage
 - **RLS_ARCHITECTURE.md** - Complete architecture explanation
@@ -27,10 +30,12 @@ Your Supabase Row Level Security (RLS) implementation is now ready to use. Here'
 - **RLS_BEFORE_AFTER.md** - Code examples showing improvements
 
 ### ✅ Example Code
+
 - **api-route-examples.ts** - Complete API route examples
 - **server-component-examples.tsx** - Server component examples
 
 ### ✅ Dependencies Added
+
 - `jsonwebtoken` ^9.1.2
 - `@types/jsonwebtoken` ^9.0.7
 
@@ -39,17 +44,20 @@ Your Supabase Row Level Security (RLS) implementation is now ready to use. Here'
 ## 🚀 Quick Start (3 Steps)
 
 ### Step 1: Add JWT Secret to Environment
+
 ```env
 # .env.local
 SUPABASE_JWT_SECRET=your_jwt_secret_from_supabase_dashboard
 ```
 
 **How to get it:**
+
 1. Go to Supabase Dashboard
 2. Project Settings → API → JWT Secret
 3. Copy and paste into `.env.local`
 
 ### Step 2: Install & Apply Migration
+
 ```bash
 # Install dependencies
 pnpm install
@@ -61,6 +69,7 @@ npx prisma migrate deploy
 ```
 
 ### Step 3: Start Using RLS
+
 ```typescript
 // Server Component
 import { getSupabaseServerClient } from "@/lib/supabase-server";
@@ -79,30 +88,31 @@ import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 export function Posts() {
   const supabase = useSupabaseClient();
   const [posts, setPosts] = useState([]);
-  
+
   useEffect(() => {
     if (!supabase) return;
     supabase.from("Post").select("*").then(({ data }) => setPosts(data || []));
   }, [supabase]);
-  
+
   return <div>{posts.map(p => <div key={p.id}>{p.content}</div>)}</div>;
 }
 ```
 
 ```typescript
 // API Route
-import { auth } from "@/auth";
-import { generateShortLivedToken } from "@/lib/rls-jwt";
-import { getSupabaseClientWithToken } from "@/lib/supabase-server";
+import { auth } from '@/auth';
+import { generateShortLivedToken } from '@/lib/rls-jwt';
+import { getSupabaseClientWithToken } from '@/lib/supabase-server';
 
 export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
-  
+  if (!session?.user?.id)
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
   const token = generateShortLivedToken(session.user.id);
   const supabase = getSupabaseClientWithToken(token);
-  
-  const { data } = await supabase.from("Post").select("*");
+
+  const { data } = await supabase.from('Post').select('*');
   return Response.json(data);
 }
 ```
@@ -112,15 +122,18 @@ export async function GET(req: Request) {
 ## 📁 Files Created
 
 ### Utilities
+
 - `src/lib/rls-jwt.ts` - JWT token generation and verification
 - `src/lib/supabase-server.ts` - Authenticated server-side Supabase client
 - `src/hooks/useSupabaseClient.ts` - Client-side hook for Supabase queries
 - `src/app/api/auth/jwt/route.ts` - Endpoint to get JWT tokens
 
 ### Database
+
 - `prisma/migrations/20250204000000_enable_rls_policies/migration.sql` - RLS policies
 
 ### Documentation
+
 - `RLS_SETUP.md` - Complete setup and configuration guide
 - `RLS_ARCHITECTURE.md` - Architecture explanation with diagrams
 - `QUICK_START_RLS.md` - Quick start guide
@@ -129,10 +142,12 @@ export async function GET(req: Request) {
 - `RLS_BEFORE_AFTER.md` - Before/after code examples
 
 ### Examples
+
 - `src/lib/api-route-examples.ts` - Example API routes
 - `src/lib/server-component-examples.tsx` - Example server components
 
 ### Configuration
+
 - `package.json` - Added jsonwebtoken dependencies
 
 ---
@@ -152,18 +167,18 @@ export async function GET(req: Request) {
 
 ## 📊 RLS Policies Created
 
-| Table | Policies |
-|-------|----------|
-| **User** | View active users, view own profile, edit own profile, admin access |
-| **Post** | View by visibility, create own, edit/delete own, admin access |
-| **Chat** | View participated chats only, admin access |
-| **ChatParticipant** | View own participation, edit own, admin access |
-| **Message** | View in accessible chats, create in member chats, delete own |
-| **PostLike** | View all, create on visible posts, delete own |
-| **PostSave** | View own, create on visible posts, delete own |
-| **ProfileImage** | View active users', manage own |
-| **OAuthAccount** | Manage own accounts |
-| **Session** | Manage own sessions |
+| Table               | Policies                                                            |
+| ------------------- | ------------------------------------------------------------------- |
+| **User**            | View active users, view own profile, edit own profile, admin access |
+| **Post**            | View by visibility, create own, edit/delete own, admin access       |
+| **Chat**            | View participated chats only, admin access                          |
+| **ChatParticipant** | View own participation, edit own, admin access                      |
+| **Message**         | View in accessible chats, create in member chats, delete own        |
+| **PostLike**        | View all, create on visible posts, delete own                       |
+| **PostSave**        | View own, create on visible posts, delete own                       |
+| **ProfileImage**    | View active users', manage own                                      |
+| **OAuthAccount**    | Manage own accounts                                                 |
+| **Session**         | Manage own sessions                                                 |
 
 ---
 
@@ -182,16 +197,16 @@ export async function GET(req: Request) {
 
 ## 📚 Documentation Map
 
-| Document | Purpose |
-|----------|---------|
-| `QUICK_START_RLS.md` | ⭐ Start here - 3-step setup |
-| `RLS_SETUP.md` | Detailed configuration guide |
-| `RLS_ARCHITECTURE.md` | Deep dive into how it works |
-| `RLS_BEFORE_AFTER.md` | Code examples showing improvements |
-| `RLS_IMPLEMENTATION_SUMMARY.md` | Overview of what was created |
-| `RLS_MIGRATION_CHECKLIST.md` | Checklist for migrating your app |
-| `src/lib/api-route-examples.ts` | Copy/paste API route examples |
-| `src/lib/server-component-examples.tsx` | Copy/paste component examples |
+| Document                                | Purpose                            |
+| --------------------------------------- | ---------------------------------- |
+| `QUICK_START_RLS.md`                    | ⭐ Start here - 3-step setup       |
+| `RLS_SETUP.md`                          | Detailed configuration guide       |
+| `RLS_ARCHITECTURE.md`                   | Deep dive into how it works        |
+| `RLS_BEFORE_AFTER.md`                   | Code examples showing improvements |
+| `RLS_IMPLEMENTATION_SUMMARY.md`         | Overview of what was created       |
+| `RLS_MIGRATION_CHECKLIST.md`            | Checklist for migrating your app   |
+| `src/lib/api-route-examples.ts`         | Copy/paste API route examples      |
+| `src/lib/server-component-examples.tsx` | Copy/paste component examples      |
 
 ---
 
@@ -219,12 +234,12 @@ A: Use Supabase's select with joins: `.select('*, author:User!authorId(id, name)
 
 ## 🛡️ Security Benefits
 
-| Before | After |
-|--------|-------|
-| Authorization in code | Authorization in database |
-| Easy to miss checks | Impossible to bypass |
-| Error-prone | Secure by default |
-| No audit trail | Clear policies in code |
+| Before                | After                       |
+| --------------------- | --------------------------- |
+| Authorization in code | Authorization in database   |
+| Easy to miss checks   | Impossible to bypass        |
+| Error-prone           | Secure by default           |
+| No audit trail        | Clear policies in code      |
 | Vulnerable to attacks | Protected at database level |
 
 ---

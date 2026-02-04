@@ -5,6 +5,7 @@ This document explains how to properly implement Row Level Security (RLS) with S
 ## The Problem
 
 You're using next-auth for authentication but Supabase RLS only works with Supabase auth. Without RLS, you need to manually check permissions in your code everywhere, which is:
+
 - Error-prone (easy to miss a check)
 - Inefficient (requires application-level filtering)
 - Insecure (vulnerable to bypasses)
@@ -12,6 +13,7 @@ You're using next-auth for authentication but Supabase RLS only works with Supab
 ## The Solution
 
 Create a hybrid approach:
+
 1. **next-auth** handles user sessions and authentication
 2. **JWT tokens** are generated using Supabase's JWT secret
 3. **Supabase client** is initialized with these JWT tokens
@@ -90,6 +92,7 @@ npx prisma migrate deploy
 ```
 
 This applies the RLS policies defined in:
+
 ```
 prisma/migrations/20250204000000_enable_rls_policies/migration.sql
 ```
@@ -103,17 +106,18 @@ import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 export default async function MyPage() {
   const supabase = await getSupabaseServerClient();
-  
+
   // Automatically uses RLS based on current user
   const { data: posts } = await supabase
     .from("Post")
     .select("*");
-  
+
   return <div>{posts?.length} posts</div>;
 }
 ```
 
 **What happens:**
+
 1. `getSupabaseServerClient()` gets the current session from next-auth
 2. Generates a JWT token using the user's ID
 3. Returns a Supabase client with the token attached
@@ -122,17 +126,17 @@ export default async function MyPage() {
 ### Pattern 2: Server Actions
 
 ```typescript
-"use server"
+'use server';
 
-import { getSupabaseServerClient } from "@/lib/supabase-server";
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 
 export async function likePost(postId: string) {
   const supabase = await getSupabaseServerClient();
-  
+
   const { error } = await supabase
-    .from("PostLike")
+    .from('PostLike')
     .insert({ postId, userId: session.user.id });
-  
+
   if (error) throw new Error(error.message);
 }
 ```
@@ -140,20 +144,20 @@ export async function likePost(postId: string) {
 ### Pattern 3: API Routes
 
 ```typescript
-import { auth } from "@/auth";
-import { generateShortLivedToken } from "@/lib/rls-jwt";
-import { getSupabaseClientWithToken } from "@/lib/supabase-server";
+import { auth } from '@/auth';
+import { generateShortLivedToken } from '@/lib/rls-jwt';
+import { getSupabaseClientWithToken } from '@/lib/supabase-server';
 
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const token = generateShortLivedToken(session.user.id);
   const supabase = getSupabaseClientWithToken(token);
-  
-  const { data } = await supabase.from("Post").select("*");
+
+  const { data } = await supabase.from('Post').select('*');
   return Response.json(data);
 }
 ```
@@ -172,7 +176,7 @@ export function Posts() {
 
   useEffect(() => {
     if (!supabase) return;
-    
+
     supabase
       .from("Post")
       .select("*")
@@ -184,6 +188,7 @@ export function Posts() {
 ```
 
 **What happens:**
+
 1. Component mounts
 2. `useSupabaseClient` hook makes a request to `/api/auth/jwt`
 3. JWT endpoint generates a short-lived token
@@ -195,22 +200,26 @@ export function Posts() {
 The migration creates these policies:
 
 ### User Table
+
 - View active users and own profile
 - Update own profile
 - Admins see all users
 
 ### Post Table
+
 - View public posts
 - Members see member-only posts
 - Create, edit, delete own posts
 - Like/save visible posts
 
 ### Chat & Messages
+
 - View only chats you're in
 - Create messages only in your chats
 - See only messages from your chats
 
 ### Profile Images
+
 - View active users' images
 - Manage only your own images
 
@@ -227,20 +236,22 @@ The migration creates these policies:
 Once RLS is enabled, you can replace Prisma queries:
 
 **Before:**
+
 ```typescript
 const user = await prisma.user.findUnique({ where: { id: userId } });
-if (user.status === "ACTIVE") {
+if (user.status === 'ACTIVE') {
   // show user
 }
 ```
 
 **After (with RLS):**
+
 ```typescript
 const supabase = await getSupabaseServerClient();
 const { data: user } = await supabase
-  .from("User")
-  .select("*")
-  .eq("id", userId)
+  .from('User')
+  .select('*')
+  .eq('id', userId)
   .single();
 // RLS automatically filters out non-active users unless viewing own profile
 ```
@@ -254,6 +265,7 @@ const { data: user } = await supabase
 ## Troubleshooting
 
 ### "SUPABASE_JWT_SECRET is not set"
+
 ```
 ✓ Add to .env.local
 ✓ Restart dev server
@@ -261,6 +273,7 @@ const { data: user } = await supabase
 ```
 
 ### "No rows returned" but data exists
+
 ```
 ✓ Check RLS policy conditions match your data
 ✓ Verify user has permission in the policy
@@ -269,6 +282,7 @@ const { data: user } = await supabase
 ```
 
 ### Token verification fails
+
 ```
 ✓ Ensure SUPABASE_JWT_SECRET matches your project
 ✓ Token hasn't expired
@@ -277,17 +291,17 @@ const { data: user } = await supabase
 
 ## Files Reference
 
-| File | Purpose |
-|------|---------|
-| `src/lib/rls-jwt.ts` | JWT token generation and verification |
-| `src/lib/supabase-server.ts` | Server-side authenticated Supabase client |
-| `src/hooks/useSupabaseClient.ts` | Client-side hook for Supabase queries |
-| `src/app/api/auth/jwt/route.ts` | Endpoint to get JWT tokens for frontend |
-| `prisma/migrations/20250204000000_enable_rls_policies/migration.sql` | RLS policies for all tables |
-| `RLS_SETUP.md` | Detailed setup guide |
-| `QUICK_START_RLS.md` | Quick start (3 steps) |
-| `src/lib/api-route-examples.ts` | Example API routes |
-| `src/lib/server-component-examples.tsx` | Example server components |
+| File                                                                 | Purpose                                   |
+| -------------------------------------------------------------------- | ----------------------------------------- |
+| `src/lib/rls-jwt.ts`                                                 | JWT token generation and verification     |
+| `src/lib/supabase-server.ts`                                         | Server-side authenticated Supabase client |
+| `src/hooks/useSupabaseClient.ts`                                     | Client-side hook for Supabase queries     |
+| `src/app/api/auth/jwt/route.ts`                                      | Endpoint to get JWT tokens for frontend   |
+| `prisma/migrations/20250204000000_enable_rls_policies/migration.sql` | RLS policies for all tables               |
+| `RLS_SETUP.md`                                                       | Detailed setup guide                      |
+| `QUICK_START_RLS.md`                                                 | Quick start (3 steps)                     |
+| `src/lib/api-route-examples.ts`                                      | Example API routes                        |
+| `src/lib/server-component-examples.tsx`                              | Example server components                 |
 
 ## Next Steps
 

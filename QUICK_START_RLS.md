@@ -11,6 +11,7 @@ SUPABASE_JWT_SECRET=your_jwt_secret_from_supabase_dashboard
 ```
 
 **How to find it:**
+
 1. Go to Supabase Dashboard
 2. Project Settings → API → JWT Secret
 3. Copy and paste into `.env.local`
@@ -28,20 +29,22 @@ This creates RLS policies for all tables automatically.
 ## Step 3: Update Your Code
 
 ### For Server Components:
+
 ```typescript
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 export default async function MyPage() {
   const supabase = await getSupabaseServerClient();
-  
+
   // RLS automatically filters data based on current user
   const { data } = await supabase.from("Post").select("*");
-  
+
   return <div>{data?.length} posts</div>;
 }
 ```
 
 ### For Client Components:
+
 ```typescript
 "use client";
 
@@ -51,30 +54,32 @@ import { useEffect, useState } from "react";
 export function Posts() {
   const supabase = useSupabaseClient();
   const [posts, setPosts] = useState([]);
-  
+
   useEffect(() => {
     if (!supabase) return;
     supabase.from("Post").select("*").then(({ data }) => setPosts(data || []));
   }, [supabase]);
-  
+
   return <div>{posts.map(p => <div key={p.id}>{p.content}</div>)}</div>;
 }
 ```
 
 ### For API Routes:
+
 ```typescript
-import { auth } from "@/auth";
-import { generateShortLivedToken } from "@/lib/rls-jwt";
-import { getSupabaseClientWithToken } from "@/lib/supabase-server";
+import { auth } from '@/auth';
+import { generateShortLivedToken } from '@/lib/rls-jwt';
+import { getSupabaseClientWithToken } from '@/lib/supabase-server';
 
 export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
-  
+  if (!session?.user?.id)
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
   const token = generateShortLivedToken(session.user.id);
   const supabase = getSupabaseClientWithToken(token);
-  
-  const { data } = await supabase.from("Post").select("*");
+
+  const { data } = await supabase.from('Post').select('*');
   return Response.json(data);
 }
 ```

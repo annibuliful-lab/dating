@@ -93,12 +93,12 @@ function FeedPage() {
   useEffect(() => {
     if (status === 'authenticated') {
       (async function () {
-        const ads = await supabase.from('Ad').select();
-        console.debug('ads', ads);
-        const images = ads.data?.map((ad) => ad.imageUrl);
-        if (images) {
-          setBannerImages(images);
-        }
+        // const ads = await supabase.from('Ad').select();
+        // console.debug('ads', ads);
+        // const images = ads.data?.map((ad) => ad.imageUrl);
+        // if (images) {
+        //   setBannerImages(images);
+        // }
 
         fetchPosts(0);
         // Show infographic modal when entering feed page

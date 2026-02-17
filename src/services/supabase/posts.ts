@@ -36,6 +36,10 @@ type PostWithUser = {
 export const postService = {
   // Fetch all public posts with author information
   async getPublicPosts(limit = 20, offset = 0) {
+    // only return posts from the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
     const { data, error } = await supabase
       .from('Post')
       .select(
@@ -52,39 +56,47 @@ export const postService = {
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
-      `
+      `,
       )
       .eq('visibility', 'PUBLIC')
+      .gte('createdAt', thirtyDaysAgo.toISOString())
       .order('createdAt', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) throw new Error(error.message);
-    
+
     // Fetch verifiedBy usernames for all posts
-    const verifiedByUserIds = (data as unknown as PostWithUser[] | null)
-      ?.map((post) => post.User?.verifiedBy)
-      .filter((id: string | null | undefined): id is string => !!id) || [];
-    
+    const verifiedByUserIds =
+      (data as unknown as PostWithUser[] | null)
+        ?.map((post) => post.User?.verifiedBy)
+        .filter(
+          (id: string | null | undefined): id is string => !!id,
+        ) || [];
+
     const verifiedByUsernames: Record<string, string> = {};
     if (verifiedByUserIds.length > 0) {
       const { data: verifiedByUsers } = await supabase
         .from('User')
         .select('id, username')
         .in('id', verifiedByUserIds);
-      
+
       if (verifiedByUsers) {
-        verifiedByUsers.forEach((user: { id: string; username: string }) => {
-          verifiedByUsernames[user.id] = user.username;
-        });
+        verifiedByUsers.forEach(
+          (user: { id: string; username: string }) => {
+            verifiedByUsernames[user.id] = user.username;
+          },
+        );
       }
     }
-    
+
     // Transform data to add verifiedByUsername
-    const transformedData = (data as unknown as PostWithUser[] | null)?.map((post) => {
-      const verifiedByUsername = post.User?.verifiedBy 
+    const transformedData = (
+      data as unknown as PostWithUser[] | null
+    )?.map((post) => {
+      const verifiedByUsername = post.User?.verifiedBy
         ? verifiedByUsernames[post.User.verifiedBy] || null
         : null;
-      
+
       return {
         ...post,
         User: {
@@ -93,7 +105,7 @@ export const postService = {
         },
       };
     });
-    
+
     return transformedData || data;
   },
 
@@ -114,7 +126,7 @@ export const postService = {
         ),
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
-      `
+      `,
       )
       .eq('authorId', userId)
       .order('createdAt', { ascending: false })
@@ -150,7 +162,7 @@ export const postService = {
           )
         ),
         PostSave!PostSave_postId_fkey (count)
-      `
+      `,
       )
       .eq('id', postId)
       .single();
@@ -176,7 +188,7 @@ export const postService = {
             role
           )
         )
-      `
+      `,
       )
       .eq('userId', userId)
       .order('id', { ascending: false });

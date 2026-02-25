@@ -554,6 +554,23 @@ export const messageService = {
     return (unreadMessages?.length || 0) > 0;
   },
 
+  /** Number of chats that have unread messages for the user (for nav badge). */
+  async getUnreadCount(userId: string): Promise<number> {
+    const { data: participants, error } = await supabase
+      .from("ChatParticipant")
+      .select("chatId")
+      .eq("userId", userId);
+
+    if (error || !participants?.length) return 0;
+
+    const results = await Promise.all(
+      participants.map((p) =>
+        this.hasUnreadMessages((p as { chatId: string }).chatId, userId)
+      )
+    );
+    return results.filter(Boolean).length;
+  },
+
   // Create a group chat
   async createGroupChat(createdById: string, name: string, userIds: string[]) {
     // Get admin user ID

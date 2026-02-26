@@ -72,6 +72,7 @@ export default function AdminUsersPage() {
     hasMore,
     refetch: fetchUsers,
     updateUserStatus,
+    total,
   } = useAdminUsers(searchQuery);
   const users = (usersData as unknown as User[]) || [];
   const loading = usersLoading || initialLoading;
@@ -315,8 +316,7 @@ export default function AdminUsersPage() {
                   {getStatusTitle()}
                 </Text>
                 <Text size="sm" c="dimmed" fw={500}>
-                  (โหลดแล้ว {users.length} คน
-                  {!hasMore && ' • ไม่มีข้อมูลเพิ่มเติม'})
+                  (ทั้งหมด {total} accounts)
                 </Text>
               </Group>
               <SearchInput

@@ -19,6 +19,15 @@ export function useAdminUsers(searchQuery?: string) {
     },
   );
 
+  // Fetch total user count for the current search/filter
+  const countQuery = useApiQuery<{ total: number }>(
+    '/api/admin/users/count',
+    {
+      retries: 1,
+      queryParams: searchQuery ? { search: searchQuery } : undefined,
+    },
+  );
+
   const updateUserStatus = useCallback(
     async (userId: string, data: Record<string, unknown>) => {
       return adminService.updateUserStatus(userId, data);
@@ -26,5 +35,10 @@ export function useAdminUsers(searchQuery?: string) {
     [],
   );
 
-  return { ...result, updateUserStatus };
+  return {
+    ...result,
+    updateUserStatus,
+    total: countQuery.data?.total ?? 0,
+    countLoading: countQuery.loading,
+  };
 }

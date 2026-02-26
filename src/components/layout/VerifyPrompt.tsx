@@ -79,6 +79,9 @@ export function VerifyPrompt() {
               เพื่อความปลอดภัยและความน่าเชื่อถือ กรุณาเพิ่ม Line OA
               เพื่อยืนยันตัวตนของคุณ
             </Text>
+            <Text size="l" ta="center" fw="bold">
+              * หากไม่ยืนยันตัวตนจะไม่สามารถเข้าใช้เว็บไซต์ได้
+            </Text>
           </Stack>
 
           <Stack gap="md" w="100%">
@@ -168,6 +171,9 @@ export function VerifyPrompt() {
             <Text size="xs" ta="center" c="dimmed">
               หลังจากเพิ่มเพื่อนแล้ว กรุณากด &quot;เสร็จสิ้น&quot;
               ด้านล่าง
+            </Text>
+            <Text size="l" ta="center" fw="bold">
+              * หากไม่ยืนยันตัวตนจะไม่สามารถเข้าใช้เว็บไซต์ได้
             </Text>
           </Stack>
 

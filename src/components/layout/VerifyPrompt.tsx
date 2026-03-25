@@ -11,6 +11,7 @@ import {
   rem,
   Stack,
   Text,
+  Flex,
 } from '@mantine/core';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -127,7 +128,7 @@ export function VerifyPrompt() {
           </Text>
         }
         centered
-        size="md"
+        size="lg"
         styles={{
           content: {
             backgroundColor: '#1a1a1a',
@@ -148,21 +149,68 @@ export function VerifyPrompt() {
         }}
       >
         <Stack gap="lg" align="center" py="md">
-          <Box
-            style={{
-              backgroundColor: 'white',
-              padding: rem(16),
-              borderRadius: rem(12),
-            }}
-          >
-            <Image
-              src="/line.png"
-              alt="LINE OA QR Code"
-              width={280}
-              height={280}
-              fit="contain"
-            />
+          <Box>
+            <Box
+              style={{
+                backgroundColor: 'white',
+                padding: rem(16),
+                borderRadius: rem(12),
+              }}
+            >
+              <Image
+                src="/line-qr/woman-relation.png"
+                alt="LINE OA QR Code woman-relation"
+                width={280}
+                height={280}
+                fit="contain"
+              />
+            </Box>
+            <Text
+              fz="h4"
+              mt={12}
+              style={{
+                textAlign: 'center',
+              }}
+            >
+              ผู้หญิงและคู่รัก
+            </Text>
           </Box>
+
+          <Flex justify="space-evenly" gap={32}>
+            <Box
+              style={{
+                backgroundColor: 'white',
+                padding: rem(16),
+                borderRadius: rem(12),
+              }}
+            >
+              <Image
+                src="/line-qr/man-1.png"
+                alt="LINE OA QR Code man-1"
+                width={280}
+                height={280}
+                fit="contain"
+              />
+            </Box>
+            <Box
+              style={{
+                backgroundColor: 'white',
+                padding: rem(16),
+                borderRadius: rem(12),
+              }}
+            >
+              <Image
+                src="/line-qr/man-2.png"
+                alt="LINE OA QR Code man-2"
+                width={280}
+                height={280}
+                fit="contain"
+              />
+            </Box>
+          </Flex>
+          <Text fz="h4" style={{ textAlign: 'center' }}>
+            ผู้ชาย
+          </Text>
 
           <Stack gap="sm" align="center">
             <Text size="sm" ta="center" c="white">

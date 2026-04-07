@@ -1,23 +1,23 @@
 import {
-    ChatInsert,
-    ChatWithLatestMessage,
-    MessageSubscriptionCallback,
-    MessageWithUser,
-    SendMessageData,
-    SupabasePresenceState,
-    TypingSubscriptionCallback,
-    TypingUser,
-} from "@/@types/message";
-import { supabase } from "@/client/supabase";
+  ChatInsert,
+  ChatWithLatestMessage,
+  MessageSubscriptionCallback,
+  MessageWithUser,
+  SendMessageData,
+  SupabasePresenceState,
+  TypingSubscriptionCallback,
+  TypingUser,
+} from '@/@types/message';
+import { supabase } from '@/client/supabase';
 
 export const messageService = {
   async getChatMessages(
     chatId: string,
     limit = 50,
-    offset = 0
+    offset = 0,
   ): Promise<MessageWithUser[]> {
     const { data, error } = await supabase
-      .from("Message")
+      .from('Message')
       .select(
         `
         *,
@@ -29,10 +29,10 @@ export const messageService = {
           isVerified,
           role
         )
-      `
+      `,
       )
-      .eq("chatId", chatId)
-      .order("createdAt", { ascending: false }) // Latest messages first like Facebook
+      .eq('chatId', chatId)
+      .order('createdAt', { ascending: false }) // Latest messages first like Facebook
       .range(offset, offset + limit - 1);
 
     if (error) throw new Error(error.message);
@@ -43,13 +43,13 @@ export const messageService = {
   async getOlderMessages(
     chatId: string,
     beforeMessageId: string,
-    limit = 20
+    limit = 20,
   ): Promise<{ messages: MessageWithUser[]; hasMore: boolean }> {
     // First get the timestamp of the message we're loading before
     const { data: beforeMessage } = await supabase
-      .from("Message")
-      .select("createdAt")
-      .eq("id", beforeMessageId)
+      .from('Message')
+      .select('createdAt')
+      .eq('id', beforeMessageId)
       .single();
 
     if (!beforeMessage) {
@@ -58,7 +58,7 @@ export const messageService = {
 
     // Fetch messages older than the beforeMessage
     const { data, error } = await supabase
-      .from("Message")
+      .from('Message')
       .select(
         `
         *,
@@ -70,11 +70,11 @@ export const messageService = {
           isVerified,
           role
         )
-      `
+      `,
       )
-      .eq("chatId", chatId)
-      .lt("createdAt", beforeMessage.createdAt) // Get messages before this timestamp
-      .order("createdAt", { ascending: false })
+      .eq('chatId', chatId)
+      .lt('createdAt', beforeMessage.createdAt) // Get messages before this timestamp
+      .order('createdAt', { ascending: false })
       .limit(limit + 1); // Fetch one extra to check if there are more
 
     if (error) throw new Error(error.message);
@@ -91,9 +91,11 @@ export const messageService = {
     };
   },
 
-  async sendMessage(messageData: SendMessageData): Promise<MessageWithUser> {
+  async sendMessage(
+    messageData: SendMessageData,
+  ): Promise<MessageWithUser> {
     const { data, error } = await supabase
-      .from("Message")
+      .from('Message')
       .insert(messageData)
       .select(
         `
@@ -106,26 +108,107 @@ export const messageService = {
           isVerified,
           role
         )
-      `
+      `,
       )
       .single();
 
     if (error) throw new Error(error.message);
-    if (!data) throw new Error("Failed to send message");
+    if (!data) throw new Error('Failed to send message');
 
-    const channel = supabase.channel(`messages:${messageData.chatId}`);
+    const channel = supabase.channel(
+      `messages:${messageData.chatId}`,
+    );
     await channel.send({
-      type: "broadcast",
-      event: "new_message",
+      type: 'broadcast',
+      event: 'new_message',
       payload: data,
     });
 
     return data as unknown as MessageWithUser;
   },
 
-  async getUserChats(userId: string): Promise<ChatWithLatestMessage[]> {
+  async getLatestMessagesByChatIds(
+    chatIds: string[],
+  ): Promise<Record<string, MessageWithUser | undefined>> {
+    if (!chatIds.length) return {};
+
     const { data, error } = await supabase
-      .from("ChatParticipant")
+      .from('Message')
+      .select(
+        `
+        *,
+        User!Message_senderId_fkey (
+          id,
+          fullName,
+          username,
+          profileImageKey,
+          isVerified,
+          role
+        )
+      `,
+      )
+      .in('chatId', chatIds)
+      .order('createdAt', { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    const latestMessages: Record<string, MessageWithUser> = {};
+    (data || []).forEach((row) => {
+      const message = row as unknown as MessageWithUser;
+      if (!latestMessages[message.chatId]) {
+        latestMessages[message.chatId] = message;
+      }
+    });
+
+    return latestMessages;
+  },
+
+  async getUnreadChatIds(
+    userId: string,
+    chatIds: string[],
+    lastReadAtByChat: Record<string, string | undefined>,
+  ): Promise<Set<string>> {
+    if (!chatIds.length) return new Set();
+
+    const { data, error } = await supabase
+      .from('Message')
+      .select('chatId, createdAt')
+      .in('chatId', chatIds)
+      .neq('senderId', userId)
+      .order('createdAt', { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    const latestByChat = new Map<string, string>();
+    (data || []).forEach((row) => {
+      const chatId = (row as any).chatId as string;
+      const createdAt = (row as any).createdAt as string;
+      if (!latestByChat.has(chatId)) {
+        latestByChat.set(chatId, createdAt);
+      }
+    });
+
+    const unreadChatIds = new Set<string>();
+    chatIds.forEach((chatId) => {
+      const lastReadAt = lastReadAtByChat[chatId];
+      const latestCreatedAt = latestByChat.get(chatId);
+      if (!latestCreatedAt) return;
+      if (
+        !lastReadAt ||
+        new Date(latestCreatedAt) > new Date(lastReadAt)
+      ) {
+        unreadChatIds.add(chatId);
+      }
+    });
+
+    return unreadChatIds;
+  },
+
+  async getUserChats(
+    userId: string,
+  ): Promise<ChatWithLatestMessage[]> {
+    const { data, error } = await supabase
+      .from('ChatParticipant')
       .select(
         `
         *,
@@ -146,52 +229,43 @@ export const messageService = {
             )
           )
         )
-      `
+      `,
       )
-      .eq("userId", userId)
-      .order("id", { ascending: false });
+      .eq('userId', userId)
+      .order('id', { ascending: false });
 
     if (error) throw new Error(error.message);
     if (!data) return [];
 
-    const chatsWithMessages = await Promise.all(
-      data.map(async (participant) => {
-        const { data: latestMessage } = await supabase
-          .from("Message")
-          .select(
-            `
-            *,
-            User!Message_senderId_fkey (
-              id,
-              fullName,
-              username,
-              profileImageKey,
-              isVerified,
-              role
-            )
-          `
-          )
-          .eq("chatId", participant.Chat.id)
-          .order("createdAt", { ascending: false })
-          .limit(1)
-          .single();
+    const chatIds = data.map((participant) => participant.Chat.id);
+    const latestMessagesByChat =
+      await this.getLatestMessagesByChatIds(chatIds);
 
-        // Check if there are unread messages
-        const hasUnread = await this.hasUnreadMessages(
-          participant.Chat.id,
-          userId
-        );
-
-        return {
-          ...participant,
-          Chat: {
-            ...participant.Chat,
-            latestMessage: latestMessage || undefined,
-            hasUnread,
-          },
-        };
-      })
+    const lastReadAtByChat = data.reduce(
+      (acc, participant) => {
+        acc[participant.Chat.id] = participant.lastReadAt as
+          | string
+          | undefined;
+        return acc;
+      },
+      {} as Record<string, string | undefined>,
     );
+
+    const unreadChatIds = await this.getUnreadChatIds(
+      userId,
+      chatIds,
+      lastReadAtByChat,
+    );
+
+    const chatsWithMessages = data.map((participant) => ({
+      ...participant,
+      Chat: {
+        ...participant.Chat,
+        latestMessage:
+          latestMessagesByChat[participant.Chat.id] || undefined,
+        hasUnread: unreadChatIds.has(participant.Chat.id),
+      },
+    }));
 
     // Sort chats by latest message createdAt (newest first)
     // Chats without messages go to the bottom
@@ -201,7 +275,10 @@ export const messageService = {
 
       // If both have messages, sort by createdAt descending (newest first)
       if (aMessageTime && bMessageTime) {
-        return new Date(bMessageTime).getTime() - new Date(aMessageTime).getTime();
+        return (
+          new Date(bMessageTime).getTime() -
+          new Date(aMessageTime).getTime()
+        );
       }
 
       // If only one has a message, prioritize it
@@ -218,20 +295,24 @@ export const messageService = {
   // Create a new chat
   async createChat(chatData: ChatInsert) {
     const { data, error } = await supabase
-      .from("Chat")
+      .from('Chat')
       .insert(chatData as never)
       .select()
       .single();
 
     if (error) throw new Error(error.message);
-    if (!data) throw new Error("Failed to create chat");
+    if (!data) throw new Error('Failed to create chat');
     return data;
   },
 
   // Add participant to chat
-  async addChatParticipant(chatId: string, userId: string, isAdmin = false) {
+  async addChatParticipant(
+    chatId: string,
+    userId: string,
+    isAdmin = false,
+  ) {
     const { data, error } = await supabase
-      .from("ChatParticipant")
+      .from('ChatParticipant')
       .insert({
         id: crypto.randomUUID(),
         chatId,
@@ -242,17 +323,17 @@ export const messageService = {
       .single();
 
     if (error) throw new Error(error.message);
-    if (!data) throw new Error("Failed to add chat participant");
+    if (!data) throw new Error('Failed to add chat participant');
     return data;
   },
 
   // Remove participant from chat
   async removeChatParticipant(chatId: string, userId: string) {
     const { error } = await supabase
-      .from("ChatParticipant")
+      .from('ChatParticipant')
       .delete()
-      .eq("chatId", chatId)
-      .eq("userId", userId);
+      .eq('chatId', chatId)
+      .eq('userId', userId);
 
     if (error) throw new Error(error.message);
     return true;
@@ -261,34 +342,34 @@ export const messageService = {
   // Update chat name
   async updateChatName(chatId: string, name: string) {
     const { data, error } = await supabase
-      .from("Chat")
+      .from('Chat')
       .update({ name })
-      .eq("id", chatId)
+      .eq('id', chatId)
       .select()
       .single();
 
     if (error) throw new Error(error.message);
-    if (!data) throw new Error("Failed to update chat name");
+    if (!data) throw new Error('Failed to update chat name');
     return data;
   },
 
   // Get chat info
   async getChatInfo(chatId: string) {
     const { data, error } = await supabase
-      .from("Chat")
-      .select("*")
-      .eq("id", chatId)
+      .from('Chat')
+      .select('*')
+      .eq('id', chatId)
       .single();
 
     if (error) throw new Error(error.message);
-    if (!data) throw new Error("Chat not found");
+    if (!data) throw new Error('Chat not found');
     return data;
   },
 
   // Get chat participants
   async getChatParticipants(chatId: string) {
     const { data, error } = await supabase
-      .from("ChatParticipant")
+      .from('ChatParticipant')
       .select(
         `
         *,
@@ -300,24 +381,27 @@ export const messageService = {
           status,
           role
         )
-      `
+      `,
       )
-      .eq("chatId", chatId);
+      .eq('chatId', chatId);
 
     if (error) throw new Error(error.message);
     return data || [];
   },
 
   // Check if user is participant in chat
-  async isUserInChat(userId: string, chatId: string): Promise<boolean> {
+  async isUserInChat(
+    userId: string,
+    chatId: string,
+  ): Promise<boolean> {
     const { data, error } = await supabase
-      .from("ChatParticipant")
-      .select("id")
-      .eq("userId", userId)
-      .eq("chatId", chatId)
+      .from('ChatParticipant')
+      .select('id')
+      .eq('userId', userId)
+      .eq('chatId', chatId)
       .single();
 
-    if (error && error.code !== "PGRST116") {
+    if (error && error.code !== 'PGRST116') {
       throw new Error(error.message);
     }
     return !!data;
@@ -327,7 +411,7 @@ export const messageService = {
   async getOrCreateDirectChat(user1Id: string, user2Id: string) {
     // First, try to find existing direct chat between these users
     const { data: existingChats } = await supabase
-      .from("ChatParticipant")
+      .from('ChatParticipant')
       .select(
         `
         chatId,
@@ -338,9 +422,9 @@ export const messageService = {
             userId
           )
         )
-      `
+      `,
       )
-      .eq("userId", user1Id);
+      .eq('userId', user1Id);
 
     // Find a non-group chat where both users are participants
     const directChat = existingChats?.find(
@@ -348,8 +432,8 @@ export const messageService = {
         !chat.Chat.isGroup &&
         chat.Chat.ChatParticipant.length === 2 &&
         chat.Chat.ChatParticipant.some(
-          (p: { userId: string }) => p.userId === user2Id
-        )
+          (p: { userId: string }) => p.userId === user2Id,
+        ),
     );
 
     if (directChat) {
@@ -374,32 +458,35 @@ export const messageService = {
   },
 
   // Real-time message subscription
-  subscribeToMessages(chatId: string, callback: MessageSubscriptionCallback) {
+  subscribeToMessages(
+    chatId: string,
+    callback: MessageSubscriptionCallback,
+  ) {
     const channel = supabase
       .channel(`messages:${chatId}`, {
         config: {
           broadcast: { self: false },
-          presence: { key: "" },
+          presence: { key: '' },
         },
       })
       // Listen for broadcast messages (faster, no database query needed)
-      .on("broadcast", { event: "new_message" }, (payload) => {
+      .on('broadcast', { event: 'new_message' }, (payload) => {
         callback(payload.payload);
       })
       // Fallback to postgres_changes for reliability
       .on(
-        "postgres_changes",
+        'postgres_changes',
         {
-          event: "INSERT",
-          schema: "public",
-          table: "Message",
+          event: 'INSERT',
+          schema: 'public',
+          table: 'Message',
           filter: `chatId=eq.${chatId}`,
         },
         async (payload) => {
           try {
             // Fetch the complete message with user data
             const { data, error } = await supabase
-              .from("Message")
+              .from('Message')
               .select(
                 `
                 *,
@@ -410,13 +497,13 @@ export const messageService = {
                   profileImageKey,
                   role
                 )
-              `
+              `,
               )
-              .eq("id", payload.new.id)
+              .eq('id', payload.new.id)
               .single();
 
             if (error) {
-              console.error("Error fetching message data:", error);
+              console.error('Error fetching message data:', error);
               return;
             }
 
@@ -424,18 +511,24 @@ export const messageService = {
               callback(data as unknown as MessageWithUser);
             }
           } catch (err) {
-            console.error("Error in message subscription callback:", err);
+            console.error(
+              'Error in message subscription callback:',
+              err,
+            );
           }
-        }
+        },
       )
       .subscribe((status, err) => {
         if (err) {
-          console.error("Subscription error:", err);
+          console.error('Subscription error:', err);
         }
-        if (status === "CHANNEL_ERROR") {
-          console.error("Error subscribing to messages for chat:", chatId);
-        } else if (status === "TIMED_OUT") {
-          console.error("Subscription timed out for chat:", chatId);
+        if (status === 'CHANNEL_ERROR') {
+          console.error(
+            'Error subscribing to messages for chat:',
+            chatId,
+          );
+        } else if (status === 'TIMED_OUT') {
+          console.error('Subscription timed out for chat:', chatId);
         }
       });
 
@@ -445,11 +538,11 @@ export const messageService = {
   // Typing indicators
   subscribeToTyping(
     chatId: string,
-    onTypingUpdate: TypingSubscriptionCallback
+    onTypingUpdate: TypingSubscriptionCallback,
   ) {
     const channel = supabase
       .channel(`typing:${chatId}`)
-      .on("presence", { event: "sync" }, () => {
+      .on('presence', { event: 'sync' }, () => {
         const presenceState = channel.presenceState();
         const typingUsers: TypingUser[] = [];
 
@@ -457,8 +550,8 @@ export const messageService = {
           presences.forEach((presence: SupabasePresenceState) => {
             if (
               presence.typing &&
-              typeof presence.user_id === "string" &&
-              typeof presence.user_name === "string"
+              typeof presence.user_id === 'string' &&
+              typeof presence.user_name === 'string'
             ) {
               typingUsers.push({
                 userId: presence.user_id,
@@ -479,7 +572,7 @@ export const messageService = {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-           // channel.track({ online_at: new Date().toISOString() });
+          // channel.track({ online_at: new Date().toISOString() });
         }
       });
 
@@ -491,7 +584,7 @@ export const messageService = {
     chatId: string,
     userId: string,
     userName: string,
-    isTyping: boolean
+    isTyping: boolean,
   ) {
     const channel = supabase.channel(`typing:${chatId}`);
     await channel.track({
@@ -505,38 +598,42 @@ export const messageService = {
   // Mark messages as read
   async markMessagesAsRead(chatId: string, userId: string) {
     const { error } = await supabase
-      .from("ChatParticipant")
+      .from('ChatParticipant')
       .update({ lastReadAt: new Date().toISOString() } as Record<
         string,
         unknown
       >)
-      .eq("chatId", chatId)
-      .eq("userId", userId);
+      .eq('chatId', chatId)
+      .eq('userId', userId);
 
     if (error) throw new Error(error.message);
     return true;
   },
 
   // Check if chat has unread messages
-  async hasUnreadMessages(chatId: string, userId: string): Promise<boolean> {
+  async hasUnreadMessages(
+    chatId: string,
+    userId: string,
+  ): Promise<boolean> {
     // Get participant's lastReadAt
     const { data: participant } = await supabase
-      .from("ChatParticipant")
-      .select("lastReadAt")
-      .eq("chatId", chatId)
-      .eq("userId", userId)
+      .from('ChatParticipant')
+      .select('lastReadAt')
+      .eq('chatId', chatId)
+      .eq('userId', userId)
       .single();
 
     if (!participant) return false;
 
-    const lastReadAt = (participant as { lastReadAt?: string }).lastReadAt;
+    const lastReadAt = (participant as { lastReadAt?: string })
+      .lastReadAt;
 
     // If never read, check if there are any messages
     if (!lastReadAt) {
       const { data: messages } = await supabase
-        .from("Message")
-        .select("id")
-        .eq("chatId", chatId)
+        .from('Message')
+        .select('id')
+        .eq('chatId', chatId)
         .limit(1);
 
       return (messages?.length || 0) > 0;
@@ -544,11 +641,11 @@ export const messageService = {
 
     // Check if there are messages after lastReadAt
     const { data: unreadMessages } = await supabase
-      .from("Message")
-      .select("id")
-      .eq("chatId", chatId)
-      .gt("createdAt", lastReadAt)
-      .neq("senderId", userId) // Don't count own messages
+      .from('Message')
+      .select('id')
+      .eq('chatId', chatId)
+      .gt('createdAt', lastReadAt)
+      .neq('senderId', userId) // Don't count own messages
       .limit(1);
 
     return (unreadMessages?.length || 0) > 0;
@@ -557,27 +654,46 @@ export const messageService = {
   /** Number of chats that have unread messages for the user (for nav badge). */
   async getUnreadCount(userId: string): Promise<number> {
     const { data: participants, error } = await supabase
-      .from("ChatParticipant")
-      .select("chatId")
-      .eq("userId", userId);
+      .from('ChatParticipant')
+      .select('chatId, lastReadAt')
+      .eq('userId', userId);
 
     if (error || !participants?.length) return 0;
 
-    const results = await Promise.all(
-      participants.map((p) =>
-        this.hasUnreadMessages((p as { chatId: string }).chatId, userId)
-      )
+    const chatIds = participants.map(
+      (p) => (p as { chatId: string }).chatId,
     );
-    return results.filter(Boolean).length;
+    const lastReadAtByChat = participants.reduce(
+      (acc, participant) => {
+        const chatId = (participant as { chatId: string }).chatId;
+        acc[chatId] = (
+          participant as { lastReadAt?: string }
+        ).lastReadAt;
+        return acc;
+      },
+      {} as Record<string, string | undefined>,
+    );
+
+    const unreadChatIds = await this.getUnreadChatIds(
+      userId,
+      chatIds,
+      lastReadAtByChat,
+    );
+
+    return unreadChatIds.size;
   },
 
   // Create a group chat
-  async createGroupChat(createdById: string, name: string, userIds: string[]) {
+  async createGroupChat(
+    createdById: string,
+    name: string,
+    userIds: string[],
+  ) {
     // Get admin user ID
     const { data: adminUser } = await supabase
-      .from("User")
-      .select("id")
-      .eq("role", "ADMIN")
+      .from('User')
+      .select('id')
+      .eq('role', 'ADMIN')
       .limit(1)
       .single();
 
@@ -593,7 +709,8 @@ export const messageService = {
     // Add admin user to group chat if admin exists
     if (adminUser) {
       const isAdminAlreadyIncluded =
-        userIds.includes(adminUser.id) || createdById === adminUser.id;
+        userIds.includes(adminUser.id) ||
+        createdById === adminUser.id;
       if (!isAdminAlreadyIncluded) {
         await this.addChatParticipant(chat.id, adminUser.id, true);
       }
@@ -608,7 +725,9 @@ export const messageService = {
     await Promise.all(
       userIds
         .filter((userId) => userId !== adminUser?.id) // Don't add admin twice
-        .map((userId) => this.addChatParticipant(chat.id, userId, false))
+        .map((userId) =>
+          this.addChatParticipant(chat.id, userId, false),
+        ),
     );
 
     return chat;
@@ -617,12 +736,12 @@ export const messageService = {
   // Edit a message
   async editMessage(
     messageId: string,
-    newText: string
+    newText: string,
   ): Promise<MessageWithUser> {
     const { data, error } = await supabase
-      .from("Message")
+      .from('Message')
       .update({ text: newText })
-      .eq("id", messageId)
+      .eq('id', messageId)
       .select(
         `
         *,
@@ -634,21 +753,21 @@ export const messageService = {
           isVerified,
           role
         )
-      `
+      `,
       )
       .single();
 
     if (error) throw new Error(error.message);
-    if (!data) throw new Error("Failed to edit message");
+    if (!data) throw new Error('Failed to edit message');
     return data as unknown as MessageWithUser;
   },
 
   // Delete a message
   async deleteMessage(messageId: string): Promise<boolean> {
     const { error } = await supabase
-      .from("Message")
+      .from('Message')
       .delete()
-      .eq("id", messageId);
+      .eq('id', messageId);
 
     if (error) throw new Error(error.message);
     return true;
@@ -657,7 +776,7 @@ export const messageService = {
   // Get message by ID
   async getMessage(messageId: string): Promise<MessageWithUser> {
     const { data, error } = await supabase
-      .from("Message")
+      .from('Message')
       .select(
         `
         *,
@@ -669,13 +788,13 @@ export const messageService = {
           isVerified,
           role
         )
-      `
+      `,
       )
-      .eq("id", messageId)
+      .eq('id', messageId)
       .single();
 
     if (error) throw new Error(error.message);
-    if (!data) throw new Error("Message not found");
+    if (!data) throw new Error('Message not found');
     return data as unknown as MessageWithUser;
   },
 };

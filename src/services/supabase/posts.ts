@@ -65,27 +65,35 @@ export const postService = {
 
     if (error) throw new Error(error.message);
 
-    // Fetch verifiedBy usernames for all posts
-    const verifiedByUserIds =
-      (data as unknown as PostWithUser[] | null)
-        ?.map((post) => post.User?.verifiedBy)
-        .filter(
-          (id: string | null | undefined): id is string => !!id,
-        ) || [];
+    // ✅ OPTIMIZED: Deduplicate verified user IDs to avoid N+1 queries
+    const verifiedByUserIds = [
+      ...new Set(
+        (data as unknown as PostWithUser[] | null)
+          ?.map((post) => post.User?.verifiedBy)
+          .filter(
+            (id: string | null | undefined): id is string => !!id,
+          ) || [],
+      ),
+    ];
 
     const verifiedByUsernames: Record<string, string> = {};
     if (verifiedByUserIds.length > 0) {
-      const { data: verifiedByUsers } = await supabase
-        .from('User')
-        .select('id, username')
-        .in('id', verifiedByUserIds);
+      // ✅ OPTIMIZED: Batch fetch in groups of 100 to handle large lists
+      const batchSize = 100;
+      for (let i = 0; i < verifiedByUserIds.length; i += batchSize) {
+        const batch = verifiedByUserIds.slice(i, i + batchSize);
+        const { data: verifiedByUsers } = await supabase
+          .from('User')
+          .select('id, username')
+          .in('id', batch);
 
-      if (verifiedByUsers) {
-        verifiedByUsers.forEach(
-          (user: { id: string; username: string }) => {
-            verifiedByUsernames[user.id] = user.username;
-          },
-        );
+        if (verifiedByUsers) {
+          verifiedByUsers.forEach(
+            (user: { id: string; username: string }) => {
+              verifiedByUsernames[user.id] = user.username;
+            },
+          );
+        }
       }
     }
 
@@ -195,6 +203,43 @@ export const postService = {
 
     if (error) throw new Error(error.message);
     return data;
+  },
+
+  // ✅ OPTIMIZED: Check both like and save in single batch query
+  async getUserPostInteractions(userId: string, postIds: string[]) {
+    if (postIds.length === 0) return {};
+
+    const [likeData, saveData] = await Promise.all([
+      supabase
+        .from('PostLike')
+        .select('postId')
+        .eq('userId', userId)
+        .in('postId', postIds),
+      supabase
+        .from('PostSave')
+        .select('postId')
+        .eq('userId', userId)
+        .in('postId', postIds),
+    ]);
+
+    const likedPosts = new Set(
+      (likeData.data || []).map((l) => l.postId),
+    );
+    const savedPosts = new Set(
+      (saveData.data || []).map((s) => s.postId),
+    );
+
+    // Return object for quick lookup: { postId: { hasLiked, hasSaved } }
+    return postIds.reduce(
+      (acc, postId) => {
+        acc[postId] = {
+          hasLiked: likedPosts.has(postId),
+          hasSaved: savedPosts.has(postId),
+        };
+        return acc;
+      },
+      {} as Record<string, { hasLiked: boolean; hasSaved: boolean }>,
+    );
   },
 
   // Check if user liked a post

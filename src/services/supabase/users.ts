@@ -13,6 +13,19 @@ type UserUpdate = {
 };
 
 export const userService = {
+  // ✅ OPTIMIZED: Batch fetch multiple users efficiently (prevents N+1)
+  async getUsersByIds(ids: string[]) {
+    if (ids.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('User')
+      .select('*')
+      .in('id', ids);
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
   // Fetch all active users
   async getActiveUsers() {
     const { data, error } = await supabase
@@ -42,7 +55,7 @@ export const userService = {
     const { data, error } = await supabase
       .from('User')
       .select(
-        'id, fullName, username, age, gender, bio, profileImageKey, height, weight, relationShipStatus'
+        'id, fullName, username, age, gender, bio, profileImageKey, height, weight, relationShipStatus',
       )
       .eq('id', id)
       .single();
@@ -57,7 +70,7 @@ export const userService = {
       .from('User')
       .select('id, fullName, username, profileImageKey, age, gender')
       .or(
-        `fullName.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`
+        `fullName.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`,
       )
       .eq('status', 'ACTIVE')
       .limit(20);
@@ -71,7 +84,7 @@ export const userService = {
     const { data, error } = await supabase
       .from('User')
       .select(
-        'id, fullName, username, age, gender, bio, profileImageKey'
+        'id, fullName, username, age, gender, bio, profileImageKey',
       )
       .gte('age', minAge)
       .lte('age', maxAge)
@@ -105,7 +118,7 @@ export const userService = {
         username,
         profileImageKey,
         Post!Post_authorId_fkey (count)
-      `
+      `,
       )
       .eq('status', 'ACTIVE');
 

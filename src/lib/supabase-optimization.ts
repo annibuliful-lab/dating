@@ -11,6 +11,7 @@
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
+  ttl: number;
 }
 
 const queryCache = new Map<string, CacheEntry<any>>();
@@ -33,7 +34,7 @@ export function getCachedResult<T>(key: string): T | null {
   if (!cached) return null;
 
   // Check if cache has expired
-  if (Date.now() - cached.timestamp > DEFAULT_CACHE_TTL) {
+  if (Date.now() - cached.timestamp > cached.ttl) {
     queryCache.delete(key);
     return null;
   }
@@ -49,7 +50,7 @@ export function setCachedResult(
   data: any,
   ttl = DEFAULT_CACHE_TTL,
 ): void {
-  queryCache.set(key, { data, timestamp: Date.now() });
+  queryCache.set(key, { data, timestamp: Date.now(), ttl });
 
   // Auto-expire after TTL
   setTimeout(() => queryCache.delete(key), ttl);

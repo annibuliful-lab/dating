@@ -181,8 +181,8 @@ export const messageService = {
 
     const latestByChat = new Map<string, string>();
     (data || []).forEach((row) => {
-      const chatId = (row as any).chatId as string;
-      const createdAt = (row as any).createdAt as string;
+      const chatId = row.chatId;
+      const createdAt = row.createdAt;
       if (!latestByChat.has(chatId)) {
         latestByChat.set(chatId, createdAt);
       }

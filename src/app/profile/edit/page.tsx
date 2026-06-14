@@ -484,9 +484,7 @@ function EditProfilePage() {
         message: 'Profile saved successfully',
       });
 
-      // Refresh profile data
-      const updatedProfile = await getUserProfile(data.user.id);
-      setUpdatedAt(updatedProfile.updatedAt ?? null);
+      router.push('/profile');
     } catch (err) {
       console.error('Error saving profile:', err);
       notifications.show({
@@ -691,9 +689,10 @@ function EditProfilePage() {
               error={
                 usernameAvailable === false
                   ? 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว'
-                  : checkingUsername
-                    ? 'กำลังตรวจสอบ...'
-                    : null
+                  : null
+              }
+              description={
+                checkingUsername ? 'กำลังตรวจสอบ...' : undefined
               }
               rightSection={
                 usernameAvailable === true ? (

@@ -104,6 +104,8 @@ model Chat {
   participants   ChatParticipant[]
   messages       Message[]
   createdAt      DateTime          @default(now()) @db.Timestamptz(6)
+
+  @@index([lastMessageAt])
 }
 
 model ChatParticipant {
@@ -116,6 +118,7 @@ model ChatParticipant {
   lastReadAt DateTime? @db.Timestamptz(6)
 
   @@unique([chatId, userId])
+  @@index([userId])
 }
 
 model Message {
@@ -128,6 +131,9 @@ model Message {
   imageUrl  String?  @db.Text
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   LatestForChats Chat[] @relation("ChatLastMessage")
+
+  @@index([chatId, createdAt])
+  @@index([chatId, senderId, createdAt])
 }
 
 model Post {
@@ -141,6 +147,8 @@ model Post {
   saves      PostSave[]
   createdAt  DateTime       @default(now()) @db.Timestamptz(6)
   updatedAt  DateTime       @updatedAt @db.Timestamptz(6)
+
+  @@index([visibility, createdAt])
 }
 
 enum PostVisibility {
@@ -175,6 +183,8 @@ model Ad {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([isActive, createdAt])
 }
 
 model ProfileImage {

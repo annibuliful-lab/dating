@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ReactNode } from "react";
 
 export const TOP_NAVBAR_HEIGHT_PX = 52;
+const DEFAULT_BACK_FALLBACK = "/feed";
 
 type TopNavbarProps = {
   title: string;
@@ -26,7 +27,13 @@ export function TopNavbar({
 
   const handleBack = () => {
     if (onBack) return onBack();
-    router.back();
+
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push(DEFAULT_BACK_FALLBACK);
   };
 
   return (

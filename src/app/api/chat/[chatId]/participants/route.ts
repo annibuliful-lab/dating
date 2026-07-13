@@ -14,13 +14,12 @@ export async function GET(
 
     const { chatId } = await params;
 
-    // Check if user is a participant in the chat
-    const isParticipant = await messageService.isUserInChat(
+    const requester = await messageService.getChatParticipant(
+      chatId,
       session.user.id,
-      chatId
     );
 
-    if (!isParticipant) {
+    if (!requester) {
       return NextResponse.json(
         { error: "You are not a participant in this chat" },
         { status: 403 }

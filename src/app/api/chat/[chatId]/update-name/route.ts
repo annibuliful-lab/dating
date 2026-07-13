@@ -28,9 +28,10 @@ export async function PATCH(
       );
     }
 
-    // Check if the requester is a participant and admin
-    const participants = await messageService.getChatParticipants(chatId);
-    const requester = participants.find((p) => p.userId === session.user.id);
+    const requester = await messageService.getChatParticipant(
+      chatId,
+      session.user.id,
+    );
 
     if (!requester) {
       return NextResponse.json(

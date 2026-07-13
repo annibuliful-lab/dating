@@ -1,5 +1,4 @@
 import { auth } from "@/auth";
-import { supabase } from "@/client/supabase";
 import { messageService } from "@/services/supabase/messages";
 import { requireNotSuspended } from "@/lib/admin";
 import { NextRequest, NextResponse } from "next/server";
@@ -31,13 +30,12 @@ export async function POST(
     }
     const { chatId } = await params;
 
-    // Verify that the requester is a participant in the chat
-    const isParticipant = await messageService.isUserInChat(
-      session.user.id,
-      chatId
+    const requester = await messageService.getChatParticipant(
+      chatId,
+      session.user.id
     );
 
-    if (!isParticipant) {
+    if (!requester) {
       return NextResponse.json(
         { error: "You are not a participant in this chat" },
         { status: 403 }
@@ -57,37 +55,23 @@ export async function POST(
       );
     }
 
-    // Get current participants count
-    const currentParticipants = await messageService.getChatParticipants(
-      chatId
-    );
+    const currentParticipantCount =
+      await messageService.getChatParticipantCount(chatId);
 
     // If there are 2 participants and we're adding a third, convert to group chat
-    if (currentParticipants.length === 2) {
-      const { error: updateError } = await supabase
-        .from("Chat")
-        .update({ isGroup: true })
-        .eq("id", chatId);
-
-      if (updateError) {
-        console.error("Error converting chat to group:", updateError);
-        // Continue anyway, as this is not critical
-      }
+    if (currentParticipantCount === 2) {
+      await messageService.updateChatGroupStatus(chatId, true);
 
       // When converting to group chat, ensure admin is added
-      const { data: adminUser } = await supabase
-        .from("User")
-        .select("id")
-        .eq("role", "ADMIN")
-        .limit(1)
-        .single();
+      const adminUserId = await messageService.getFirstAdminUserId();
 
-      if (adminUser) {
-        const isAdminInChat = currentParticipants.some(
-          (p) => p.userId === adminUser.id
+      if (adminUserId) {
+        const isAdminInChat = await messageService.isUserInChat(
+          adminUserId,
+          chatId
         );
         if (!isAdminInChat) {
-          await messageService.addChatParticipant(chatId, adminUser.id, true);
+          await messageService.addChatParticipant(chatId, adminUserId, true);
         }
       }
     }

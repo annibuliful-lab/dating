@@ -28,9 +28,10 @@ export async function DELETE(
       );
     }
 
-    // Check if the requester is a participant and admin
-    const participants = await messageService.getChatParticipants(chatId);
-    const requester = participants.find((p) => p.userId === session.user.id);
+    const requester = await messageService.getChatParticipant(
+      chatId,
+      session.user.id,
+    );
 
     if (!requester) {
       return NextResponse.json(
@@ -54,8 +55,10 @@ export async function DELETE(
       );
     }
 
-    // Check if the user to be removed is a participant
-    const targetUser = participants.find((p) => p.userId === userId);
+    const targetUser = await messageService.getChatParticipant(
+      chatId,
+      userId,
+    );
     if (!targetUser) {
       return NextResponse.json(
         { error: "User is not a participant in this chat" },

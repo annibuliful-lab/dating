@@ -1,7 +1,6 @@
 "use client";
 
 import { UserProfile } from "@/@types/user";
-import { supabase } from "@/client/supabase";
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
@@ -11,6 +10,7 @@ import { AgeIcon } from "@/components/icons/AgeIcon";
 import { GenderIcon } from "@/components/icons/GenderIcon";
 import { RulerIcon } from "@/components/icons/RulerIcon";
 import { SingleIcon } from "@/components/icons/SingleIcon";
+import { useAdminCheck } from "@/hooks/useAdmin";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { getUserProfile } from "@/services/profile/get";
 import { messageService } from "@/services/supabase/messages";
@@ -38,12 +38,10 @@ function ProfileViewPage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<{
-    role: string;
-  } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isUnverifying, setIsUnverifying] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const { data: adminData } = useAdminCheck();
 
   const verifyMutation = useApiMutation<{ success: boolean }>(
     `/api/users/${params.userId}/verify`
@@ -63,25 +61,13 @@ function ProfileViewPage() {
       setLoading(true);
       const userProfile = await getUserProfile(params.userId);
       setProfile(userProfile);
-
-      // Fetch current user to check if admin
-      if (session?.user?.id) {
-        const { data: currentUserData } = await supabase
-          .from("User")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
-        if (currentUserData && !("error" in currentUserData)) {
-          setCurrentUser(currentUserData as { role: string });
-        }
-      }
     } catch (err) {
       console.error("Error fetching profile:", err);
       setError("Failed to load profile");
     } finally {
       setLoading(false);
     }
-  }, [params.userId, session?.user?.id]);
+  }, [params.userId]);
 
   useEffect(() => {
     fetchProfile();
@@ -121,7 +107,7 @@ function ProfileViewPage() {
     }
   };
 
-  const isAdmin = currentUser?.role === "ADMIN";
+  const isAdmin = adminData?.isAdmin || adminData?.role === "ADMIN";
   const isOwnProfile = session?.user?.id === params.userId;
 
   const handleStartChat = async () => {

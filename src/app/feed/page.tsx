@@ -1,6 +1,5 @@
 'use client';
 
-import { BUCKET_NAME, supabase } from '@/client/supabase';
 import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { BOTTOM_NAVBAR_HEIGHT_PX } from '@/components/element/BottomNavbar';
 import {
@@ -10,8 +9,10 @@ import {
 import { useAdminCheck } from '@/hooks/useAdmin';
 import { useUserStatusCheck } from '@/hooks/useUser';
 import { adminService } from '@/services/admin';
+import { adService } from '@/services/supabase/ads';
 import { messageService } from '@/services/supabase/messages';
 import { postService } from '@/services/supabase/posts';
+import { getProfileImageUrl } from '@/services/supabase/storage';
 import { Carousel } from '@mantine/carousel';
 import {
   Avatar,
@@ -35,7 +36,7 @@ import { notifications } from '@mantine/notifications';
 import type { EmblaCarouselType } from 'embla-carousel';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Post = {
   id: string;
@@ -92,13 +93,7 @@ function FeedPage() {
   useEffect(() => {
     if (status === 'authenticated') {
       (async function () {
-        // const ads = await supabase.from('Ad').select();
-        // console.debug('ads', ads);
-        // const images = ads.data?.map((ad) => ad.imageUrl);
-        // if (images) {
-        //   setBannerImages(images);
-        // }
-
+        fetchBannerAds();
         fetchPosts(0);
         // Show infographic modal when entering feed page
         setInfographicModalOpened(true);
@@ -151,13 +146,9 @@ function FeedPage() {
           content?: unknown;
           [key: string]: unknown;
         };
-        let profileImageUrl = null;
-        if (postData.User?.profileImageKey) {
-          const { data: imageData } = supabase.storage
-            .from(BUCKET_NAME)
-            .getPublicUrl(postData.User.profileImageKey);
-          profileImageUrl = imageData.publicUrl;
-        }
+        const profileImageUrl = getProfileImageUrl(
+          postData.User?.profileImageKey,
+        );
 
         // Handle backward compatibility: convert string imageUrl to array
         let imageUrlArray: string[] | null = null;
@@ -204,6 +195,16 @@ function FeedPage() {
     }
   };
 
+  const fetchBannerAds = async (options?: { force?: boolean }) => {
+    try {
+      const ads = await adService.getActiveAds(options);
+      setBannerImages(ads.map((ad) => ad.imageUrl).filter(Boolean));
+    } catch (err) {
+      console.error('Error fetching banner ads:', err);
+      setBannerImages([]);
+    }
+  };
+
   // Clean up banner interval on unmount
   useEffect(() => {
     return () => {
@@ -246,6 +247,7 @@ function FeedPage() {
   const handleTouchEnd = () => {
     if (isPulling.current && pullDistance > 50) {
       fetchPosts(0, true);
+      fetchBannerAds({ force: true });
     }
     setPullDistance(0);
     isPulling.current = false;

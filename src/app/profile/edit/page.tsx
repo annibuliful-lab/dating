@@ -1,7 +1,6 @@
 'use client';
 
 import { ProfileImage } from '@/@types/user';
-import { supabase } from '@/client/supabase';
 import { TOP_NAVBAR_HEIGHT_PX } from '@/components/element/TopNavbar';
 import { CalendarIcon } from '@/components/icons/CalendarIcon';
 import { CameraIcon } from '@/components/icons/CameraIcon';
@@ -9,6 +8,10 @@ import { compressImage } from '@/lib/image-compression';
 import { getUserProfile } from '@/services/profile/get';
 import { saveProfileImages } from '@/services/profile/images';
 import { updateUserProfile } from '@/services/profile/update';
+import {
+  deletePublicStorageFiles,
+  uploadPublicStorageFile,
+} from '@/services/supabase/storage';
 import {
   Badge,
   Box,
@@ -77,7 +80,6 @@ function EditProfilePage() {
   const profileImagesInputRef = useRef<HTMLInputElement | null>(null);
 
   const userId = data?.user?.id;
-  const BUCKET = 'dating';
 
   const openFilePicker = () => fileInputRef.current?.click();
   const openProfileImagesPicker = () =>
@@ -245,23 +247,13 @@ function EditProfilePage() {
         userId || 'anon'
       }/avatar-${userId}-${new Date().toISOString()}.${ext}`;
 
-      // Upload compressed file
-      const { error: uploadErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(key, compressedFile, {
-          upsert: true,
-          contentType: compressedFile.type,
-          cacheControl: '3600',
-        });
+      const publicUrl = await uploadPublicStorageFile(
+        key,
+        compressedFile,
+        { upsert: true },
+      );
 
-      if (uploadErr) throw uploadErr;
-
-      // Get public URL
-      const { data: pub } = supabase.storage
-        .from(BUCKET)
-        .getPublicUrl(key);
-
-      setAvatarUrl(pub.publicUrl);
+      setAvatarUrl(publicUrl);
       setAvatarKey(key);
     } catch (err) {
       console.error(err);
@@ -329,26 +321,15 @@ function EditProfilePage() {
           .toString(36)
           .substring(2)}.${ext}`;
 
-        // Upload compressed file
-        const { error: uploadErr } = await supabase.storage
-          .from(BUCKET)
-          .upload(key, compressedFile, {
-            upsert: false,
-            contentType: compressedFile.type,
-            cacheControl: '3600',
-          });
-
-        if (uploadErr) throw uploadErr;
-
-        // Get public URL
-        const { data: pub } = supabase.storage
-          .from(BUCKET)
-          .getPublicUrl(key);
+        const publicUrl = await uploadPublicStorageFile(
+          key,
+          compressedFile,
+        );
 
         newImages.push({
           id: `temp-${Date.now()}-${Math.random()}`,
           imageKey: key,
-          imageUrl: pub.publicUrl,
+          imageUrl: publicUrl,
           order: profileImages.length + newImages.length,
           tempId: `temp-${Date.now()}-${Math.random()}`,
         });
@@ -375,12 +356,9 @@ function EditProfilePage() {
 
     // If it's a temporary image (not saved yet), delete from storage
     if (image.tempId && userId) {
-      supabase.storage
-        .from(BUCKET)
-        .remove([image.imageKey])
-        .catch((err) =>
-          console.error('Error deleting temp image:', err),
-        );
+      deletePublicStorageFiles([image.imageKey]).catch((err) =>
+        console.error('Error deleting temp image:', err),
+      );
     }
   };
 

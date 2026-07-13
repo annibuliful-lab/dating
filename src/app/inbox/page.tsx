@@ -1,6 +1,5 @@
 'use client';
 
-import { BUCKET_NAME, supabase } from '@/client/supabase';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
@@ -9,6 +8,7 @@ import { UserPlusIcon } from '@/components/icons/UserPlusIcon';
 // Using a simple refresh icon from Mantine
 import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { messageService } from '@/services/supabase/messages';
+import { getProfileImageUrl } from '@/services/supabase/storage';
 import { userService } from '@/services/supabase/users';
 import {
   ActionIcon,
@@ -140,13 +140,9 @@ function InboxPage() {
             participants: otherParticipants
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               .map((p: any) => {
-                let profileImageUrl = null;
-                if (p.User?.profileImageKey) {
-                  const { data: imageData } = supabase.storage
-                    .from(BUCKET_NAME)
-                    .getPublicUrl(p.User.profileImageKey);
-                  profileImageUrl = imageData.publicUrl;
-                }
+                const profileImageUrl = getProfileImageUrl(
+                  p.User?.profileImageKey,
+                );
                 return {
                   id: p.userId,
                   fullName: p.User?.fullName || 'Unknown',
@@ -239,7 +235,7 @@ function InboxPage() {
   // Search users when query changes
   useEffect(() => {
     const searchUsers = async () => {
-      if (!searchQuery.trim()) {
+      if (searchQuery.trim().length < 2) {
         setSearchResults([]);
         setSearchLoading(false);
         return;
@@ -252,13 +248,9 @@ function InboxPage() {
         const filteredResults = results
           .filter((user) => user.id !== session?.user?.id)
           .map((user) => {
-            let profileImageUrl = null;
-            if (user.profileImageKey) {
-              const { data: imageData } = supabase.storage
-                .from(BUCKET_NAME)
-                .getPublicUrl(user.profileImageKey);
-              profileImageUrl = imageData.publicUrl;
-            }
+            const profileImageUrl = getProfileImageUrl(
+              user.profileImageKey,
+            );
             return {
               ...user,
               profileImageUrl,
@@ -667,9 +659,11 @@ function InboxPage() {
           ) : searchResults.length === 0 ? (
             <Center py="xl">
               <Text c="dimmed" size="sm">
-                {searchQuery.trim()
-                  ? 'No users found'
-                  : 'No active users available'}
+                {searchQuery.trim().length === 1
+                  ? 'Type at least 2 characters to search'
+                  : searchQuery.trim().length >= 2
+                    ? 'No users found'
+                    : 'No active users available'}
               </Text>
             </Center>
           ) : (

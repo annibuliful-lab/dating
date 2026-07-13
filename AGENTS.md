@@ -35,6 +35,7 @@ That means schema changes usually require all of the following:
   - `src/auth.ts`
   - `src/app/signin/page.tsx`
   - `src/app/signup/page.tsx`
+  - `src/app/line-auth-test/page.tsx`
   - `src/app/api/auth/register/route.ts`
 - Providers:
   - Credentials
@@ -45,6 +46,9 @@ That means schema changes usually require all of the following:
 
 Important behavior:
 
+- The main `/signin` and `/signup` pages are currently email/password only in the UI.
+- LINE auth is still enabled in NextAuth, but it is exposed through the dedicated public test page at `/line-auth-test`.
+- The `LineSignIn` button component is reusable and currently drives all visible LINE auth entry points.
 - OAuth sign-in uses `upsertUserAccount()` in `src/auth.ts`.
 - New OAuth users are created with placeholder values:
   - empty `fullName`
@@ -56,7 +60,7 @@ Important behavior:
 ### Route Protection and Onboarding
 
 - Middleware/proxy logic lives in `src/proxy.ts`.
-- Public routes: `/`, `/auth/error`.
+- Public routes: `/`, `/auth/error`, `/line-auth-test`.
 - Auth routes: `/signin`, `/signup`.
 - Protected routes: `/feed`, `/profile`, `/inbox`, `/create`.
 - Admin routes: `/admin/*`.
@@ -267,6 +271,7 @@ Conventions to preserve:
 - Top and bottom nav spacing uses exported pixel constants.
 - Safe-area-aware spacing patterns are already used in several places.
 - Dark styling is common across the app; match existing page tone unless doing an intentional redesign.
+- Routes excluded from the standard navbar/client shell currently include `/signin`, `/signup`, `/auth/error`, and `/line-auth-test`.
 
 ## Environment and Commands
 
@@ -306,6 +311,7 @@ Notable environment variables from `env.sample`:
 - Admin access is determined from `User.role`.
 - Suspension behavior is business-critical.
 - Verification state affects rendering and navigation, not just badge display.
+- LINE OAuth still works in the backend even though it is hidden from the main auth screens.
 
 ### Unsafe assumptions
 
@@ -319,7 +325,7 @@ Notable environment variables from `env.sample`:
 
 Check these first if the change touches:
 
-- auth: `src/auth.ts`, `src/proxy.ts`, `src/@types/next-auth.d.ts`
+- auth: `src/auth.ts`, `src/proxy.ts`, `src/@types/next-auth.d.ts`, `src/components/social-button/LineSignIn.tsx`
 - profile: `src/services/profile/*`, `src/app/profile/*`
 - chat: `src/services/supabase/messages.ts`, `src/app/inbox/*`, `src/components/chat/*`
 - admin: `src/lib/admin.ts`, `src/app/api/admin/*`, `src/app/admin/*`

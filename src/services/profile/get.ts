@@ -1,5 +1,6 @@
 import { ProfileImage, UserProfile } from '@/@types/user';
-import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { supabase } from '@/client/supabase';
+import { getProfileImageUrl } from '@/services/supabase/storage';
 
 export async function getUserProfile(
   userId: string,
@@ -73,28 +74,18 @@ export async function getUserProfile(
       profileImagesData as Array<
         Pick<ProfileImageRow, 'id' | 'imageKey' | 'order'>
       >
-    ).map((img) => {
-      const { data: imageUrlData } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(img.imageKey);
-
-      return {
+    ).map((img) => ({
         id: img.id,
         imageKey: img.imageKey,
-        imageUrl: imageUrlData.publicUrl,
+        imageUrl: getProfileImageUrl(img.imageKey) || '',
         order: img.order,
-      };
-    });
+      }));
   }
 
   if (userProfile.profileImageKey) {
-    const { data: profileUrl } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(userProfile.profileImageKey);
-
     return {
       ...userProfile,
-      avatarUrl: profileUrl.publicUrl as string,
+      avatarUrl: getProfileImageUrl(userProfile.profileImageKey),
       profileImages,
       verifiedByUsername,
       userStatus: userProfile.status as

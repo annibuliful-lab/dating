@@ -33,11 +33,15 @@ const pendingChatSummaryRequests = new Map<
   Promise<ChatSummary>
 >();
 const UNREAD_COUNT_INVALIDATED_EVENT = 'unread-count-invalidated';
+let chatCacheGeneration = 0;
 
 function clearChatCaches(chatId?: string) {
+  chatCacheGeneration += 1;
   userChatsCache.clear();
+  pendingUserChatsRequests.clear();
   if (!chatId) {
     chatSummaryCache.clear();
+    pendingChatSummaryRequests.clear();
     return;
   }
 
@@ -46,6 +50,37 @@ function clearChatCaches(chatId?: string) {
       chatSummaryCache.delete(key);
     }
   });
+  Array.from(pendingChatSummaryRequests.keys()).forEach((key) => {
+    if (key.startsWith(`${chatId}:`)) {
+      pendingChatSummaryRequests.delete(key);
+    }
+  });
+}
+
+function notifyUnreadCountInvalidated() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(UNREAD_COUNT_INVALIDATED_EVENT));
+  }
+}
+
+async function refreshChatLatestMessageMetadata(chatId: string) {
+  const { data: latestMessage, error } = await supabase
+    .from('Message')
+    .select('id, createdAt')
+    .eq('chatId', chatId)
+    .order('createdAt', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+
+  await supabase
+    .from('Chat')
+    .update({
+      lastMessageId: latestMessage?.id || null,
+      lastMessageAt: latestMessage?.createdAt || null,
+    } as never)
+    .eq('id', chatId);
 }
 
 export const messageService = {
@@ -161,6 +196,7 @@ export const messageService = {
       } as never)
       .eq('id', messageData.chatId);
     clearChatCaches(messageData.chatId);
+    notifyUnreadCountInvalidated();
 
     const channel = supabase.channel(
       `messages:${messageData.chatId}`,
@@ -291,49 +327,50 @@ export const messageService = {
       if (pending) return pending;
     }
 
+    const requestGeneration = chatCacheGeneration;
     const request = (async () => {
       const { data, error } = await supabase
-      .from('ChatParticipant')
-      .select(
-        `
-        *,
-        Chat!ChatParticipant_chatId_fkey (
+        .from('ChatParticipant')
+        .select(
+          `
           *,
-          Message!Chat_lastMessageId_fkey (
-            id,
-            chatId,
-            senderId,
-            text,
-            imageUrl,
-            createdAt,
-            User!Message_senderId_fkey (
-              id,
-              fullName,
-              username,
-              profileImageKey,
-              isVerified,
-              role
-            )
-          ),
-          User!Chat_createdById_fkey (
-            id,
-            fullName,
-            profileImageKey
-          ),
-          ChatParticipant!ChatParticipant_chatId_fkey (
+          Chat!ChatParticipant_chatId_fkey (
             *,
-            User!ChatParticipant_userId_fkey (
+            Message!Chat_lastMessageId_fkey (
+              id,
+              chatId,
+              senderId,
+              text,
+              imageUrl,
+              createdAt,
+              User!Message_senderId_fkey (
+                id,
+                fullName,
+                username,
+                profileImageKey,
+                isVerified,
+                role
+              )
+            ),
+            User!Chat_createdById_fkey (
               id,
               fullName,
-              profileImageKey,
-              role
+              profileImageKey
+            ),
+            ChatParticipant!ChatParticipant_chatId_fkey (
+              *,
+              User!ChatParticipant_userId_fkey (
+                id,
+                fullName,
+                profileImageKey,
+                role
+              )
             )
           )
+        `,
         )
-      `,
-      )
-      .eq('userId', userId)
-      .order('id', { ascending: false });
+        .eq('userId', userId)
+        .order('id', { ascending: false });
 
       if (error) throw new Error(error.message);
       if (!data) return [];
@@ -387,15 +424,19 @@ export const messageService = {
       });
 
       return sortedChats as never;
-    })().then((result) => {
-      userChatsCache.set(userId, {
-        data: result,
-        timestamp: Date.now(),
+    })()
+      .then((result) => {
+        if (requestGeneration === chatCacheGeneration) {
+          userChatsCache.set(userId, {
+            data: result,
+            timestamp: Date.now(),
+          });
+        }
+        return result;
+      })
+      .finally(() => {
+        pendingUserChatsRequests.delete(userId);
       });
-      return result;
-    }).finally(() => {
-      pendingUserChatsRequests.delete(userId);
-    });
 
     pendingUserChatsRequests.set(userId, request);
     return request;
@@ -411,6 +452,7 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to create chat');
+    clearChatCaches(data.id);
     return data;
   },
 
@@ -433,6 +475,7 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to add chat participant');
+    clearChatCaches(chatId);
     return data;
   },
 
@@ -445,6 +488,7 @@ export const messageService = {
       .eq('userId', userId);
 
     if (error) throw new Error(error.message);
+    clearChatCaches(chatId);
     return true;
   },
 
@@ -459,6 +503,7 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to update chat name');
+    clearChatCaches(chatId);
     return data;
   },
 
@@ -517,6 +562,7 @@ export const messageService = {
       if (pending) return pending;
     }
 
+    const requestGeneration = chatCacheGeneration;
     const request = (async () => {
       const { data, error } = await supabase
         .from('ChatParticipant')
@@ -570,10 +616,12 @@ export const messageService = {
       };
     })()
       .then((result) => {
-        chatSummaryCache.set(cacheKey, {
-          data: result,
-          timestamp: Date.now(),
-        });
+        if (requestGeneration === chatCacheGeneration) {
+          chatSummaryCache.set(cacheKey, {
+            data: result,
+            timestamp: Date.now(),
+          });
+        }
         return result;
       })
       .finally(() => {
@@ -649,6 +697,7 @@ export const messageService = {
       this.addChatParticipant(newChat.id, user2Id, false),
     ]);
 
+    clearChatCaches(newChat.id);
     return newChat;
   },
 
@@ -657,6 +706,7 @@ export const messageService = {
     chatId: string,
     callback: MessageSubscriptionCallback,
   ) {
+    const broadcastMessageIds = new Set<string>();
     const channel = supabase
       .channel(`messages:${chatId}`, {
         config: {
@@ -666,7 +716,12 @@ export const messageService = {
       })
       // Listen for broadcast messages (faster, no database query needed)
       .on('broadcast', { event: 'new_message' }, (payload) => {
-        callback(payload.payload);
+        const message = payload.payload as MessageWithUser;
+        broadcastMessageIds.add(message.id);
+        setTimeout(() => {
+          broadcastMessageIds.delete(message.id);
+        }, 10000);
+        callback(message);
       })
       // Fallback to postgres_changes for reliability
       .on(
@@ -679,6 +734,10 @@ export const messageService = {
         },
         async (payload) => {
           try {
+            if (broadcastMessageIds.has(payload.new.id as string)) {
+              return;
+            }
+
             // Fetch the complete message with user data
             const { data, error } = await supabase
               .from('Message')
@@ -802,9 +861,8 @@ export const messageService = {
       .eq('userId', userId);
 
     if (error) throw new Error(error.message);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event(UNREAD_COUNT_INVALIDATED_EVENT));
-    }
+    clearChatCaches(chatId);
+    notifyUnreadCountInvalidated();
     return true;
   },
 
@@ -939,6 +997,7 @@ export const messageService = {
         ),
     );
 
+    clearChatCaches(chat.id);
     return chat;
   },
 
@@ -968,17 +1027,31 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to edit message');
+    clearChatCaches(data.chatId);
     return data as unknown as MessageWithUser;
   },
 
   // Delete a message
   async deleteMessage(messageId: string): Promise<boolean> {
+    const { data: existingMessage, error: lookupError } = await supabase
+      .from('Message')
+      .select('chatId')
+      .eq('id', messageId)
+      .single();
+
+    if (lookupError) throw new Error(lookupError.message);
+
     const { error } = await supabase
       .from('Message')
       .delete()
       .eq('id', messageId);
 
     if (error) throw new Error(error.message);
+    if (existingMessage?.chatId) {
+      await refreshChatLatestMessageMetadata(existingMessage.chatId);
+      clearChatCaches(existingMessage.chatId);
+      notifyUnreadCountInvalidated();
+    }
     return true;
   },
 

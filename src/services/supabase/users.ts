@@ -1,5 +1,24 @@
 import { supabase } from '@/client/supabase';
 
+type UserSearchResult = {
+  id: string;
+  fullName: string;
+  username: string | null;
+  profileImageKey: string | null;
+  age: number | null;
+  gender: string | null;
+};
+
+const USER_SEARCH_CACHE_TTL_MS = 30 * 1000;
+const userSearchCache = new Map<
+  string,
+  { data: UserSearchResult[]; timestamp: number }
+>();
+const pendingUserSearchRequests = new Map<
+  string,
+  Promise<UserSearchResult[]>
+>();
+
 type UserUpdate = {
   fullName?: string;
   username?: string;
@@ -66,17 +85,44 @@ export const userService = {
 
   // Search users by username or full name
   async searchUsers(searchTerm: string) {
-    const { data, error } = await supabase
-      .from('User')
-      .select('id, fullName, username, profileImageKey, age, gender')
-      .or(
-        `fullName.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`,
-      )
-      .eq('status', 'ACTIVE')
-      .limit(20);
+    const normalizedSearchTerm = searchTerm.trim();
+    if (normalizedSearchTerm.length < 2) return [];
 
-    if (error) throw new Error(error.message);
-    return data;
+    const cacheKey = normalizedSearchTerm.toLowerCase();
+    const cached = userSearchCache.get(cacheKey);
+    if (
+      cached &&
+      Date.now() - cached.timestamp < USER_SEARCH_CACHE_TTL_MS
+    ) {
+      return cached.data;
+    }
+
+    const pending = pendingUserSearchRequests.get(cacheKey);
+    if (pending) return pending;
+
+    const request = (async () => {
+      const { data, error } = await supabase
+        .from('User')
+        .select('id, fullName, username, profileImageKey, age, gender')
+        .or(
+          `fullName.ilike.%${normalizedSearchTerm}%,username.ilike.%${normalizedSearchTerm}%`,
+        )
+        .eq('status', 'ACTIVE')
+        .limit(20);
+
+      if (error) throw new Error(error.message);
+      const result = (data || []) as UserSearchResult[];
+      userSearchCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now(),
+      });
+      return result;
+    })().finally(() => {
+      pendingUserSearchRequests.delete(cacheKey);
+    });
+
+    pendingUserSearchRequests.set(cacheKey, request);
+    return request;
   },
 
   // Get users by age range

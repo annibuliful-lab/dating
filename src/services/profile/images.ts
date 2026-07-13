@@ -1,4 +1,9 @@
-import { BUCKET_NAME, supabase } from "@/client/supabase";
+import { supabase } from "@/client/supabase";
+import {
+  deletePublicStorageFiles,
+  getPublicStorageUrl,
+  uploadPublicStorageFile,
+} from "@/services/supabase/storage";
 
 export interface ProfileImageData {
   id: string;
@@ -90,13 +95,10 @@ export async function getProfileImages(
     (
       data as Array<Pick<ProfileImageRow, "id" | "imageKey" | "order">> | null
     )?.map((img) => {
-      const { data: imageUrlData } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(img.imageKey);
       return {
         id: img.id,
         imageKey: img.imageKey,
-        imageUrl: imageUrlData.publicUrl,
+        imageUrl: getPublicStorageUrl(img.imageKey) || "",
         order: img.order,
       };
     }) || []
@@ -117,15 +119,7 @@ export async function uploadProfileImage(
     .toString(36)
     .substring(2)}.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET_NAME)
-    .upload(imageKey, file, {
-      upsert: false,
-      contentType: file.type,
-      cacheControl: "3600",
-    });
-
-  if (uploadError) throw uploadError;
+  const imageUrl = await uploadPublicStorageFile(imageKey, file);
 
   // Create database record
   const insertData: ProfileImageInsert = {
@@ -141,13 +135,11 @@ export async function uploadProfileImage(
 
   if (error) {
     // If database insert fails, try to delete the uploaded file
-    await supabase.storage.from(BUCKET_NAME).remove([imageKey]);
+    await deletePublicStorageFiles([imageKey]).catch((deleteError) => {
+      console.error("Error deleting orphan profile image:", deleteError);
+    });
     throw error;
   }
-
-  const { data: imageUrlData } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(imageKey);
 
   const typedData = data as Pick<ProfileImageRow, "id" | "imageKey" | "order">;
   if (!typedData) {
@@ -157,7 +149,7 @@ export async function uploadProfileImage(
   return {
     id: typedData.id,
     imageKey: typedData.imageKey,
-    imageUrl: imageUrlData.publicUrl,
+    imageUrl,
     order: typedData.order,
   };
 }
@@ -177,10 +169,9 @@ export async function deleteProfileImage(imageId: string): Promise<void> {
   // Delete from storage
   const typedImageData = imageData as Pick<ProfileImageRow, "imageKey"> | null;
   if (typedImageData?.imageKey) {
-    const { error: deleteError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .remove([typedImageData.imageKey]);
-    if (deleteError) {
+    try {
+      await deletePublicStorageFiles([typedImageData.imageKey]);
+    } catch (deleteError) {
       console.error("Error deleting file from storage:", deleteError);
       // Continue to delete DB record even if storage delete fails
     }

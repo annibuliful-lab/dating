@@ -63,10 +63,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get latest message for each chat
-    const chatsWithLatestMessage = await Promise.all(
-      (chats || []).map(async (chat) => {
-        const { data: latestMessage } = await supabase
+    const chatIds = (chats || []).map((chat) => chat.id);
+    const latestMessagesByChat = new Map<string, unknown>();
+
+    if (chatIds.length > 0) {
+      const { data: latestMessages, error: latestMessagesError } =
+        await supabase
           .from('Message')
           .select(
             `
@@ -80,17 +82,31 @@ export async function GET(req: NextRequest) {
             )
           `,
           )
-          .eq('chatId', chat.id)
-          .order('createdAt', { ascending: false })
-          .limit(1)
-          .single();
+          .in('chatId', chatIds)
+          .order('createdAt', { ascending: false });
 
-        return {
-          ...chat,
-          latestMessage: latestMessage || null,
-        };
-      }),
-    );
+      if (latestMessagesError) {
+        console.error(
+          'Error fetching latest messages:',
+          latestMessagesError,
+        );
+        return NextResponse.json(
+          { error: 'Failed to fetch latest messages' },
+          { status: 500 },
+        );
+      }
+
+      (latestMessages || []).forEach((message) => {
+        if (!latestMessagesByChat.has(message.chatId)) {
+          latestMessagesByChat.set(message.chatId, message);
+        }
+      });
+    }
+
+    const chatsWithLatestMessage = (chats || []).map((chat) => ({
+      ...chat,
+      latestMessage: latestMessagesByChat.get(chat.id) || null,
+    }));
 
     return NextResponse.json(chatsWithLatestMessage);
   } catch (error) {

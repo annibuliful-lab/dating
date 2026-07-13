@@ -6,7 +6,7 @@ import {
 } from '@/components/element/BottomNavbar';
 import { VerifyPrompt } from '@/components/layout/VerifyPrompt';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { Box } from '@mantine/core';
+import { Box, Button, Container, Stack, Text } from '@mantine/core';
 
 import { usePathname } from 'next/navigation';
 
@@ -18,7 +18,8 @@ export function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { status, userProfile, loading } = useUserProfile();
+  const { status, userProfile, loading, error, refetch } =
+    useUserProfile();
 
   console.debug('pathname', pathname);
   // Check if current route should not show navbar
@@ -32,6 +33,21 @@ export function ClientLayout({
 
   if (status === 'loading' || loading) {
     return null;
+  }
+
+  if (status === 'authenticated' && error) {
+    return (
+      <Container size="xs" py="xl">
+        <Stack align="center" gap="md">
+          <Text c="red" ta="center">
+            Failed to load your profile.
+          </Text>
+          <Button variant="filled" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </Stack>
+      </Container>
+    );
   }
 
   if (status === 'authenticated' && userProfile && !userProfile.isVerified) {

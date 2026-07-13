@@ -6,7 +6,10 @@ import {
   TopNavbar,
 } from '@/components/element/TopNavbar';
 import { useApiMutation } from '@/hooks/useApiMutation';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import {
+  notifyUserProfileUpdated,
+  useUserProfile,
+} from '@/hooks/useUserProfile';
 import {
   Box,
   Button,
@@ -28,7 +31,7 @@ function ProfilePage() {
   const { data, status } = useSession();
   const userId = data?.user.id;
 
-  const { userProfile, loading, error } = useUserProfile();
+  const { userProfile, loading, error, refetch } = useUserProfile();
   const [isVerifying, setIsVerifying] = useState(false);
 
   const verifyMutation = useApiMutation<{ success: boolean }>(
@@ -42,8 +45,8 @@ function ProfilePage() {
       setIsVerifying(true);
       const result = await verifyMutation.mutate({});
       if (result?.success) {
-        // Refresh profile after verification
-        window.location.reload();
+        await refetch();
+        notifyUserProfileUpdated();
       } else {
         throw new Error('Verification failed');
       }

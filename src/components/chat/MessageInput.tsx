@@ -152,6 +152,7 @@ export const MessageInput = forwardRef<
         style={{
           paddingBottom: 'calc(env(safe-area-inset-bottom))',
           borderTop: '1px solid var(--mantine-color-dark-4)',
+          zIndex: 90,
         }}
       >
         {selectedMedia &&

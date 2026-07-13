@@ -29,7 +29,7 @@ import {
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 function ProfileViewPage() {
   const params = useParams<{ userId: string }>();
@@ -52,40 +52,40 @@ function ProfileViewPage() {
     `/api/users/${params.userId}/unverify`
   );
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!params.userId) {
-        setError("User ID not provided");
-        setLoading(false);
-        return;
-      }
+  const fetchProfile = useCallback(async () => {
+    if (!params.userId) {
+      setError("User ID not provided");
+      setLoading(false);
+      return;
+    }
 
-      try {
-        setLoading(true);
-        const userProfile = await getUserProfile(params.userId);
-        setProfile(userProfile);
+    try {
+      setLoading(true);
+      const userProfile = await getUserProfile(params.userId);
+      setProfile(userProfile);
 
-        // Fetch current user to check if admin
-        if (session?.user?.id) {
-          const { data: currentUserData } = await supabase
-            .from("User")
-            .select("role")
-            .eq("id", session.user.id)
-            .single();
-          if (currentUserData && !("error" in currentUserData)) {
-            setCurrentUser(currentUserData as { role: string });
-          }
+      // Fetch current user to check if admin
+      if (session?.user?.id) {
+        const { data: currentUserData } = await supabase
+          .from("User")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+        if (currentUserData && !("error" in currentUserData)) {
+          setCurrentUser(currentUserData as { role: string });
         }
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        setError("Failed to load profile");
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchProfile();
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+      setError("Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
   }, [params.userId, session?.user?.id]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleVerify = async () => {
     if (!params.userId) return;
@@ -93,8 +93,7 @@ function ProfileViewPage() {
     try {
       setIsVerifying(true);
       await verifyMutation.mutate({});
-      // Refresh profile after verification
-      window.location.reload();
+      await fetchProfile();
     } catch (error) {
       if (error instanceof Error) {
         console.error("Error verifying user:", error);
@@ -111,8 +110,7 @@ function ProfileViewPage() {
     try {
       setIsUnverifying(true);
       await unverifyMutation.mutate({});
-      // Refresh profile after unverification
-      window.location.reload();
+      await fetchProfile();
     } catch (error) {
       if (error instanceof Error) {
         console.error("Error unverifying user:", error);

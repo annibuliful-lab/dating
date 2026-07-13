@@ -1,7 +1,10 @@
 'use client';
 
 import { LineIcon } from '@/components/icons/LineIcon';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import {
+  notifyUserProfileUpdated,
+  useUserProfile,
+} from '@/hooks/useUserProfile';
 import {
   Box,
   Button,
@@ -19,15 +22,8 @@ import { useState } from 'react';
 export function VerifyPrompt() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { userProfile } = useUserProfile();
-  const handleSkip = () => {
-    // When user skips verification:
-    // - They can still use the app (status remains ACTIVE)
-    // - isVerified remains false (no verify mark will be shown)
-    // - Verification status will remain as "รอยืนยันตัวตน" (waiting for verification)
-    // - No changes are made to the user's verification status
-    router.push('/feed');
-  };
+  const [isCompleting, setIsCompleting] = useState(false);
+  const { userProfile, refetch } = useUserProfile();
 
   const handleAddLineOA = () => {
     // Open modal to show QR code
@@ -38,10 +34,29 @@ export function VerifyPrompt() {
     setIsModalOpen(false);
   };
 
-  const handleCompleteVerification = () => {
-    // Close modal and redirect to feed
-    setIsModalOpen(false);
-    router.push('/feed');
+  const handleCompleteVerification = async () => {
+    if (!userProfile?.id || isCompleting) return;
+
+    try {
+      setIsCompleting(true);
+      const response = await fetch(`/api/users/${userProfile.id}/verify`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || 'Failed to verify user');
+      }
+
+      await refetch();
+      notifyUserProfileUpdated();
+      setIsModalOpen(false);
+      router.push('/feed');
+    } catch (error) {
+      console.error('Error completing verification:', error);
+    } finally {
+      setIsCompleting(false);
+    }
   };
 
   return (
@@ -94,21 +109,6 @@ export function VerifyPrompt() {
             >
               เพิ่ม Line OA
             </Button>
-
-            {userProfile?.isVerified && (
-              <Button
-                fullWidth
-                variant="subtle"
-                onClick={handleSkip}
-                styles={{
-                  root: {
-                    color: 'white',
-                  },
-                }}
-              >
-                ข้าม
-              </Button>
-            )}
           </Stack>
 
           {/* <Text size="xs" c="dimmed" ta="center">
@@ -230,6 +230,7 @@ export function VerifyPrompt() {
               fullWidth
               variant="primary"
               onClick={handleCompleteVerification}
+              loading={isCompleting}
             >
               เสร็จสิ้น
             </Button>

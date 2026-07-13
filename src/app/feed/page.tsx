@@ -1,7 +1,6 @@
 'use client';
 
 import { BUCKET_NAME, supabase } from '@/client/supabase';
-import { NewUserRedirect } from '@/components/auth/NewUserRedirect';
 import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { BOTTOM_NAVBAR_HEIGHT_PX } from '@/components/element/BottomNavbar';
 import {
@@ -351,7 +350,6 @@ function FeedPage() {
 
   return (
     <Box>
-      <NewUserRedirect />
       <SuspendedUserRedirect />
       <TopNavbar title="Feed and Contents" />
       <Container

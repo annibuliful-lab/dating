@@ -33,14 +33,36 @@ type PostWithUser = {
   PostSave?: Array<{ count?: number }>;
 };
 
+const PUBLIC_POSTS_CACHE_TTL_MS = 30 * 1000;
+const publicPostsCache = new Map<
+  string,
+  { data: unknown[]; timestamp: number }
+>();
+const pendingPublicPostRequests = new Map<string, Promise<unknown[]>>();
+
 export const postService = {
   // Fetch all public posts with author information
-  async getPublicPosts(limit = 20, offset = 0) {
+  async getPublicPosts(limit = 20, offset = 0, options?: { force?: boolean }) {
+    const cacheKey = `${limit}:${offset}`;
+    if (!options?.force) {
+      const cached = publicPostsCache.get(cacheKey);
+      if (
+        cached &&
+        Date.now() - cached.timestamp < PUBLIC_POSTS_CACHE_TTL_MS
+      ) {
+        return cached.data;
+      }
+
+      const pending = pendingPublicPostRequests.get(cacheKey);
+      if (pending) return pending;
+    }
+
     // only return posts from the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data, error } = await supabase
+    const request = (async () => {
+      const { data, error } = await supabase
       .from('Post')
       .select(
         `
@@ -63,58 +85,70 @@ export const postService = {
       .order('createdAt', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) throw new Error(error.message);
+      if (error) throw new Error(error.message);
 
-    // ✅ OPTIMIZED: Deduplicate verified user IDs to avoid N+1 queries
-    const verifiedByUserIds = [
-      ...new Set(
-        (data as unknown as PostWithUser[] | null)
-          ?.map((post) => post.User?.verifiedBy)
-          .filter(
-            (id: string | null | undefined): id is string => !!id,
-          ) || [],
-      ),
-    ];
+      // ✅ OPTIMIZED: Deduplicate verified user IDs to avoid N+1 queries
+      const verifiedByUserIds = [
+        ...new Set(
+          (data as unknown as PostWithUser[] | null)
+            ?.map((post) => post.User?.verifiedBy)
+            .filter(
+              (id: string | null | undefined): id is string => !!id,
+            ) || [],
+        ),
+      ];
 
-    const verifiedByUsernames: Record<string, string> = {};
-    if (verifiedByUserIds.length > 0) {
-      // ✅ OPTIMIZED: Batch fetch in groups of 100 to handle large lists
-      const batchSize = 100;
-      for (let i = 0; i < verifiedByUserIds.length; i += batchSize) {
-        const batch = verifiedByUserIds.slice(i, i + batchSize);
-        const { data: verifiedByUsers } = await supabase
-          .from('User')
-          .select('id, username')
-          .in('id', batch);
+      const verifiedByUsernames: Record<string, string> = {};
+      if (verifiedByUserIds.length > 0) {
+        // ✅ OPTIMIZED: Batch fetch in groups of 100 to handle large lists
+        const batchSize = 100;
+        for (let i = 0; i < verifiedByUserIds.length; i += batchSize) {
+          const batch = verifiedByUserIds.slice(i, i + batchSize);
+          const { data: verifiedByUsers } = await supabase
+            .from('User')
+            .select('id, username')
+            .in('id', batch);
 
-        if (verifiedByUsers) {
-          verifiedByUsers.forEach(
-            (user: { id: string; username: string }) => {
-              verifiedByUsernames[user.id] = user.username;
-            },
-          );
+          if (verifiedByUsers) {
+            verifiedByUsers.forEach(
+              (user: { id: string; username: string }) => {
+                verifiedByUsernames[user.id] = user.username;
+              },
+            );
+          }
         }
       }
-    }
 
-    // Transform data to add verifiedByUsername
-    const transformedData = (
-      data as unknown as PostWithUser[] | null
-    )?.map((post) => {
-      const verifiedByUsername = post.User?.verifiedBy
-        ? verifiedByUsernames[post.User.verifiedBy] || null
-        : null;
+      // Transform data to add verifiedByUsername
+      const transformedData = (
+        data as unknown as PostWithUser[] | null
+      )?.map((post) => {
+        const verifiedByUsername = post.User?.verifiedBy
+          ? verifiedByUsernames[post.User.verifiedBy] || null
+          : null;
 
-      return {
-        ...post,
-        User: {
-          ...post.User,
-          verifiedByUsername,
-        },
-      };
+        return {
+          ...post,
+          User: {
+            ...post.User,
+            verifiedByUsername,
+          },
+        };
+      });
+
+      return (transformedData || data || []) as unknown[];
+    })().then((result) => {
+      publicPostsCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now(),
+      });
+      return result;
+    }).finally(() => {
+      pendingPublicPostRequests.delete(cacheKey);
     });
 
-    return transformedData || data;
+    pendingPublicPostRequests.set(cacheKey, request);
+    return request;
   },
 
   // Fetch posts by specific user

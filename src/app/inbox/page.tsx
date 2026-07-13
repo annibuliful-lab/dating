@@ -78,7 +78,7 @@ function InboxPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [groupChatName, setGroupChatName] = useState('');
 
-  const fetchUserChats = useCallback(async () => {
+  const fetchUserChats = useCallback(async (options?: { force?: boolean }) => {
     if (!session?.user?.id) return;
 
     try {
@@ -86,7 +86,8 @@ function InboxPage() {
       setError(null);
 
       const userChats = await messageService.getUserChats(
-        session.user.id
+        session.user.id,
+        { force: options?.force },
       );
 
       // Transform the data to match our ChatPreview type
@@ -180,7 +181,7 @@ function InboxPage() {
     if (!session?.user?.id) return;
 
     const interval = setInterval(() => {
-      fetchUserChats();
+      fetchUserChats({ force: true });
     }, 120000); // Refresh every 2 minutes to prevent rate limiting
 
     return () => clearInterval(interval);
@@ -232,39 +233,15 @@ function InboxPage() {
   };
 
   const handleRefresh = () => {
-    fetchUserChats();
+    fetchUserChats({ force: true });
   };
 
   // Search users when query changes
   useEffect(() => {
     const searchUsers = async () => {
       if (!searchQuery.trim()) {
-        // If no search query, show active users
-        try {
-          setSearchLoading(true);
-          const users = await userService.getActiveUsers();
-          // Filter out current user and convert profileImageKey to URL
-          const filteredUsers = users
-            .filter((user) => user.id !== session?.user?.id)
-            .map((user) => {
-              let profileImageUrl = null;
-              if (user.profileImageKey) {
-                const { data: imageData } = supabase.storage
-                  .from(BUCKET_NAME)
-                  .getPublicUrl(user.profileImageKey);
-                profileImageUrl = imageData.publicUrl;
-              }
-              return {
-                ...user,
-                profileImageUrl,
-              };
-            });
-          setSearchResults(filteredUsers);
-        } catch (err) {
-          console.error('Error fetching users:', err);
-        } finally {
-          setSearchLoading(false);
-        }
+        setSearchResults([]);
+        setSearchLoading(false);
         return;
       }
 
@@ -440,7 +417,7 @@ function InboxPage() {
               <Text
                 c="blue"
                 style={{ cursor: 'pointer' }}
-                onClick={fetchUserChats}
+                onClick={() => fetchUserChats({ force: true })}
               >
                 Try again
               </Text>

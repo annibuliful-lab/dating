@@ -10,6 +10,44 @@ import {
 } from '@/@types/message';
 import { supabase } from '@/client/supabase';
 
+const USER_CHATS_CACHE_TTL_MS = 30 * 1000;
+const userChatsCache = new Map<
+  string,
+  { data: ChatWithLatestMessage[]; timestamp: number }
+>();
+const pendingUserChatsRequests = new Map<
+  string,
+  Promise<ChatWithLatestMessage[]>
+>();
+const CHAT_SUMMARY_CACHE_TTL_MS = 60 * 1000;
+type ChatSummary = {
+  name: string | null;
+  isGroup: boolean;
+};
+const chatSummaryCache = new Map<
+  string,
+  { data: ChatSummary; timestamp: number }
+>();
+const pendingChatSummaryRequests = new Map<
+  string,
+  Promise<ChatSummary>
+>();
+const UNREAD_COUNT_INVALIDATED_EVENT = 'unread-count-invalidated';
+
+function clearChatCaches(chatId?: string) {
+  userChatsCache.clear();
+  if (!chatId) {
+    chatSummaryCache.clear();
+    return;
+  }
+
+  Array.from(chatSummaryCache.keys()).forEach((key) => {
+    if (key.startsWith(`${chatId}:`)) {
+      chatSummaryCache.delete(key);
+    }
+  });
+}
+
 export const messageService = {
   async getChatMessages(
     chatId: string,
@@ -115,6 +153,15 @@ export const messageService = {
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to send message');
 
+    await supabase
+      .from('Chat')
+      .update({
+        lastMessageId: data.id,
+        lastMessageAt: data.createdAt,
+      } as never)
+      .eq('id', messageData.chatId);
+    clearChatCaches(messageData.chatId);
+
     const channel = supabase.channel(
       `messages:${messageData.chatId}`,
     );
@@ -170,10 +217,34 @@ export const messageService = {
   ): Promise<Set<string>> {
     if (!chatIds.length) return new Set();
 
+    const neverReadChatIds = chatIds.filter(
+      (chatId) => !lastReadAtByChat[chatId],
+    );
+    const readChatIds = chatIds.filter(
+      (chatId) => !!lastReadAtByChat[chatId],
+    );
+    const unreadChatIds = new Set<string>();
+
+    if (neverReadChatIds.length > 0) {
+      const { data, error } = await supabase
+        .from('Message')
+        .select('chatId')
+        .in('chatId', neverReadChatIds)
+        .neq('senderId', userId);
+
+      if (error) throw new Error(error.message);
+
+      (data || []).forEach((row) => {
+        unreadChatIds.add(row.chatId);
+      });
+    }
+
+    if (!readChatIds.length) return unreadChatIds;
+
     const { data, error } = await supabase
       .from('Message')
       .select('chatId, createdAt')
-      .in('chatId', chatIds)
+      .in('chatId', readChatIds)
       .neq('senderId', userId)
       .order('createdAt', { ascending: false });
 
@@ -188,8 +259,7 @@ export const messageService = {
       }
     });
 
-    const unreadChatIds = new Set<string>();
-    chatIds.forEach((chatId) => {
+    readChatIds.forEach((chatId) => {
       const lastReadAt = lastReadAtByChat[chatId];
       const latestCreatedAt = latestByChat.get(chatId);
       if (!latestCreatedAt) return;
@@ -206,14 +276,45 @@ export const messageService = {
 
   async getUserChats(
     userId: string,
+    options?: { force?: boolean },
   ): Promise<ChatWithLatestMessage[]> {
-    const { data, error } = await supabase
+    if (!options?.force) {
+      const cached = userChatsCache.get(userId);
+      if (
+        cached &&
+        Date.now() - cached.timestamp < USER_CHATS_CACHE_TTL_MS
+      ) {
+        return cached.data;
+      }
+
+      const pending = pendingUserChatsRequests.get(userId);
+      if (pending) return pending;
+    }
+
+    const request = (async () => {
+      const { data, error } = await supabase
       .from('ChatParticipant')
       .select(
         `
         *,
         Chat!ChatParticipant_chatId_fkey (
           *,
+          Message!Chat_lastMessageId_fkey (
+            id,
+            chatId,
+            senderId,
+            text,
+            imageUrl,
+            createdAt,
+            User!Message_senderId_fkey (
+              id,
+              fullName,
+              username,
+              profileImageKey,
+              isVerified,
+              role
+            )
+          ),
           User!Chat_createdById_fkey (
             id,
             fullName,
@@ -234,62 +335,70 @@ export const messageService = {
       .eq('userId', userId)
       .order('id', { ascending: false });
 
-    if (error) throw new Error(error.message);
-    if (!data) return [];
+      if (error) throw new Error(error.message);
+      if (!data) return [];
 
-    const chatIds = data.map((participant) => participant.Chat.id);
-    const latestMessagesByChat =
-      await this.getLatestMessagesByChatIds(chatIds);
+      const chatsWithMessages = data.map((participant) => ({
+        ...participant,
+        Chat: {
+          ...participant.Chat,
+          latestMessage:
+            (participant.Chat as { Message?: MessageWithUser | null })
+              .Message || undefined,
+          hasUnread:
+            Boolean(
+              (participant.Chat as { lastMessageAt?: string | null })
+                .lastMessageAt,
+            ) &&
+            (!participant.lastReadAt ||
+              new Date(
+                (participant.Chat as { lastMessageAt: string })
+                  .lastMessageAt,
+              ) > new Date(participant.lastReadAt as string)) &&
+            (participant.Chat as { Message?: { senderId?: string } })
+              .Message?.senderId !== userId,
+        },
+      }));
 
-    const lastReadAtByChat = data.reduce(
-      (acc, participant) => {
-        acc[participant.Chat.id] = participant.lastReadAt as
-          | string
-          | undefined;
-        return acc;
-      },
-      {} as Record<string, string | undefined>,
-    );
+      // Sort chats by latest message createdAt (newest first)
+      // Chats without messages go to the bottom
+      const sortedChats = chatsWithMessages.sort((a, b) => {
+        const aMessageTime =
+          (a.Chat as { lastMessageAt?: string | null }).lastMessageAt ||
+          a.Chat.latestMessage?.createdAt;
+        const bMessageTime =
+          (b.Chat as { lastMessageAt?: string | null }).lastMessageAt ||
+          b.Chat.latestMessage?.createdAt;
 
-    const unreadChatIds = await this.getUnreadChatIds(
-      userId,
-      chatIds,
-      lastReadAtByChat,
-    );
+        // If both have messages, sort by createdAt descending (newest first)
+        if (aMessageTime && bMessageTime) {
+          return (
+            new Date(bMessageTime).getTime() -
+            new Date(aMessageTime).getTime()
+          );
+        }
 
-    const chatsWithMessages = data.map((participant) => ({
-      ...participant,
-      Chat: {
-        ...participant.Chat,
-        latestMessage:
-          latestMessagesByChat[participant.Chat.id] || undefined,
-        hasUnread: unreadChatIds.has(participant.Chat.id),
-      },
-    }));
+        // If only one has a message, prioritize it
+        if (aMessageTime && !bMessageTime) return -1;
+        if (!aMessageTime && bMessageTime) return 1;
 
-    // Sort chats by latest message createdAt (newest first)
-    // Chats without messages go to the bottom
-    const sortedChats = chatsWithMessages.sort((a, b) => {
-      const aMessageTime = a.Chat.latestMessage?.createdAt;
-      const bMessageTime = b.Chat.latestMessage?.createdAt;
+        // If neither has messages, maintain original order (by chat id)
+        return 0;
+      });
 
-      // If both have messages, sort by createdAt descending (newest first)
-      if (aMessageTime && bMessageTime) {
-        return (
-          new Date(bMessageTime).getTime() -
-          new Date(aMessageTime).getTime()
-        );
-      }
-
-      // If only one has a message, prioritize it
-      if (aMessageTime && !bMessageTime) return -1;
-      if (!aMessageTime && bMessageTime) return 1;
-
-      // If neither has messages, maintain original order (by chat id)
-      return 0;
+      return sortedChats as never;
+    })().then((result) => {
+      userChatsCache.set(userId, {
+        data: result,
+        timestamp: Date.now(),
+      });
+      return result;
+    }).finally(() => {
+      pendingUserChatsRequests.delete(userId);
     });
 
-    return sortedChats as never;
+    pendingUserChatsRequests.set(userId, request);
+    return request;
   },
 
   // Create a new chat
@@ -387,6 +496,92 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     return data || [];
+  },
+
+  async getChatSummary(
+    chatId: string,
+    currentUserId: string,
+    options?: { force?: boolean },
+  ): Promise<ChatSummary> {
+    const cacheKey = `${chatId}:${currentUserId}`;
+    if (!options?.force) {
+      const cached = chatSummaryCache.get(cacheKey);
+      if (
+        cached &&
+        Date.now() - cached.timestamp < CHAT_SUMMARY_CACHE_TTL_MS
+      ) {
+        return cached.data;
+      }
+
+      const pending = pendingChatSummaryRequests.get(cacheKey);
+      if (pending) return pending;
+    }
+
+    const request = (async () => {
+      const { data, error } = await supabase
+        .from('ChatParticipant')
+        .select(
+          `
+          userId,
+          User!ChatParticipant_userId_fkey (
+            fullName
+          ),
+          Chat!ChatParticipant_chatId_fkey (
+            id,
+            name,
+            isGroup
+          )
+        `,
+        )
+        .eq('chatId', chatId);
+
+      if (error) throw new Error(error.message);
+
+      const participants = data || [];
+      const first = participants[0];
+      const chat = first?.Chat;
+
+      if (!chat) {
+        return {
+          name: `Chat ${chatId.slice(0, 8)}`,
+          isGroup: false,
+        };
+      }
+
+      let chatName = chat.name;
+      if (!chatName) {
+        const otherParticipants = participants.filter(
+          (participant) => participant.userId !== currentUserId,
+        );
+        chatName =
+          otherParticipants
+            .map((participant) => {
+              const user = participant.User as
+                | { fullName?: string }
+                | undefined;
+              return user?.fullName || 'Unknown';
+            })
+            .join(', ') || `Chat ${chatId.slice(0, 8)}`;
+      }
+
+      return {
+        name: chatName,
+        isGroup: Boolean(chat.isGroup),
+      };
+    })()
+      .then((result) => {
+        chatSummaryCache.set(cacheKey, {
+          data: result,
+          timestamp: Date.now(),
+        });
+        return result;
+      })
+      .finally(() => {
+        pendingChatSummaryRequests.delete(cacheKey);
+      });
+
+    pendingChatSummaryRequests.set(cacheKey, request);
+    return request;
   },
 
   // Check if user is participant in chat
@@ -607,6 +802,9 @@ export const messageService = {
       .eq('userId', userId);
 
     if (error) throw new Error(error.message);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(UNREAD_COUNT_INVALIDATED_EVENT));
+    }
     return true;
   },
 
@@ -655,32 +853,43 @@ export const messageService = {
   async getUnreadCount(userId: string): Promise<number> {
     const { data: participants, error } = await supabase
       .from('ChatParticipant')
-      .select('chatId, lastReadAt')
+      .select(
+        `
+        chatId,
+        lastReadAt,
+        Chat!ChatParticipant_chatId_fkey (
+          lastMessageAt,
+          Message!Chat_lastMessageId_fkey (
+            senderId
+          )
+        )
+      `,
+      )
       .eq('userId', userId);
 
     if (error || !participants?.length) return 0;
 
-    const chatIds = participants.map(
-      (p) => (p as { chatId: string }).chatId,
-    );
-    const lastReadAtByChat = participants.reduce(
-      (acc, participant) => {
-        const chatId = (participant as { chatId: string }).chatId;
-        acc[chatId] = (
-          participant as { lastReadAt?: string }
-        ).lastReadAt;
-        return acc;
-      },
-      {} as Record<string, string | undefined>,
-    );
+    return participants.filter((participant) => {
+      const row = participant as {
+        lastReadAt?: string | null;
+        Chat?: {
+          lastMessageAt?: string | null;
+          Message?: { senderId?: string | null } | null;
+        } | null;
+      };
+      const lastMessageAt = row.Chat?.lastMessageAt;
+      const lastMessageSenderId = row.Chat?.Message?.senderId;
 
-    const unreadChatIds = await this.getUnreadChatIds(
-      userId,
-      chatIds,
-      lastReadAtByChat,
-    );
+      if (!lastMessageAt || lastMessageSenderId === userId) {
+        return false;
+      }
 
-    return unreadChatIds.size;
+      if (!row.lastReadAt) {
+        return true;
+      }
+
+      return new Date(lastMessageAt) > new Date(row.lastReadAt);
+    }).length;
   },
 
   // Create a group chat

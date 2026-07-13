@@ -129,7 +129,9 @@ function FeedPage() {
       }
 
       const limit = 20;
-      const data = await postService.getPublicPosts(limit, offset);
+      const data = await postService.getPublicPosts(limit, offset, {
+        force: isRefresh,
+      });
 
       // Check if we have more posts
       if (data.length < limit) {

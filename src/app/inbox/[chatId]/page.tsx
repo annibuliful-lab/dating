@@ -80,33 +80,13 @@ export default function ChatPage() {
 
   // Fetch chat info function
   const fetchChatInfo = useCallback(async () => {
-    if (params.chatId) {
+    if (params.chatId && session?.user?.id) {
       try {
-        const info = await messageService.getChatInfo(params.chatId);
-        let chatName = info.name;
-
-        // If no name is set, use participant names
-        if (!chatName) {
-          const participants =
-            await messageService.getChatParticipants(params.chatId);
-          // Get other participants (excluding current user)
-          const otherParticipants = participants.filter(
-            (p) => p.userId !== session?.user?.id
-          );
-
-          if (otherParticipants.length > 0) {
-            chatName = otherParticipants
-              .map((p) => {
-                const user = p.User as { fullName?: string } | undefined;
-                return user?.fullName || 'Unknown';
-              })
-              .join(', ');
-          } else {
-            chatName = `Chat ${params.chatId.slice(0, 8)}`;
-          }
-        }
-
-        setChatInfo({ name: chatName, isGroup: info.isGroup });
+        const info = await messageService.getChatSummary(
+          params.chatId,
+          session.user.id,
+        );
+        setChatInfo(info);
       } catch (error) {
         console.error('Error fetching chat info:', error);
       }

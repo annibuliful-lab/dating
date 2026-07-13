@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react';
 import { messageService } from '@/services/supabase/messages';
 
 const UNREAD_COUNT_CACHE_TTL_MS = 15 * 1000;
+export const UNREAD_COUNT_INVALIDATED_EVENT =
+  'unread-count-invalidated';
 const unreadCountCache = new Map<
   string,
   { count: number; timestamp: number }
@@ -66,8 +68,22 @@ export function useUnreadCount() {
 
   useEffect(() => {
     const onFocus = () => fetchCount(true);
+    const onUnreadCountInvalidated = () => {
+      unreadCountCache.clear();
+      fetchCount(true);
+    };
     window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    window.addEventListener(
+      UNREAD_COUNT_INVALIDATED_EVENT,
+      onUnreadCountInvalidated,
+    );
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener(
+        UNREAD_COUNT_INVALIDATED_EVENT,
+        onUnreadCountInvalidated,
+      );
+    };
   }, [fetchCount]);
 
   return {

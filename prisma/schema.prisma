@@ -98,6 +98,9 @@ model Chat {
   createdBy      User              @relation(fields: [createdById], references: [id])
   createdById    String            @db.Uuid
   isAdminVisible Boolean           @default(false)
+  lastMessageId  String?           @db.Uuid
+  lastMessageAt  DateTime?         @db.Timestamptz(6)
+  lastMessage    Message?          @relation("ChatLastMessage", fields: [lastMessageId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   participants   ChatParticipant[]
   messages       Message[]
   createdAt      DateTime          @default(now()) @db.Timestamptz(6)
@@ -124,6 +127,7 @@ model Message {
   text      String?  @db.Text
   imageUrl  String?  @db.Text
   createdAt DateTime @default(now()) @db.Timestamptz(6)
+  LatestForChats Chat[] @relation("ChatLastMessage")
 }
 
 model Post {

@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "./client/supabase";
 
 // Define route types
-const PUBLIC_ROUTES = ["/", "/auth/error"];
+const PUBLIC_ROUTES = ["/", "/auth/error", "/line-auth-test"];
 const AUTH_ROUTES = ["/signin", "/signup"];
 const PROTECTED_ROUTES = ["/feed", "/profile", "/inbox", "/create"];
 const ADMIN_ROUTES = ["/admin"];

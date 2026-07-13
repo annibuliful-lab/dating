@@ -10,7 +10,7 @@ import { Box, Button, Container, Stack, Text } from '@mantine/core';
 
 import { usePathname } from 'next/navigation';
 
-const ROUTES_WITHOUT_NAVBAR = ['/signin', '/signup', '/auth/error'];
+const ROUTES_WITHOUT_NAVBAR = ['/signin', '/signup', '/auth/error', '/line-auth-test'];
 
 export function ClientLayout({
   children,

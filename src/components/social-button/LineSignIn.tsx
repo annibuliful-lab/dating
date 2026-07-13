@@ -3,14 +3,22 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { LineIcon } from "../icons/LineIcon";
 
-export function LineSignIn() {
+type LineSignInProps = {
+  callbackUrl?: string;
+  label?: string;
+};
+
+export function LineSignIn({
+  callbackUrl = "/feed",
+  label = "Continue with Line",
+}: LineSignInProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLineSignIn = async () => {
     try {
       setIsLoading(true);
       await signIn("line", {
-        callbackUrl: "/feed",
+        callbackUrl,
         redirect: true,
       });
     } catch (error) {
@@ -27,7 +35,7 @@ export function LineSignIn() {
       loading={isLoading}
       disabled={isLoading}
     >
-      Continue with Line
+      {label}
     </Button>
   );
 }

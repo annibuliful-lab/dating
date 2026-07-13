@@ -6,7 +6,7 @@ import { ProfileIcon } from "@/components/icons/ProfileIcon";
 import { UserStatusIcon } from "@/components/icons/UserStatusIcon";
 import { ActionIcon, Box, Group, Loader, Text, rem } from "@mantine/core";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CreatePostIcon } from "../icons/CreatePostIcon";
 
 import { useAdminCheck } from "@/hooks/useAdmin";
@@ -18,7 +18,7 @@ export const BOTTOM_NAVBAR_HEIGHT_PX = 72;
 export function BottomNavbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isNavigating, setIsNavigating] = useState(false);
   const [targetHref, setTargetHref] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -34,17 +34,18 @@ export function BottomNavbar() {
   const isSuspended = statusData?.isSuspended ?? false;
 
   const isActive = (href: string) => pathname === href;
-  const isLoading = (href: string) => isPending && targetHref === href;
+  const isLoading = (href: string) => isNavigating && targetHref === href;
 
   useEffect(() => {
-    if (!isPending) {
+    if (targetHref !== null && pathname === targetHref) {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
+      setIsNavigating(false);
       setTargetHref(null);
     }
-  }, [isPending]);
+  }, [pathname, targetHref]);
 
   useEffect(() => {
     return () => {
@@ -55,29 +56,30 @@ export function BottomNavbar() {
   }, []);
 
   const handleClick = (href: string) => {
-    if (isPending) return;
+    if (isNavigating) return;
     if (href === pathname) return;
 
+    setIsNavigating(true);
     setTargetHref(href);
 
     // Safety timeout: clear loading state after 5 seconds if navigation doesn't complete
     timeoutRef.current = setTimeout(() => {
       console.warn(`Navigation to ${href} did not complete within 5 seconds`);
+      setIsNavigating(false);
       setTargetHref(null);
     }, 5000);
 
-    startTransition(() => {
-      try {
-        router.push(href);
-      } catch (error) {
-        console.error(`Navigation to ${href} failed:`, error);
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        setTargetHref(null);
+    try {
+      router.push(href);
+    } catch (error) {
+      console.error(`Navigation to ${href} failed:`, error);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
-    });
+      setIsNavigating(false);
+      setTargetHref(null);
+    }
   };
 
   const navItems = isSuspended
@@ -145,6 +147,7 @@ export function BottomNavbar() {
           BOTTOM_NAVBAR_HEIGHT_PX,
         )} + env(safe-area-inset-bottom))`,
         paddingBottom: "env(safe-area-inset-bottom)",
+        zIndex: 100,
       }}
     >
       <Group justify="space-around" py="xs">

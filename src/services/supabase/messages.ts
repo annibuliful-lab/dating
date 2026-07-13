@@ -608,35 +608,54 @@ export const messageService = {
 
   // Get or create direct message chat between two users
   async getOrCreateDirectChat(user1Id: string, user2Id: string) {
-    // First, try to find existing direct chat between these users
-    const { data: existingChats } = await supabase
-      .from('ChatParticipant')
-      .select(
-        `
-        chatId,
-        Chat!ChatParticipant_chatId_fkey (
-          id,
-          isGroup,
-          ChatParticipant!ChatParticipant_chatId_fkey (
-            userId
+    const { data: userDirectChats, error: directChatsError } =
+      await supabase
+        .from('ChatParticipant')
+        .select(
+          `
+          chatId,
+          Chat!ChatParticipant_chatId_fkey (
+            id,
+            isGroup
           )
+        `,
         )
-      `,
-      )
-      .eq('userId', user1Id);
+        .eq('userId', user1Id);
 
-    // Find a non-group chat where both users are participants
-    const directChat = existingChats?.find(
-      (chat) =>
-        !chat.Chat.isGroup &&
-        chat.Chat.ChatParticipant.length === 2 &&
-        chat.Chat.ChatParticipant.some(
-          (p: { userId: string }) => p.userId === user2Id,
-        ),
-    );
+    if (directChatsError) throw new Error(directChatsError.message);
 
-    if (directChat) {
-      return directChat.Chat;
+    const directChatIds = (userDirectChats || [])
+      .filter((participant) => !participant.Chat?.isGroup)
+      .map((participant) => participant.chatId);
+
+    if (directChatIds.length > 0) {
+      const { data: directParticipant, error: participantError } =
+        await supabase
+          .from('ChatParticipant')
+          .select(
+            `
+            chatId,
+            Chat!ChatParticipant_chatId_fkey (
+              id,
+              isGroup,
+              name,
+              createdById,
+              createdAt
+            )
+          `,
+          )
+          .eq('userId', user2Id)
+          .in('chatId', directChatIds)
+          .limit(1)
+          .maybeSingle();
+
+      if (participantError) {
+        throw new Error(participantError.message);
+      }
+
+      if (directParticipant?.Chat) {
+        return directParticipant.Chat;
+      }
     }
 
     // Create new direct chat
@@ -871,13 +890,7 @@ export const messageService = {
     name: string,
     userIds: string[],
   ) {
-    // Get admin user ID
-    const { data: adminUser } = await supabase
-      .from('User')
-      .select('id')
-      .eq('role', 'ADMIN')
-      .limit(1)
-      .single();
+    const adminUserId = await this.getFirstAdminUserId();
 
     // Create the chat
     const chat = await this.createChat({
@@ -889,24 +902,23 @@ export const messageService = {
     });
 
     // Add admin user to group chat if admin exists
-    if (adminUser) {
+    if (adminUserId) {
       const isAdminAlreadyIncluded =
-        userIds.includes(adminUser.id) ||
-        createdById === adminUser.id;
+        userIds.includes(adminUserId) || createdById === adminUserId;
       if (!isAdminAlreadyIncluded) {
-        await this.addChatParticipant(chat.id, adminUser.id, true);
+        await this.addChatParticipant(chat.id, adminUserId, true);
       }
     }
 
     // Add creator as admin participant (if not already admin user)
-    if (createdById !== adminUser?.id) {
+    if (createdById !== adminUserId) {
       await this.addChatParticipant(chat.id, createdById, true);
     }
 
     // Add all other participants
     await Promise.all(
       userIds
-        .filter((userId) => userId !== adminUser?.id) // Don't add admin twice
+        .filter((userId) => userId !== adminUserId) // Don't add admin twice
         .map((userId) =>
           this.addChatParticipant(chat.id, userId, false),
         ),

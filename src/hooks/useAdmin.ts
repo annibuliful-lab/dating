@@ -6,6 +6,10 @@ import { useApiQuery } from './useApiQuery';
 export function useAdminCheck() {
   return useApiQuery<{ isAdmin: boolean; role: 'USER' | 'ADMIN' }>(
     '/api/admin/check',
+    {
+      cacheKey: 'admin-check',
+      cacheTimeMs: 60 * 1000,
+    },
   );
 }
 

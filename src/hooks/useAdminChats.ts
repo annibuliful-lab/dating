@@ -36,8 +36,8 @@ type Chat = {
 
 export function useAdminChats() {
   const result = useInfiniteQuery<Chat[]>('/api/admin/chats', {
-    retries: 1,
-    pageSize: 20,
+    retries: 0,
+    pageSize: 10,
   });
 
   return result;

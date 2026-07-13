@@ -28,7 +28,7 @@ function ProfilePage() {
   const { data, status } = useSession();
   const userId = data?.user.id;
 
-  const { userProfile, loading } = useUserProfile();
+  const { userProfile, loading, error } = useUserProfile();
   const [isVerifying, setIsVerifying] = useState(false);
 
   const verifyMutation = useApiMutation<{ success: boolean }>(
@@ -59,8 +59,26 @@ function ProfilePage() {
     }
   };
 
-  if ((loading && status === 'loading') || !userProfile) {
+  if (loading || status === 'loading') {
     return null;
+  }
+
+  if (error || !userProfile) {
+    return (
+      <Box>
+        <TopNavbar title="Profile" />
+        <Container
+          size="xs"
+          pt="md"
+          px="md"
+          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
+        >
+          <Text c="red" ta="center">
+            {error?.message || 'Failed to load profile'}
+          </Text>
+        </Container>
+      </Box>
+    );
   }
 
   return (

@@ -34,7 +34,7 @@ export function ClientLayout({
     return null;
   }
 
-  if (status === 'authenticated' && !userProfile?.isVerified) {
+  if (status === 'authenticated' && userProfile && !userProfile.isVerified) {
     return <VerifyPrompt />;
   }
 

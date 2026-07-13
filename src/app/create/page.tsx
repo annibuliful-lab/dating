@@ -26,7 +26,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const MAX_IMAGES = 5;
 const MAX_CHARACTERS = 300;
@@ -39,6 +39,12 @@ function CreatePostPage() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/signin');
+    }
+  }, [router, status]);
 
   const handleImageSelect = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -210,7 +216,6 @@ function CreatePostPage() {
   }
 
   if (status === 'unauthenticated') {
-    router.push('/signin');
     return null;
   }
 

@@ -14,21 +14,35 @@ export const useUserProfile = () => {
     if (status === 'loading') return;
 
     if (!userId || status === 'unauthenticated') {
+      setUserProfile(undefined);
+      setError(undefined);
       setLoading(false);
       return;
     }
 
+    let cancelled = false;
+    setLoading(true);
+    setError(undefined);
+
     (async () => {
       try {
         const profile = await getUserProfile(userId);
+        if (cancelled) return;
         setUserProfile(profile);
       } catch (error) {
+        if (cancelled) return;
         console.error('useUserProfile: ', error);
         setError(error as never);
+        setUserProfile(undefined);
       } finally {
+        if (cancelled) return;
         setLoading(false);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId, status]);
 
   return {

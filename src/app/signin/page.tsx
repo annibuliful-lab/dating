@@ -1,11 +1,8 @@
 'use client';
 
-import { LineSignIn } from '@/components/social-button/LineSignIn';
 import {
   Button,
   Container,
-  Divider,
-  Group,
   Image,
   PasswordInput,
   rem,
@@ -90,16 +87,6 @@ export default function LoginPage() {
         <Text size="sm" c="dimmed">
           เข้าสู่ระบบด้วยช่องทางที่สมัครมาเท่านั้น
         </Text>
-
-        <LineSignIn />
-
-        <Group justify="center" gap="xs">
-          <Divider w="40%" color="gray" />
-          <Text size="xs" c="dimmed">
-            or
-          </Text>
-          <Divider w="40%" color="gray" />
-        </Group>
 
         <TextInput
           placeholder="Email"

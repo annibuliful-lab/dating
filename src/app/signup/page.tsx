@@ -2,7 +2,6 @@
 
 import { PasswordChecklist } from '@/components/element/PasswordChecklist';
 import { ActiveCheckCircle } from '@/components/icons/CheckCircle';
-import { LineSignIn } from '@/components/social-button/LineSignIn';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { isValidEmail } from '@/shared/validation';
 import {
@@ -11,7 +10,6 @@ import {
   Image,
   PasswordInput,
   rem,
-  SegmentedControl,
   Stack,
   Text,
   TextInput,
@@ -40,12 +38,8 @@ const passwordValidations = [
   },
 ];
 
-type RegistrationMethod = 'email' | 'line';
-
 export default function SignupPage() {
   const router = useRouter();
-  const [registrationMethod, setRegistrationMethod] =
-    useState<RegistrationMethod>('email');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,90 +107,61 @@ export default function SignupPage() {
           เลือกช่องทางสมัครสมาชิก
         </Text>
 
-        <SegmentedControl
-          value={registrationMethod}
-          onChange={(value) =>
-            setRegistrationMethod(value as RegistrationMethod)
-          }
-          data={[
-            { label: 'Email/Password', value: 'email' },
-            { label: 'Line', value: 'line' },
-          ]}
-          fullWidth
+        <TextInput
+          placeholder="Email"
+          radius="md"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="off"
+          rightSection={isEmailValid && <ActiveCheckCircle />}
           styles={{
-            root: {
+            input: {
               backgroundColor: '#131313',
-            },
-            indicator: {
-              backgroundColor: '#FFD400',
-            },
-            label: {
+              borderColor: '#333',
               color: 'white',
+              height: '50px',
+            },
+          }}
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          inputMode="text"
+        />
+
+        <PasswordInput
+          placeholder="Password"
+          radius="md"
+          visible={showPassword}
+          onVisibilityChange={setShowPassword}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="off"
+          styles={{
+            input: {
+              backgroundColor: '#131313',
+              borderColor: '#333',
+              color: 'white',
+              height: '50px',
             },
           }}
         />
 
-        {registrationMethod === 'line' ? (
-          <LineSignIn />
-        ) : (
-          <>
-            <TextInput
-              placeholder="Email"
-              radius="md"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="off"
-              rightSection={isEmailValid && <ActiveCheckCircle />}
-              styles={{
-                input: {
-                  backgroundColor: '#131313',
-                  borderColor: '#333',
-                  color: 'white',
-                  height: '50px',
-                },
-              }}
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              inputMode="text"
-            />
-
-            <PasswordInput
-              placeholder="Password"
-              radius="md"
-              visible={showPassword}
-              onVisibilityChange={setShowPassword}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="off"
-              styles={{
-                input: {
-                  backgroundColor: '#131313',
-                  borderColor: '#333',
-                  color: 'white',
-                  height: '50px',
-                },
-              }}
-            />
-
-            {isEmailValid && (
-              <PasswordChecklist
-                password={password}
-                validations={passwordValidations}
-              />
-            )}
-
-            <Button
-              fullWidth
-              variant="primary"
-              onClick={handleSignup}
-              loading={loading}
-              disabled={!isPasswordValid}
-            >
-              Create account
-            </Button>
-          </>
+        {isEmailValid && (
+          <PasswordChecklist
+            password={password}
+            validations={passwordValidations}
+          />
         )}
+
+        <Button
+          fullWidth
+          variant="primary"
+          onClick={handleSignup}
+          loading={loading}
+          disabled={!isPasswordValid}
+        >
+          Create account
+        </Button>
 
         <Text size="sm" ta="center" c="dimmed">
           Already have an account?{' '}

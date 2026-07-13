@@ -1,4 +1,5 @@
-import { supabase } from "@/client/supabase";
+import { supabase } from '@/client/supabase';
+import { compressImage } from '@/lib/image-compression';
 
 export interface MediaUploadResult {
   url: string;
@@ -10,12 +11,16 @@ export const mediaService = {
   // Upload a file to Supabase Storage
   async uploadMedia(
     file: File,
-    bucket: string = "chat-media",
-    folder: string = "messages"
+    bucket: string = 'chat-media',
+    folder: string = 'messages',
   ): Promise<MediaUploadResult> {
     try {
+      // Compress images before upload to save bandwidth and storage
+      const fileToUpload = file.type.startsWith('image/')
+        ? await compressImage(file)
+        : file;
       // Generate unique filename
-      const fileExt = file.name.split(".").pop();
+      const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random()
         .toString(36)
         .substring(2)}.${fileExt}`;
@@ -24,8 +29,8 @@ export const mediaService = {
       // Upload file to Supabase Storage
       const { error } = await supabase.storage
         .from(bucket)
-        .upload(filePath, file, {
-          cacheControl: "3600",
+        .upload(filePath, fileToUpload, {
+          cacheControl: '3600',
           upsert: false,
         });
 
@@ -44,26 +49,30 @@ export const mediaService = {
         publicUrl: publicUrl,
       };
     } catch (error) {
-      console.error("Media upload error:", error);
-      throw new Error(error instanceof Error ? error.message : "Upload failed");
+      console.error('Media upload error:', error);
+      throw new Error(
+        error instanceof Error ? error.message : 'Upload failed',
+      );
     }
   },
 
   // Upload multiple files to Supabase Storage
   async uploadMultipleMedia(
     files: File[],
-    bucket: string = "dating",
-    folder: string = "messages"
+    bucket: string = 'dating',
+    folder: string = 'messages',
   ): Promise<MediaUploadResult[]> {
     try {
       const uploadPromises = files.map((file) =>
-        this.uploadMedia(file, bucket, folder)
+        this.uploadMedia(file, bucket, folder),
       );
       return await Promise.all(uploadPromises);
     } catch (error) {
-      console.error("Batch media upload error:", error);
+      console.error('Batch media upload error:', error);
       throw new Error(
-        error instanceof Error ? error.message : "Batch upload failed"
+        error instanceof Error
+          ? error.message
+          : 'Batch upload failed',
       );
     }
   },
@@ -71,42 +80,48 @@ export const mediaService = {
   // Delete a media file from Supabase Storage
   async deleteMedia(
     filePath: string,
-    bucket: string = "chat-media"
+    bucket: string = 'chat-media',
   ): Promise<boolean> {
     try {
-      const { error } = await supabase.storage.from(bucket).remove([filePath]);
+      const { error } = await supabase.storage
+        .from(bucket)
+        .remove([filePath]);
 
       if (error) {
-        console.error("Delete media error:", error);
+        console.error('Delete media error:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error("Delete media error:", error);
+      console.error('Delete media error:', error);
       return false;
     }
   },
 
   // Get file info from URL
   getFileInfoFromUrl(
-    url: string
+    url: string,
   ): { fileName: string; fileType: string } | null {
     try {
-      const urlParts = url.split("/");
+      const urlParts = url.split('/');
       const fileName = urlParts[urlParts.length - 1];
-      const fileExt = fileName.split(".").pop()?.toLowerCase();
+      const fileExt = fileName.split('.').pop()?.toLowerCase();
 
-      let fileType = "unknown";
-      if (["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt || "")) {
-        fileType = "image";
-      } else if (["mp4", "webm", "mov", "quicktime"].includes(fileExt || "")) {
-        fileType = "video";
+      let fileType = 'unknown';
+      if (
+        ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt || '')
+      ) {
+        fileType = 'image';
+      } else if (
+        ['mp4', 'webm', 'mov', 'quicktime'].includes(fileExt || '')
+      ) {
+        fileType = 'video';
       }
 
       return { fileName, fileType };
     } catch (error) {
-      console.error("Error parsing file info from URL:", error);
+      console.error('Error parsing file info from URL:', error);
       return null;
     }
   },
@@ -116,24 +131,31 @@ export const mediaService = {
     // Check file size (10MB limit)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      return { valid: false, error: "File size must be less than 10MB" };
+      return {
+        valid: false,
+        error: 'File size must be less than 10MB',
+      };
     }
 
     // Check file type
     const validImageTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/webp",
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
     ];
-    const validVideoTypes = ["video/mp4", "video/webm", "video/quicktime"];
+    const validVideoTypes = [
+      'video/mp4',
+      'video/webm',
+      'video/quicktime',
+    ];
     const validTypes = [...validImageTypes, ...validVideoTypes];
 
     if (!validTypes.includes(file.type)) {
       return {
         valid: false,
         error:
-          "Please select an image (JPEG, PNG, GIF, WebP) or video (MP4, WebM, QuickTime) file",
+          'Please select an image (JPEG, PNG, GIF, WebP) or video (MP4, WebM, QuickTime) file',
       };
     }
 

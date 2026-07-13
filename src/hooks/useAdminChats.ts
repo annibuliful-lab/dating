@@ -1,5 +1,4 @@
 import { useInfiniteQuery } from '@/hooks/useInfiniteQuery';
-import { useCallback } from 'react';
 
 type Chat = {
   id: string;

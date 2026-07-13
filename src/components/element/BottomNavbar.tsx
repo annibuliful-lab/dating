@@ -24,11 +24,11 @@ export function BottomNavbar() {
 
   const { data: adminData } = useAdminCheck();
   const { data: statusData } = useUserStatusCheck();
-  const { unreadCount, refetch: refetchUnread } = useUnreadCount();
+  const { unreadCount, refreshIfStale } = useUnreadCount();
 
   useEffect(() => {
-    refetchUnread();
-  }, [pathname, refetchUnread]);
+    refreshIfStale();
+  }, [pathname, refreshIfStale]);
 
   const isAdmin = adminData?.isAdmin ?? false;
   const isSuspended = statusData?.isSuspended ?? false;

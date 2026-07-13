@@ -45,10 +45,6 @@ export async function GET(req: NextRequest) {
             status,
             role
           )
-        ),
-        Message (
-          id,
-          createdAt
         )
       `,
       )

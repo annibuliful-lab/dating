@@ -210,106 +210,6 @@ export const messageService = {
     return data as unknown as MessageWithUser;
   },
 
-  async getLatestMessagesByChatIds(
-    chatIds: string[],
-  ): Promise<Record<string, MessageWithUser | undefined>> {
-    if (!chatIds.length) return {};
-
-    const { data, error } = await supabase
-      .from('Message')
-      .select(
-        `
-        *,
-        User!Message_senderId_fkey (
-          id,
-          fullName,
-          username,
-          profileImageKey,
-          isVerified,
-          role
-        )
-      `,
-      )
-      .in('chatId', chatIds)
-      .order('createdAt', { ascending: false });
-
-    if (error) throw new Error(error.message);
-
-    const latestMessages: Record<string, MessageWithUser> = {};
-    (data || []).forEach((row) => {
-      const message = row as unknown as MessageWithUser;
-      if (!latestMessages[message.chatId]) {
-        latestMessages[message.chatId] = message;
-      }
-    });
-
-    return latestMessages;
-  },
-
-  async getUnreadChatIds(
-    userId: string,
-    chatIds: string[],
-    lastReadAtByChat: Record<string, string | undefined>,
-  ): Promise<Set<string>> {
-    if (!chatIds.length) return new Set();
-
-    const neverReadChatIds = chatIds.filter(
-      (chatId) => !lastReadAtByChat[chatId],
-    );
-    const readChatIds = chatIds.filter(
-      (chatId) => !!lastReadAtByChat[chatId],
-    );
-    const unreadChatIds = new Set<string>();
-
-    if (neverReadChatIds.length > 0) {
-      const { data, error } = await supabase
-        .from('Message')
-        .select('chatId')
-        .in('chatId', neverReadChatIds)
-        .neq('senderId', userId);
-
-      if (error) throw new Error(error.message);
-
-      (data || []).forEach((row) => {
-        unreadChatIds.add(row.chatId);
-      });
-    }
-
-    if (!readChatIds.length) return unreadChatIds;
-
-    const { data, error } = await supabase
-      .from('Message')
-      .select('chatId, createdAt')
-      .in('chatId', readChatIds)
-      .neq('senderId', userId)
-      .order('createdAt', { ascending: false });
-
-    if (error) throw new Error(error.message);
-
-    const latestByChat = new Map<string, string>();
-    (data || []).forEach((row) => {
-      const chatId = row.chatId;
-      const createdAt = row.createdAt;
-      if (!latestByChat.has(chatId)) {
-        latestByChat.set(chatId, createdAt);
-      }
-    });
-
-    readChatIds.forEach((chatId) => {
-      const lastReadAt = lastReadAtByChat[chatId];
-      const latestCreatedAt = latestByChat.get(chatId);
-      if (!latestCreatedAt) return;
-      if (
-        !lastReadAt ||
-        new Date(latestCreatedAt) > new Date(lastReadAt)
-      ) {
-        unreadChatIds.add(chatId);
-      }
-    });
-
-    return unreadChatIds;
-  },
-
   async getUserChats(
     userId: string,
     options?: { force?: boolean },
@@ -333,9 +233,18 @@ export const messageService = {
         .from('ChatParticipant')
         .select(
           `
-          *,
+          id,
+          chatId,
+          userId,
+          isAdmin,
+          lastReadAt,
           Chat!ChatParticipant_chatId_fkey (
-            *,
+            id,
+            name,
+            isGroup,
+            createdById,
+            lastMessageAt,
+            createdAt,
             Message!Chat_lastMessageId_fkey (
               id,
               chatId,
@@ -358,7 +267,10 @@ export const messageService = {
               profileImageKey
             ),
             ChatParticipant!ChatParticipant_chatId_fkey (
-              *,
+              id,
+              chatId,
+              userId,
+              isAdmin,
               User!ChatParticipant_userId_fkey (
                 id,
                 fullName,
@@ -541,6 +453,50 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     return data || [];
+  },
+
+  async getChatParticipant(chatId: string, userId: string) {
+    const { data, error } = await supabase
+      .from('ChatParticipant')
+      .select('id, chatId, userId, isAdmin, lastReadAt')
+      .eq('chatId', chatId)
+      .eq('userId', userId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async getChatParticipantCount(chatId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('ChatParticipant')
+      .select('id', { count: 'exact', head: true })
+      .eq('chatId', chatId);
+
+    if (error) throw new Error(error.message);
+    return count || 0;
+  },
+
+  async updateChatGroupStatus(chatId: string, isGroup: boolean) {
+    const { error } = await supabase
+      .from('Chat')
+      .update({ isGroup })
+      .eq('id', chatId);
+
+    if (error) throw new Error(error.message);
+    clearChatCaches(chatId);
+  },
+
+  async getFirstAdminUserId(): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('User')
+      .select('id')
+      .eq('role', 'ADMIN')
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data?.id || null;
   },
 
   async getChatSummary(
@@ -864,47 +820,6 @@ export const messageService = {
     clearChatCaches(chatId);
     notifyUnreadCountInvalidated();
     return true;
-  },
-
-  // Check if chat has unread messages
-  async hasUnreadMessages(
-    chatId: string,
-    userId: string,
-  ): Promise<boolean> {
-    // Get participant's lastReadAt
-    const { data: participant } = await supabase
-      .from('ChatParticipant')
-      .select('lastReadAt')
-      .eq('chatId', chatId)
-      .eq('userId', userId)
-      .single();
-
-    if (!participant) return false;
-
-    const lastReadAt = (participant as { lastReadAt?: string })
-      .lastReadAt;
-
-    // If never read, check if there are any messages
-    if (!lastReadAt) {
-      const { data: messages } = await supabase
-        .from('Message')
-        .select('id')
-        .eq('chatId', chatId)
-        .limit(1);
-
-      return (messages?.length || 0) > 0;
-    }
-
-    // Check if there are messages after lastReadAt
-    const { data: unreadMessages } = await supabase
-      .from('Message')
-      .select('id')
-      .eq('chatId', chatId)
-      .gt('createdAt', lastReadAt)
-      .neq('senderId', userId) // Don't count own messages
-      .limit(1);
-
-    return (unreadMessages?.length || 0) > 0;
   },
 
   /** Number of chats that have unread messages for the user (for nav badge). */

@@ -5,9 +5,9 @@ import {
   MessageWithUser,
   TypingUser,
 } from '@/@types/message';
-import { BUCKET_NAME, supabase } from '@/client/supabase';
 import { mediaService } from '@/services/supabase/media';
 import { messageService } from '@/services/supabase/messages';
+import { getProfileImageUrl } from '@/services/supabase/storage';
 import { useSession } from 'next-auth/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -125,13 +125,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       const transformedMessages: ChatMessage[] = chatMessages
         .reverse() // Reverse to show oldest first in chat (Facebook-style)
         .map((msg: MessageWithUser) => {
-          let senderAvatarUrl = null;
-          if (msg.User?.profileImageKey) {
-            const { data: imageData } = supabase.storage
-              .from(BUCKET_NAME)
-              .getPublicUrl(msg.User.profileImageKey);
-            senderAvatarUrl = imageData.publicUrl;
-          }
+          const senderAvatarUrl = getProfileImageUrl(
+            msg.User?.profileImageKey,
+          );
           return {
             id: msg.id,
             text: msg.text,
@@ -198,13 +194,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       const transformedOlderMessages: ChatMessage[] =
         olderMessages.map((msg: MessageWithUser) => {
-          let senderAvatarUrl = null;
-          if (msg.User?.profileImageKey) {
-            const { data: imageData } = supabase.storage
-              .from(BUCKET_NAME)
-              .getPublicUrl(msg.User.profileImageKey);
-            senderAvatarUrl = imageData.publicUrl;
-          }
+          const senderAvatarUrl = getProfileImageUrl(
+            msg.User?.profileImageKey,
+          );
           return {
             id: msg.id,
             text: msg.text,
@@ -273,13 +265,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     const subscription = messageService.subscribeToMessages(
       chatId,
       (newMessage: MessageWithUser) => {
-        let senderAvatarUrl = null;
-        if (newMessage.User?.profileImageKey) {
-          const { data: imageData } = supabase.storage
-            .from(BUCKET_NAME)
-            .getPublicUrl(newMessage.User.profileImageKey);
-          senderAvatarUrl = imageData.publicUrl;
-        }
+        const senderAvatarUrl = getProfileImageUrl(
+          newMessage.User?.profileImageKey,
+        );
         const transformedMessage: ChatMessage = {
           id: newMessage.id,
           text: newMessage.text,

@@ -54,7 +54,11 @@ export function useInfiniteQuery<
     async (pageNumber: number, isInitial: boolean) => {
       if (!enabled) return;
 
-      isInitial ? setLoading(true) : setLoadingMore(true);
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
 
       const offset = pageNumber * pageSize;
@@ -102,7 +106,11 @@ export function useInfiniteQuery<
         onError?.(e);
         throw e;
       } finally {
-        isInitial ? setLoading(false) : setLoadingMore(false);
+        if (isInitial) {
+          setLoading(false);
+        } else {
+          setLoadingMore(false);
+        }
       }
     },
     [

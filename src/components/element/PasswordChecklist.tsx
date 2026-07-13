@@ -1,5 +1,5 @@
 import { Text, Box } from '@mantine/core';
-import { ActiveCheckCircle, CheckCircle } from '../icons/CheckCircle';
+import { ActiveCheckCircle } from '../icons/CheckCircle';
 
 type Props = {
   password: string;

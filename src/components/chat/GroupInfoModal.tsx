@@ -1,5 +1,6 @@
 'use client';
 
+import { getProfileImageUrl } from '@/services/supabase/storage';
 import { userService } from '@/services/supabase/users';
 import {
   ActionIcon,
@@ -26,7 +27,7 @@ import { useCallback, useEffect, useState } from 'react';
 interface User {
   id: string;
   fullName: string;
-  username: string;
+  username: string | null;
   profileImageKey: string | null;
   age: number | null;
   gender: string | null;
@@ -423,11 +424,9 @@ export function GroupInfoModal({
                       <Group justify="space-between" wrap="nowrap">
                         <Group gap="sm" wrap="nowrap">
                           <Avatar
-                            src={
-                              participant.User.profileImageKey
-                                ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-images/${participant.User.profileImageKey}`
-                                : null
-                            }
+                            src={getProfileImageUrl(
+                              participant.User.profileImageKey,
+                            )}
                             alt={participant.User.fullName}
                             size="md"
                             radius="xl"
@@ -535,11 +534,9 @@ export function GroupInfoModal({
                       <Group justify="space-between" wrap="nowrap">
                         <Group gap="sm" wrap="nowrap">
                           <Avatar
-                            src={
-                              user.profileImageKey
-                                ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-images/${user.profileImageKey}`
-                                : null
-                            }
+                            src={getProfileImageUrl(
+                              user.profileImageKey,
+                            )}
                             alt={user.fullName}
                             size="md"
                             radius="xl"

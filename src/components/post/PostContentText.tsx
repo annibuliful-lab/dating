@@ -1,10 +1,11 @@
 'use client';
 
 import { Anchor, Text, type TextProps } from '@mantine/core';
+import type { HTMLAttributes } from 'react';
 
 type PostContentTextProps = {
   text: string;
-  textProps?: TextProps;
+  textProps?: TextProps & HTMLAttributes<HTMLElement>;
 };
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;

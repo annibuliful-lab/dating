@@ -2,6 +2,7 @@
 
 import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { BOTTOM_NAVBAR_HEIGHT_PX } from '@/components/element/BottomNavbar';
+import { PostContentText } from '@/components/post/PostContentText';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
@@ -561,9 +562,13 @@ function FeedPage() {
                       </Group>
 
                       {post.content?.text && (
-                        <Text fz="lg" style={{ lineHeight: 1.6 }}>
-                          {post.content.text}
-                        </Text>
+                        <PostContentText
+                          text={post.content.text}
+                          textProps={{
+                            fz: 'lg',
+                            style: { lineHeight: 1.6 },
+                          }}
+                        />
                       )}
 
                       {post.imageUrl && post.imageUrl.length > 0 && (

@@ -4,6 +4,7 @@ import {
   TopNavbar,
   TOP_NAVBAR_HEIGHT_PX,
 } from '@/components/element/TopNavbar';
+import { PostContentText } from '@/components/post/PostContentText';
 import { BUCKET_NAME, supabase } from '@/client/supabase';
 import { useAdminPosts } from '@/hooks/useAdminPosts';
 import {
@@ -258,20 +259,22 @@ export default function AdminPostsPage() {
 
                       {/* Post Content */}
                       {post.content?.text && (
-                        <Text size="sm" c="white">
-                          <span
-                            lang="th"
-                            translate="no"
-                            suppressHydrationWarning
-                            style={{
+                        <PostContentText
+                          text={post.content.text}
+                          textProps={{
+                            size: 'sm',
+                            c: 'white',
+                            span: true,
+                            lang: 'th',
+                            translate: 'no',
+                            suppressHydrationWarning: true,
+                            style: {
                               display: 'block',
                               WebkitTextSizeAdjust: 'none',
                               textSizeAdjust: 'none',
-                            }}
-                          >
-                            {post.content.text}
-                          </span>
-                        </Text>
+                            },
+                          }}
+                        />
                       )}
 
                       {/* Post Image */}

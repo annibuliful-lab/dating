@@ -145,7 +145,7 @@ function ProfilePage() {
             {userProfile.bio}
           </Text>
 
-          {!userProfile.isVerified && (
+          {/* {!userProfile.isVerified && (
             <Button
               variant="filled"
               color="teal"
@@ -156,7 +156,7 @@ function ProfilePage() {
             >
               Verify Yourself
             </Button>
-          )}
+          )} */}
 
           <Button
             variant="secondary"

@@ -4,8 +4,7 @@ type AdminCheckResponse = {
 };
 
 type UserStatusUpdate = {
-  status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
-  isVerified?: boolean;
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
 };
 
 export const adminService = {
@@ -38,6 +37,19 @@ export const adminService = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Failed to update user status");
+    }
+    return response.json();
+  },
+
+  async updateUserVerification(userId: string, isVerified: boolean) {
+    const action = isVerified ? "verify" : "unverify";
+    const response = await fetch(`/api/users/${userId}/${action}`, {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update user verification");
     }
     return response.json();
   },

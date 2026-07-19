@@ -72,6 +72,7 @@ export default function AdminUsersPage() {
     hasMore,
     refetch: fetchUsers,
     updateUserStatus,
+    updateUserVerification,
     total,
   } = useAdminUsers(searchQuery);
   const users = (usersData as unknown as User[]) || [];
@@ -119,19 +120,13 @@ export default function AdminUsersPage() {
       const user = users.find((u) => u.id === userId);
       if (!user) return;
 
-      const updateData: { status?: string; isVerified?: boolean } =
-        {};
-
       if (statusType === 'verification') {
-        updateData.isVerified = newValue === 'verified';
+        await updateUserVerification(userId, newValue === 'verified');
       } else if (statusType === 'usage') {
-        updateData.status = newValue as
-          | 'ACTIVE'
-          | 'INACTIVE'
-          | 'SUSPENDED';
+        await updateUserStatus(userId, {
+          status: newValue as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
+        });
       }
-
-      await updateUserStatus(userId, updateData);
 
       notifications.show({
         title: 'สำเร็จ',

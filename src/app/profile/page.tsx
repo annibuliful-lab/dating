@@ -5,11 +5,7 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
 } from '@/components/element/TopNavbar';
-import { useApiMutation } from '@/hooks/useApiMutation';
-import {
-  notifyUserProfileUpdated,
-  useUserProfile,
-} from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   Box,
   Button,
@@ -24,43 +20,12 @@ import {
 } from '@mantine/core';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 function ProfilePage() {
   const router = useRouter();
-  const { data, status } = useSession();
-  const userId = data?.user.id;
+  const { status } = useSession();
 
-  const { userProfile, loading, error, refetch } = useUserProfile();
-  const [isVerifying, setIsVerifying] = useState(false);
-
-  const verifyMutation = useApiMutation<{ success: boolean }>(
-    `/api/users/${userId}/verify`,
-  );
-
-  const handleVerify = async () => {
-    if (!userId) return;
-
-    try {
-      setIsVerifying(true);
-      const result = await verifyMutation.mutate({});
-      if (result?.success) {
-        await refetch();
-        notifyUserProfileUpdated();
-      } else {
-        throw new Error('Verification failed');
-      }
-    } catch (error) {
-      console.error('Error verifying user:', error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to verify. Please try again.';
-      alert(errorMessage);
-    } finally {
-      setIsVerifying(false);
-    }
-  };
+  const { userProfile, loading, error } = useUserProfile();
 
   if (loading || status === 'loading') {
     return null;
@@ -144,19 +109,6 @@ function ProfilePage() {
           <Text ta="center" px="lg" style={{ lineHeight: 1.5 }}>
             {userProfile.bio}
           </Text>
-
-          {/* {!userProfile.isVerified && (
-            <Button
-              variant="filled"
-              color="teal"
-              radius="md"
-              mt="xs"
-              onClick={handleVerify}
-              loading={isVerifying}
-            >
-              Verify Yourself
-            </Button>
-          )} */}
 
           <Button
             variant="secondary"

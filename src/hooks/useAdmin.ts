@@ -33,8 +33,18 @@ export function useAdminUsers(searchQuery?: string) {
   );
 
   const updateUserStatus = useCallback(
-    async (userId: string, data: Record<string, unknown>) => {
+    async (
+      userId: string,
+      data: { status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' },
+    ) => {
       return adminService.updateUserStatus(userId, data);
+    },
+    [],
+  );
+
+  const updateUserVerification = useCallback(
+    async (userId: string, isVerified: boolean) => {
+      return adminService.updateUserVerification(userId, isVerified);
     },
     [],
   );
@@ -42,6 +52,7 @@ export function useAdminUsers(searchQuery?: string) {
   return {
     ...result,
     updateUserStatus,
+    updateUserVerification,
     total: countQuery.data?.total ?? 0,
     countLoading: countQuery.loading,
   };

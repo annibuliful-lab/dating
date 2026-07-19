@@ -46,6 +46,17 @@ Suspension is enforced at every stage (signIn, JWT, session). Suspended users ar
 
 Session shape is extended in `src/@types/next-auth.d.ts` — `session.user.id` is the primary user identifier throughout the app.
 
+## Verification Workflow
+
+User verification is admin-controlled only.
+
+- New users from Credentials, Google, or LINE are created with `User.isVerified = false`.
+- Logging in must not auto-verify the user.
+- Users can see the LINE OA verification prompt and scan/add LINE, but that client flow must not update `User.isVerified`.
+- Only admins manually verify or unverify users.
+- Admin verification uses `/api/users/[userId]/verify`; admin unverification uses `/api/users/[userId]/unverify`.
+- `/api/users/[userId]/verify` must reject non-admin self-verification.
+
 ## Service Layer (`src/services/`)
 
 All data access goes through services — never call Supabase directly from page/component files.

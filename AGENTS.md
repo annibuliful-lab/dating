@@ -54,6 +54,7 @@ Important behavior:
   - empty `fullName`
   - UUID-like `username`
   - `isVerified = false`
+- Credentials registration also creates users with `isVerified = false`.
 - Credentials registration also creates an `OAuthAccount` row with provider `credentials`.
 - Passwords are currently stored in `passwordHash` without hashing. Treat this as existing behavior, not a good pattern.
 
@@ -75,6 +76,12 @@ Critical behavior enforced by `src/proxy.ts`:
 ### Verification Gate
 
 - `src/components/layout/ClientLayout.tsx` blocks authenticated but unverified users with `VerifyPrompt`.
+- Verification is admin-controlled only:
+  - Users remain `isVerified = false` after registration and login.
+  - Users can add/scan LINE OA from the verification prompt, but that does not update `User.isVerified`.
+  - Only admins manually update verification status.
+  - The admin UI calls `/api/users/[userId]/verify` and `/api/users/[userId]/unverify`.
+  - `/api/users/[userId]/verify` must reject non-admin self-verification.
 - `src/components/auth/SuspendedUserRedirect.tsx` and status-check hooks reinforce suspension behavior on the client.
 
 When changing auth or navigation, preserve all three layers:

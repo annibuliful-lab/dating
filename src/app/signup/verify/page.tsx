@@ -2,10 +2,6 @@
 
 import { LineIcon } from '@/components/icons/LineIcon';
 import {
-  notifyUserProfileUpdated,
-  useUserProfile,
-} from '@/hooks/useUserProfile';
-import {
   Box,
   Button,
   Container,
@@ -15,14 +11,10 @@ import {
   Stack,
   Text,
 } from '@mantine/core';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function VerifyPage() {
-  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const { userProfile, refetch } = useUserProfile();
 
   const handleAddLineOA = () => {
     // Open modal to show QR code
@@ -31,31 +23,6 @@ export default function VerifyPage() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-  };
-
-  const handleCompleteVerification = async () => {
-    if (!userProfile?.id || isCompleting) return;
-
-    try {
-      setIsCompleting(true);
-      const response = await fetch(`/api/users/${userProfile.id}/verify`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => null);
-        throw new Error(error?.error || 'Failed to verify user');
-      }
-
-      await refetch();
-      notifyUserProfileUpdated();
-      setIsModalOpen(false);
-      router.push('/feed');
-    } catch (error) {
-      console.error('Error completing verification:', error);
-    } finally {
-      setIsCompleting(false);
-    }
   };
 
   return (
@@ -166,8 +133,7 @@ export default function VerifyPage() {
               เปิดแอป LINE แล้วสแกน QR Code นี้
             </Text>
             <Text size="xs" ta="center" c="dimmed">
-              หลังจากเพิ่มเพื่อนแล้ว กรุณากด &quot;เสร็จสิ้น&quot;
-              ด้านล่าง
+              หลังจากเพิ่มเพื่อนแล้ว กรุณารอแอดมินตรวจสอบและยืนยันสถานะ
             </Text>
           </Stack>
 
@@ -175,14 +141,6 @@ export default function VerifyPage() {
             <Button
               fullWidth
               variant="primary"
-              onClick={handleCompleteVerification}
-              loading={isCompleting}
-            >
-              เสร็จสิ้น
-            </Button>
-            <Button
-              fullWidth
-              variant="subtle"
               onClick={handleCloseModal}
               styles={{
                 root: {

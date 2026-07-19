@@ -28,27 +28,22 @@ export async function POST(
       );
     }
 
-    // Only admins can verify other users
-    // Users can verify themselves
-    const isSelfVerification = userId === session.user.id;
     const isUserAdmin = (currentUser as { role?: string }).role === "ADMIN";
 
-    if (!isSelfVerification && !isUserAdmin) {
+    if (!isUserAdmin) {
       return NextResponse.json(
-        { error: "Only admins can verify other users" },
+        { error: "Only admins can verify users" },
         { status: 403 }
       );
     }
 
     // Update user verification
-    // For self-verification: verifiedBy is null (user verified themselves)
-    // For admin verification: verifiedBy is the admin's userId
     const { data: updatedUser, error: updateError } = await supabase
       .from("User")
       .update({
         isVerified: true,
         verifiedAt: new Date().toISOString(),
-        verifiedBy: isSelfVerification ? null : session.user.id,
+        verifiedBy: session.user.id,
       })
       .eq("id", userId)
       .select()

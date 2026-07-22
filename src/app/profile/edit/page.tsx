@@ -4,6 +4,7 @@ import { ProfileImage } from '@/@types/user';
 import { TOP_NAVBAR_HEIGHT_PX } from '@/components/element/TopNavbar';
 import { CalendarIcon } from '@/components/icons/CalendarIcon';
 import { CameraIcon } from '@/components/icons/CameraIcon';
+import { notifyUserProfileUpdated } from '@/hooks/useUserProfile';
 import { compressImage } from '@/lib/image-compression';
 import { getUserProfile } from '@/services/profile/get';
 import { saveProfileImages } from '@/services/profile/images';
@@ -37,6 +38,8 @@ import { format } from 'date-fns';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+
+const MAX_COMPLETED_PROFILE_USERNAME_LENGTH = 30;
 
 function EditProfilePage() {
   const { data } = useSession();
@@ -369,8 +372,11 @@ function EditProfilePage() {
   const handleConfirmSave = async () => {
     if (!data?.user.id) return;
 
+    const normalizedUsername = username.trim();
+    const normalizedFullName = fullName.trim();
+
     // Validate required fields
-    if (!fullName.trim()) {
+    if (!normalizedFullName) {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
@@ -380,12 +386,25 @@ function EditProfilePage() {
       return;
     }
 
-    if (!username.trim()) {
+    if (!normalizedUsername) {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
         title: 'Error',
         message: 'ชื่อผู้ใช้จำเป็นต้องกรอก',
+      });
+      return;
+    }
+
+    if (
+      normalizedUsername.length > MAX_COMPLETED_PROFILE_USERNAME_LENGTH
+    ) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: 'red',
+        title: 'Error',
+        message:
+          'ชื่อผู้ใช้ต้องมีความยาวไม่เกิน 30 ตัวอักษร',
       });
       return;
     }
@@ -425,8 +444,8 @@ function EditProfilePage() {
 
     try {
       const profileData = {
-        username,
-        name: fullName,
+        username: normalizedUsername,
+        name: normalizedFullName,
         lastname: null,
         gender,
         birthday,
@@ -462,6 +481,7 @@ function EditProfilePage() {
         message: 'Profile saved successfully',
       });
 
+      notifyUserProfileUpdated();
       router.push('/profile');
     } catch (err) {
       console.error('Error saving profile:', err);

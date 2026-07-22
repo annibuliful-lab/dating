@@ -34,11 +34,33 @@ type PostWithUser = {
 };
 
 const PUBLIC_POSTS_CACHE_TTL_MS = 30 * 1000;
+const PUBLIC_POSTS_FETCH_TIMEOUT_MS = 10000;
 const publicPostsCache = new Map<
   string,
   { data: unknown[]; timestamp: number }
 >();
 const pendingPublicPostRequests = new Map<string, Promise<unknown[]>>();
+
+async function withTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs: number,
+  message: string,
+) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error(message)),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
 
 export const postService = {
   // Fetch all public posts with author information
@@ -62,10 +84,11 @@ export const postService = {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const request = (async () => {
-      const { data, error } = await supabase
-      .from('Post')
-      .select(
-        `
+      const { data, error } = await withTimeout(
+        supabase
+          .from('Post')
+          .select(
+            `
         *,
         User!Post_authorId_fkey (
           id,
@@ -79,11 +102,14 @@ export const postService = {
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
       `,
-      )
-      .eq('visibility', 'PUBLIC')
-      .gte('createdAt', thirtyDaysAgo.toISOString())
-      .order('createdAt', { ascending: false })
-      .range(offset, offset + limit - 1);
+          )
+          .eq('visibility', 'PUBLIC')
+          .gte('createdAt', thirtyDaysAgo.toISOString())
+          .order('createdAt', { ascending: false })
+          .range(offset, offset + limit - 1),
+        PUBLIC_POSTS_FETCH_TIMEOUT_MS,
+        'Feed posts request timed out',
+      );
 
       if (error) throw new Error(error.message);
 
@@ -104,10 +130,14 @@ export const postService = {
         const batchSize = 100;
         for (let i = 0; i < verifiedByUserIds.length; i += batchSize) {
           const batch = verifiedByUserIds.slice(i, i + batchSize);
-          const { data: verifiedByUsers } = await supabase
-            .from('User')
-            .select('id, username')
-            .in('id', batch);
+          const { data: verifiedByUsers } = await withTimeout(
+            supabase
+              .from('User')
+              .select('id, username')
+              .in('id', batch),
+            PUBLIC_POSTS_FETCH_TIMEOUT_MS,
+            'Feed verification lookup timed out',
+          );
 
           if (verifiedByUsers) {
             verifiedByUsers.forEach(

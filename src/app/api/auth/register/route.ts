@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       email: username,
       username,
       passwordHash: password,
-      fullName: v7(),
+      fullName: '',
       status: 'ACTIVE', // User status: Active (ปกติใช้งาน)
       isVerified: false, // Verify status: Under review (รอยืนยันตัวตน)
       updatedAt: new Date().toUTCString(),

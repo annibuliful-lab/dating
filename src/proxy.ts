@@ -11,6 +11,15 @@ const PUBLIC_ROUTES = ["/", "/auth/error", "/line-auth-test"];
 const AUTH_ROUTES = ["/signin", "/signup"];
 const PROTECTED_ROUTES = ["/feed", "/profile", "/inbox", "/create"];
 const ADMIN_ROUTES = ["/admin"];
+const UUID_LIKE_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isBlankOrGeneratedProfileValue(
+  value: string | null | undefined,
+) {
+  const normalized = value?.trim();
+  return !normalized || UUID_LIKE_PATTERN.test(normalized);
+}
 
 export default auth(async (req) => {
   const { nextUrl } = req;
@@ -104,11 +113,10 @@ export default auth(async (req) => {
     }
 
     // Check if user has completed their profile (new users)
-    // New users have empty fullName or generated username (uuid format)
+    // New users have empty fields or generated UUID-like placeholders.
     const isNewUser =
-      !userData.fullName ||
-      userData.fullName === "" ||
-      userData.username.length > 30; // UUID v7 is longer than typical usernames
+      isBlankOrGeneratedProfileValue(userData.fullName) ||
+      isBlankOrGeneratedProfileValue(userData.username);
 
     // Redirect new users to profile edit page (except if they're already there)
     if (

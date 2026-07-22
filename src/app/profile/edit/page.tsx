@@ -39,7 +39,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-const MAX_COMPLETED_PROFILE_USERNAME_LENGTH = 30;
+const UUID_LIKE_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function EditProfilePage() {
   const { data } = useSession();
@@ -396,15 +397,12 @@ function EditProfilePage() {
       return;
     }
 
-    if (
-      normalizedUsername.length >
-      MAX_COMPLETED_PROFILE_USERNAME_LENGTH
-    ) {
+    if (UUID_LIKE_PATTERN.test(normalizedUsername)) {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
         title: 'Error',
-        message: 'ชื่อผู้ใช้ต้องมีความยาวไม่เกิน 30 ตัวอักษร',
+        message: 'กรุณาเปลี่ยนชื่อผู้ใช้ก่อนบันทึกโปรไฟล์',
       });
       return;
     }
@@ -445,7 +443,7 @@ function EditProfilePage() {
     try {
       const profileData = {
         username: normalizedUsername,
-        name: fullName,
+        name: normalizedFullName,
         lastname: null,
         gender,
         birthday,

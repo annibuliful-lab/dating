@@ -80,7 +80,14 @@ function ProfilePage() {
           </Box>
           <Flex direction="column" align="center">
             <Group gap={6} align="center">
-              <Text fw={800} fz={20}>
+              <Text
+                fw={800}
+                fz={20}
+                style={{
+                  textAlign: 'center',
+                  margin: 'auto',
+                }}
+              >
                 {userProfile.username}
               </Text>
               {userProfile.isVerified && (
@@ -93,6 +100,7 @@ function ProfilePage() {
                     padding: '2px 8px',
                     borderRadius: '12px',
                     border: '1px solid #2563eb',
+                    margin: 'auto',
                   }}
                 >
                   {userProfile.verifiedByUsername

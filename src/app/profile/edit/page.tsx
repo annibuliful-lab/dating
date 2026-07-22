@@ -397,14 +397,14 @@ function EditProfilePage() {
     }
 
     if (
-      normalizedUsername.length > MAX_COMPLETED_PROFILE_USERNAME_LENGTH
+      normalizedUsername.length >
+      MAX_COMPLETED_PROFILE_USERNAME_LENGTH
     ) {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
         title: 'Error',
-        message:
-          'ชื่อผู้ใช้ต้องมีความยาวไม่เกิน 30 ตัวอักษร',
+        message: 'ชื่อผู้ใช้ต้องมีความยาวไม่เกิน 30 ตัวอักษร',
       });
       return;
     }
@@ -445,7 +445,7 @@ function EditProfilePage() {
     try {
       const profileData = {
         username: normalizedUsername,
-        name: normalizedFullName,
+        name: fullName,
         lastname: null,
         gender,
         birthday,

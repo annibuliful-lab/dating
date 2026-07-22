@@ -46,6 +46,8 @@ Suspension is enforced at every stage (signIn, JWT, session). Suspended users ar
 
 Session shape is extended in `src/@types/next-auth.d.ts` — `session.user.id` is the primary user identifier throughout the app.
 
+`src/proxy.ts` treats users as incomplete/new when `fullName` is empty or `username.length > 30`. Do not let profile save flows preserve a UUID-like generated username if the user should be able to navigate to `/feed`.
+
 ## Verification Workflow
 
 User verification is admin-controlled only.
@@ -57,6 +59,8 @@ User verification is admin-controlled only.
 - Admin verification uses `/api/users/[userId]/verify`; admin unverification uses `/api/users/[userId]/unverify`.
 - `/api/users/[userId]/verify` must reject non-admin self-verification.
 
+`src/components/layout/ClientLayout.tsx` wraps authenticated routes and can block page rendering while session/profile state loads, or show `VerifyPrompt` for unverified users. A perceived `/feed` loading issue may actually be stale profile state or the verification gate.
+
 ## Service Layer (`src/services/`)
 
 All data access goes through services — never call Supabase directly from page/component files.
@@ -66,6 +70,10 @@ All data access goes through services — never call Supabase directly from page
 - `services/post.ts`, `services/user.ts` — feed and batch user fetching
 
 The batch user fetch pattern in `services/user.ts` (getUsersByIds) exists specifically to prevent N+1 queries on the feed. Use it whenever fetching author data for a list of posts/messages.
+
+`useUserProfile()` has a module cache and `notifyUserProfileUpdated()`. After successful profile edits or profile image saves, call `notifyUserProfileUpdated()` before route navigation so `/profile`, `/feed`, and `ClientLayout` see fresh user state.
+
+Feed post loading in `src/services/supabase/posts.ts` uses cache and pending-request deduplication. Pending request maps must delete entries in `finally`, including timeout/error paths, or a stuck Supabase request can be reused and keep `/feed` loading forever. Supabase PostgREST builders are awaitable but typed as `PromiseLike<T>`, so timeout helpers wrapping them should accept `PromiseLike<T>`, not only `Promise<T>`.
 
 ## Hooks (`src/hooks/`)
 

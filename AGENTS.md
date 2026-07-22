@@ -72,6 +72,7 @@ Critical behavior enforced by `src/proxy.ts`:
 - Authenticated users are redirected away from auth pages to `/feed`.
 - Suspended users are effectively read-only and redirected back to `/feed`.
 - New users are detected by incomplete profile data and forced to `/profile/edit`.
+- New-user detection treats empty `fullName` or `username.length > 30` as incomplete. Profile save flows must not allow a UUID-like generated username to remain if the user should be able to leave onboarding.
 
 ### Verification Gate
 
@@ -121,6 +122,8 @@ Behavior:
 - Profile images are stored in Supabase Storage under `dating/users/{userId}/profile-images/...`.
 - Avatar/public URLs are derived from `profileImageKey` and storage keys.
 - Age is derived from birthday in `updateUserProfile()`.
+- `useUserProfile()` maintains a short-lived module cache and exposes `notifyUserProfileUpdated()`. After successful profile updates or profile image saves, call `notifyUserProfileUpdated()` before navigating so `ClientLayout`, `/profile`, and `/feed` do not keep using stale profile data.
+- Profile/onboarding bugs can look like feed loading bugs because `ClientLayout` wraps authenticated routes and returns `null` while profile/session state is loading.
 
 ### Chat / Inbox
 
@@ -255,6 +258,8 @@ Current reality:
 - The repo contains explicit work to reduce N+1 queries.
 - Some hotspots are still present, especially in admin and feed-related data assembly.
 - There is a utility file for cache/dedup/prefetch: `src/lib/supabase-optimization.ts`.
+- `src/services/supabase/posts.ts` uses cache and pending-request deduplication for the feed. If adding or changing pending request maps, make sure rejected or timed-out requests are cleared in `finally`; otherwise future navigation can reuse a stuck promise and show an endless feed loader.
+- Supabase PostgREST query builders are awaitable but typed as `PromiseLike`, not concrete `Promise`. Shared timeout helpers that wrap Supabase builders should accept `PromiseLike<T>`.
 
 When changing query-heavy code:
 

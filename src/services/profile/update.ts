@@ -1,4 +1,5 @@
 import { supabase } from '@/client/supabase';
+import { normalizeEmail, normalizeUsername } from '@/lib/normalize-user-fields';
 import { formatISO } from 'date-fns';
 
 type ProfileInput = {
@@ -67,7 +68,10 @@ export async function updateUserProfile(
   const age = calculateAge(birthdayDate);
 
   const payload = clean({
-    username: input.username,
+    username:
+      input.username === undefined
+        ? undefined
+        : normalizeUsername(input.username),
     fullName: input.name,
     lastname: input.lastname,
     gender: input.gender,
@@ -79,7 +83,7 @@ export async function updateUserProfile(
     height: toNullableNumber(input.height),
     weight: toNullableNumber(input.weight),
     relationShipStatus: input.relationShipStatus,
-    email: input.email ?? null,
+    email: normalizeEmail(input.email),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any;
 

@@ -1,4 +1,5 @@
 import { supabase } from '@/client/supabase';
+import { normalizeUsername } from '@/lib/normalize-user-fields';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -12,10 +13,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const normalizedUsername = normalizeUsername(username);
+
+    if (!normalizedUsername) {
+      return NextResponse.json(
+        { available: false, message: 'Username is required' },
+        { status: 400 },
+      );
+    }
+
     let query = supabase
       .from('User')
       .select('id, username')
-      .eq('username', username);
+      .eq('username', normalizedUsername);
 
     // Exclude current user if provided
     if (excludeUserId) {
@@ -46,4 +56,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

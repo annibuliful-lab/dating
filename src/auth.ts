@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 import LineProvider from "next-auth/providers/line";
 import { v7 } from "uuid";
 import { supabase } from "./client/supabase";
+import { normalizeEmail } from "./lib/normalize-user-fields";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
@@ -25,11 +26,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: string;
           password: string;
         };
+        const normalizedEmail = normalizeEmail(email);
+
+        if (!normalizedEmail) return null;
 
         const { data: userInfo, error } = await supabase
           .from("User")
           .select("*")
-          .eq("email", email)
+          .eq("email", normalizedEmail)
           .single();
 
         if (error) {

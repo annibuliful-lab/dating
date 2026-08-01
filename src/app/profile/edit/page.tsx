@@ -747,8 +747,8 @@ function EditProfilePage() {
 
             {/* Password - Editable */}
             <PasswordInput
-              label="Password"
-              placeholder="Leave blank to keep current password"
+              label={t('password')}
+              placeholder={t('passwordKeepCurrent')}
               value={password}
               onChange={(e) => setPassword(e.currentTarget.value)}
               autoComplete="off"
@@ -760,8 +760,8 @@ function EditProfilePage() {
 
             {/* Line ID - Editable */}
             <TextInput
-              label="Line ID"
-              placeholder="Line ID"
+              label={t('lineId')}
+              placeholder={t('lineId')}
               value={lineId}
               onChange={(e) => setLineId(e.currentTarget.value)}
               autoComplete="off"

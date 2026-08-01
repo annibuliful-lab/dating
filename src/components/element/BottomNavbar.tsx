@@ -12,6 +12,7 @@ import { CreatePostIcon } from "../icons/CreatePostIcon";
 import { useAdminCheck } from "@/hooks/useAdmin";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useUserStatusCheck } from "@/hooks/useUser";
+import { useLocale } from "@/i18n/LocaleProvider";
 
 export const BOTTOM_NAVBAR_HEIGHT_PX = 72;
 
@@ -25,6 +26,7 @@ export function BottomNavbar() {
   const { data: adminData } = useAdminCheck();
   const { data: statusData } = useUserStatusCheck();
   const { unreadCount, refreshIfStale } = useUnreadCount();
+  const { t } = useLocale();
 
   useEffect(() => {
     refreshIfStale();
@@ -85,19 +87,19 @@ export function BottomNavbar() {
   const navItems = isSuspended
     ? [
         {
-          label: "Home",
+          label: t('home'),
           icon: <HomeIcon color={isActive("/feed") ? "#FFFFFF" : "#989898"} />,
           href: "/feed",
         },
       ]
     : ([
         {
-          label: "Home",
+          label: t('home'),
           icon: <HomeIcon color={isActive("/feed") ? "#FFFFFF" : "#989898"} />,
           href: "/feed",
         },
         {
-          label: "Create post",
+          label: t('createPost'),
           icon: (
             <CreatePostIcon
               color={isActive("/create") ? "#FFFFFF" : "#989898"}
@@ -106,7 +108,7 @@ export function BottomNavbar() {
           href: "/create",
         },
         {
-          label: "Inbox",
+          label: t('inbox'),
           icon: (
             <InboxIcon color={isActive("/inbox") ? "#FFFFFF" : "#989898"} />
           ),
@@ -115,7 +117,7 @@ export function BottomNavbar() {
         ...(isAdmin
           ? [
               {
-                label: "User Status",
+                label: t('userStatus'),
                 icon: (
                   <UserStatusIcon
                     color={isActive("/admin/users") ? "#FFFFFF" : "#989898"}
@@ -126,7 +128,7 @@ export function BottomNavbar() {
             ]
           : []),
         {
-          label: "Profile",
+          label: t('profile'),
           icon: (
             <ProfileIcon color={isActive("/profile") ? "#FFFFFF" : "#989898"} />
           ),

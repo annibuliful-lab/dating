@@ -9,6 +9,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { Box, Button, Container, Stack, Text } from '@mantine/core';
 
 import { usePathname } from 'next/navigation';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 const ROUTES_WITHOUT_NAVBAR = ['/signin', '/signup', '/auth/error', '/line-auth-test'];
 const UUID_LIKE_PATTERN =
@@ -27,6 +28,7 @@ export function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { t } = useLocale();
   const { status, userProfile, loading, error, refetch } =
     useUserProfile();
 
@@ -49,10 +51,10 @@ export function ClientLayout({
       <Container size="xs" py="xl">
         <Stack align="center" gap="md">
           <Text c="red" ta="center">
-            Failed to load your profile.
+            {t('failedToLoadProfile')}
           </Text>
           <Button variant="filled" onClick={() => refetch()}>
-            Retry
+            {t('retry')}
           </Button>
         </Stack>
       </Container>

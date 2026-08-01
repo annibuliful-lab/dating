@@ -18,28 +18,30 @@ import { notifications } from '@mantine/notifications';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 const passwordValidations = [
   {
-    label: '8 characters minimum',
+    label: 'passwordMin',
     validator: (pw: string) => pw.length >= 8,
   },
   {
-    label: 'a number',
+    label: 'passwordNumber',
     validator: (pw: string) => /\d/.test(pw),
   },
   {
-    label: 'an uppercase letter',
+    label: 'passwordUppercase',
     validator: (pw: string) => /[A-Z]/.test(pw),
   },
   {
-    label: 'a special character',
+    label: 'passwordSpecial',
     validator: (pw: string) => /[!@#$%^&*(),.?":{}|<>]/.test(pw),
   },
 ];
 
 export default function SignupPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,8 +55,8 @@ export default function SignupPage() {
   }>('/api/auth/register', {
     onCompleted: async (data) => {
       notifications.show({
-        title: 'Sign up',
-        message: 'Sign up successfully',
+        title: t('signUp'),
+        message: t('signUpSuccess'),
         autoClose: 5000,
       });
 
@@ -64,8 +66,8 @@ export default function SignupPage() {
     },
     onError: () => {
       notifications.show({
-        title: 'Sign up',
-        message: 'Sign up failed, please contact administrator',
+        title: t('signUp'),
+        message: t('signUpFailed'),
         autoClose: 5000,
       });
     },
@@ -78,7 +80,7 @@ export default function SignupPage() {
   const isEmailValid = isValidEmail(email);
 
   const isPasswordValid = passwordValidations.every((el) =>
-    el.validator(password)
+    el.validator(password),
   );
 
   return (
@@ -101,14 +103,14 @@ export default function SignupPage() {
         />
 
         <Text size="xl" fw={700}>
-          Sign up for Amorisloki
+          {t('signUpFor')}
         </Text>
         <Text size="sm" c="dimmed">
           เลือกช่องทางสมัครสมาชิก
         </Text>
 
         <TextInput
-          placeholder="Email"
+          placeholder={t('email')}
           radius="md"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -129,7 +131,7 @@ export default function SignupPage() {
         />
 
         <PasswordInput
-          placeholder="Password"
+          placeholder={t('password')}
           radius="md"
           visible={showPassword}
           onVisibilityChange={setShowPassword}
@@ -149,7 +151,16 @@ export default function SignupPage() {
         {isEmailValid && (
           <PasswordChecklist
             password={password}
-            validations={passwordValidations}
+            validations={passwordValidations.map((validation) => ({
+              ...validation,
+              label: t(
+                validation.label as
+                  | 'passwordMin'
+                  | 'passwordNumber'
+                  | 'passwordUppercase'
+                  | 'passwordSpecial',
+              ),
+            }))}
           />
         )}
 
@@ -160,16 +171,16 @@ export default function SignupPage() {
           loading={loading}
           disabled={!isPasswordValid}
         >
-          Create account
+          {t('createAccount')}
         </Button>
 
         <Text size="sm" ta="center" c="dimmed">
-          Already have an account?{' '}
+          {t('alreadyAccount')}{' '}
           <Link
             href="/signin"
             style={{ color: '#FFD400', fontWeight: 500 }}
           >
-            Log in
+            {t('login')}
           </Link>
         </Text>
       </Stack>

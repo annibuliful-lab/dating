@@ -12,9 +12,11 @@ import {
 } from '@mantine/core';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 export default function Home() {
   const router = useRouter();
+  const { t } = useLocale();
 
   const { status } = useUserProfile();
 
@@ -64,7 +66,7 @@ export default function Home() {
 
         <Stack gap="xs" pb="xl">
           <Button fullWidth onClick={handleClickLogin}>
-            Log in to Amorisloki
+            {t('loginTo')}
           </Button>
           <Text
             style={{
@@ -75,7 +77,7 @@ export default function Home() {
             fw={500}
             onClick={handleClickSignup}
           >
-            Sign up
+            {t('signUp')}
           </Text>
         </Stack>
       </Container>

@@ -38,6 +38,7 @@ import { format } from 'date-fns';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 const UUID_LIKE_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -45,15 +46,16 @@ const UUID_LIKE_PATTERN =
 function EditProfilePage() {
   const { data } = useSession();
   const router = useRouter();
+  const { t } = useLocale();
 
   // Profile states
   const [username, setUsername] = useState('');
-  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [lineId, setLineId] = useState('');
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState<string | null>(null);
+  const [relationshipStatus, setRelationshipStatus] = useState<string | null>(null);
   const [birthday, setBirthday] = useState<Date | null>(null);
   const [age, setAge] = useState<number | null>(null);
   const [height, setHeight] = useState('');
@@ -149,11 +151,11 @@ function EditProfilePage() {
       try {
         const profile = await getUserProfile(userId);
         setUsername(profile.username ?? '');
-        setFullName(profile.fullName ?? '');
         setEmail(profile.email ?? '');
         setLineId(profile.lineId ?? '');
         setPhone(profile.phone ?? '');
         setGender(profile.gender ?? null);
+        setRelationshipStatus(profile.relationShipStatus ?? null);
         setBirthday(
           profile.birthday ? new Date(profile.birthday) : null,
         );
@@ -374,18 +376,6 @@ function EditProfilePage() {
     if (!data?.user.id) return;
 
     const normalizedUsername = username.trim();
-    const normalizedFullName = fullName.trim();
-
-    // Validate required fields
-    if (!normalizedFullName) {
-      setShowConfirmModal(false);
-      notifications.show({
-        color: 'red',
-        title: 'Error',
-        message: 'ชื่อ-นามสกุลจำเป็นต้องกรอก',
-      });
-      return;
-    }
 
     if (!normalizedUsername) {
       setShowConfirmModal(false);
@@ -437,15 +427,53 @@ function EditProfilePage() {
       return;
     }
 
+    if (!relationshipStatus) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: 'red',
+        title: 'Error',
+        message: 'สถานะจำเป็นต้องเลือก',
+      });
+      return;
+    }
+
+    const heightValue = Number(height);
+    const weightValue = Number(weight);
+    if (
+      !height.trim() ||
+      !weight.trim() ||
+      !Number.isFinite(heightValue) ||
+      !Number.isFinite(weightValue) ||
+      heightValue <= 0 ||
+      weightValue <= 0
+    ) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: 'red',
+        title: 'Error',
+        message: 'กรุณากรอกน้ำหนักและส่วนสูง',
+      });
+      return;
+    }
+
+    if (!email.trim()) {
+      setShowConfirmModal(false);
+      notifications.show({
+        color: 'red',
+        title: 'Error',
+        message: 'อีเมลจำเป็นต้องกรอก',
+      });
+      return;
+    }
+
     setShowConfirmModal(false);
     setSaving(true);
 
     try {
       const profileData = {
         username: normalizedUsername,
-        name: normalizedFullName,
-        lastname: null,
         gender,
+        relationShipStatus: relationshipStatus,
         birthday,
         bio: bio || null,
         lineId: lineId || null,
@@ -658,19 +686,6 @@ function EditProfilePage() {
           <Stack gap="sm">
             <Text fw={700}>ข้อมูลส่วนตัว *</Text>
 
-            {/* Full Name - Editable */}
-            <TextInput
-              label="ชื่อ-นามสกุล *"
-              placeholder="ชื่อ-นามสกุล"
-              value={fullName}
-              onChange={(e) => setFullName(e.currentTarget.value)}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              inputMode="text"
-            />
-
             {/* Username - Editable */}
             <TextInput
               autoComplete="off"
@@ -718,7 +733,7 @@ function EditProfilePage() {
 
             {/* Email - Editable */}
             <TextInput
-              label="Email"
+              label="Email *"
               placeholder="Email"
               type="email"
               value={email}
@@ -760,9 +775,20 @@ function EditProfilePage() {
             <Select
               label="เพศ *"
               placeholder="เลือกเพศ"
-              data={['Male', 'Female', 'Other']}
+              data={['ชาย', 'หญิง', 'อื่นๆ']}
               value={gender}
               onChange={setGender}
+              rightSection={<Text>›</Text>}
+              comboboxProps={{ withinPortal: true }}
+            />
+
+            {/* Relationship status - Dropdown */}
+            <Select
+              label="สถานะ *"
+              placeholder="เลือกสถานะ"
+              data={['ชาย', 'หญิง', 'คู่รัก']}
+              value={relationshipStatus}
+              onChange={setRelationshipStatus}
               rightSection={<Text>›</Text>}
               comboboxProps={{ withinPortal: true }}
             />
@@ -799,8 +825,10 @@ function EditProfilePage() {
 
             {/* Height */}
             <TextInput
-              label="ส่วนสูง"
-              placeholder="ส่วนสูง"
+              label="ส่วนสูง *"
+              placeholder="ส่วนสูง (ซม.)"
+              type="number"
+              min={1}
               rightSection={<Text c="dimmed">cm</Text>}
               value={height}
               onChange={(e) => setHeight(e.currentTarget.value)}
@@ -808,8 +836,10 @@ function EditProfilePage() {
 
             {/* Weight */}
             <TextInput
-              label="น้ำหนัก"
-              placeholder="น้ำหนัก"
+              label="น้ำหนัก *"
+              placeholder="น้ำหนัก (กก.)"
+              type="number"
+              min={1}
               rightSection={<Text c="dimmed">kg</Text>}
               value={weight}
               onChange={(e) => setWeight(e.currentTarget.value)}
@@ -818,8 +848,8 @@ function EditProfilePage() {
             {/* Bio - Long text with emoji support */}
             <Box>
               <Textarea
-                label="Bio"
-                placeholder="เขียนเกี่ยวกับตัวคุณ (รองรับ emoji)"
+                label={t('intro')}
+                placeholder={t('introPlaceholder')}
                 autosize
                 minRows={5}
                 maxRows={10}

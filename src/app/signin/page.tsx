@@ -15,9 +15,11 @@ import { signIn, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,8 +34,8 @@ export default function LoginPage() {
 
       if (result?.error) {
         notifications.show({
-          title: 'Login failed',
-          message: 'Invalid email or password',
+          title: t('loginFailed'),
+          message: t('invalidCredentials'),
           color: 'red',
           autoClose: 5000,
         });
@@ -44,8 +46,8 @@ export default function LoginPage() {
     } catch (err) {
       console.error('[signin-error]: ', err);
       notifications.show({
-        title: 'Login failed',
-        message: 'An error occurred. Please try again.',
+        title: t('loginFailed'),
+        message: t('tryAgain'),
         color: 'red',
         autoClose: 5000,
       });
@@ -82,14 +84,14 @@ export default function LoginPage() {
         />
 
         <Text size="xl" fw={700}>
-          Log in for Amorisloki
+          {t('loginFor')}
         </Text>
         <Text size="sm" c="dimmed">
           เข้าสู่ระบบด้วยช่องทางที่สมัครมาเท่านั้น
         </Text>
 
         <TextInput
-          placeholder="Email"
+          placeholder={t('email')}
           radius="md"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -109,7 +111,7 @@ export default function LoginPage() {
         />
 
         <PasswordInput
-          placeholder="Password"
+          placeholder={t('password')}
           radius="md"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -130,7 +132,7 @@ export default function LoginPage() {
           variant="primary"
           onClick={handleClickSignIn}
         >
-          Log in
+          {t('login')}
         </Button>
 
         <Text size="sm" ta="center" mt="xs" fw={500}>
@@ -138,17 +140,17 @@ export default function LoginPage() {
             href="#"
             style={{ color: 'white', textDecoration: 'none' }}
           >
-            Forgot password
+            {t('forgotPassword')}
           </a>
         </Text>
 
         <Text size="sm" ta="center" c="dimmed">
-          Don&apos;t have an account?{' '}
+          {t('noAccount')}{' '}
           <Link
             href="/signup"
             style={{ color: 'white', fontWeight: 500 }}
           >
-            Create one
+            {t('createOne')}
           </Link>
         </Text>
       </Stack>

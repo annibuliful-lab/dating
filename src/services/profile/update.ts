@@ -72,6 +72,7 @@ export async function updateUserProfile(
       input.username === undefined
         ? undefined
         : normalizeUsername(input.username),
+    // Keep the legacy database field unchanged; the profile form no longer edits it.
     fullName: input.name,
     lastname: input.lastname,
     gender: input.gender,

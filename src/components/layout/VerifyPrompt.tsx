@@ -13,9 +13,11 @@ import {
   Flex,
 } from '@mantine/core';
 import { useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 export function VerifyPrompt() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { t } = useLocale();
 
   const handleAddLineOA = () => {
     // Open modal to show QR code
@@ -56,14 +58,13 @@ export function VerifyPrompt() {
 
           <Stack gap="md" align="center">
             <Text size="xl" fw={700} ta="center">
-              เพิ่ม Line OA เพื่อยืนยันตัวตน
+              {t('addLine')}
             </Text>
             <Text size="sm" c="dimmed" ta="center">
-              เพื่อความปลอดภัยและความน่าเชื่อถือ กรุณาเพิ่ม Line OA
-              เพื่อยืนยันตัวตนของคุณ
+              {t('addLineDescription')}
             </Text>
             <Text size="l" ta="center" fw="bold">
-              * หากไม่ยืนยันตัวตนจะไม่สามารถเข้าใช้เว็บไซต์ได้
+              {t('verificationRequired')}
             </Text>
           </Stack>
 
@@ -74,7 +75,7 @@ export function VerifyPrompt() {
               leftSection={<LineIcon />}
               onClick={handleAddLineOA}
             >
-              เพิ่ม Line OA
+              {t('addLine')}
             </Button>
           </Stack>
 
@@ -91,7 +92,7 @@ export function VerifyPrompt() {
         onClose={handleCloseModal}
         title={
           <Text size="lg" fw={700}>
-            สแกน QR Code เพื่อเพิ่ม LINE OA
+            {t('scanLine')}
           </Text>
         }
         centered
@@ -181,13 +182,13 @@ export function VerifyPrompt() {
 
           <Stack gap="sm" align="center">
             <Text size="sm" ta="center" c="white">
-              เปิดแอป LINE แล้วสแกน QR Code นี้
+              {t('openLine')}
             </Text>
             <Text size="xs" ta="center" c="dimmed">
-              หลังจากเพิ่มเพื่อนแล้ว กรุณารอแอดมินตรวจสอบและยืนยันสถานะ
+              {t('adminReview')}
             </Text>
             <Text size="l" ta="center" fw="bold">
-              * หากไม่ยืนยันตัวตนจะไม่สามารถเข้าใช้เว็บไซต์ได้
+              {t('verificationRequired')}
             </Text>
           </Stack>
 
@@ -202,7 +203,7 @@ export function VerifyPrompt() {
                 },
               }}
             >
-              ปิด
+              {t('close')}
             </Button>
           </Stack>
         </Stack>

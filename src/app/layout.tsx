@@ -7,6 +7,7 @@ import { SessionProvider } from 'next-auth/react';
 import { Inter } from 'next/font/google';
 import { ClientLayout } from '@/components/layout/ClientLayout';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { LocaleProvider } from '@/i18n/LocaleProvider';
 
 const inter = Inter({
   weight: ['400', '500', '600', '700'],
@@ -19,14 +20,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" {...mantineHtmlProps} className={inter.className}>
+    <html lang="th" {...mantineHtmlProps} className={inter.className}>
       <head>
         <ColorSchemeScript />
       </head>
       <body>
         <SessionProvider>
           <MantineAppProvider>
-            <ClientLayout>{children}</ClientLayout>
+            <LocaleProvider>
+              <ClientLayout>{children}</ClientLayout>
+            </LocaleProvider>
           </MantineAppProvider>
         </SessionProvider>
         <SpeedInsights />

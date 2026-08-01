@@ -20,10 +20,12 @@ import {
 } from '@mantine/core';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 function ProfilePage() {
   const router = useRouter();
   const { status } = useSession();
+  const { t } = useLocale();
 
   const { userProfile, loading, error } = useUserProfile();
 
@@ -109,9 +111,6 @@ function ProfilePage() {
                 </Text>
               )}
             </Group>
-            <Text c="#979797">
-              {userProfile.fullName} {userProfile.lastname}
-            </Text>
           </Flex>
 
           <Text ta="center" px="lg" style={{ lineHeight: 1.5 }}>
@@ -125,7 +124,7 @@ function ProfilePage() {
             mt="xs"
             onClick={() => router.push('/profile/edit')}
           >
-            Edit profile
+            {t('editProfile')}
           </Button>
 
           <Button
@@ -139,7 +138,7 @@ function ProfilePage() {
               router.push('/');
             }}
           >
-            <Text c="white">Logout</Text>
+            <Text c="white">{t('logout')}</Text>
           </Button>
         </Stack>
 

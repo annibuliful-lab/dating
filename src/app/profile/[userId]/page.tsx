@@ -339,9 +339,6 @@ function ProfileViewPage() {
                 </Text>
               )}
             </Group>
-            <Text c="dimmed" fz="sm">
-              {profile.fullName || "Unknown"}
-            </Text>
             <Text fz="sm" style={{ maxWidth: rem(320), lineHeight: 1.5 }}>
               {profile.bio || "No bio available"}
             </Text>

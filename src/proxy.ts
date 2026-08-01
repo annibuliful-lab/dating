@@ -74,14 +74,13 @@ export default auth(async (req) => {
     // Fetch user details from database
     const { data: user, error } = await supabase
       .from("User")
-      .select("status, role, fullName, username")
+      .select("status, role, username")
       .eq("id", userId)
       .single();
 
     const userData = user as unknown as {
       status: string;
       role: string;
-      fullName: string | null;
       username: string;
     };
 
@@ -113,10 +112,9 @@ export default auth(async (req) => {
     }
 
     // Check if user has completed their profile (new users)
-    // New users have empty fields or generated UUID-like placeholders.
-    const isNewUser =
-      isBlankOrGeneratedProfileValue(userData.fullName) ||
-      isBlankOrGeneratedProfileValue(userData.username);
+    // New users have an empty or generated UUID-like username.
+    // Full name is a legacy field and is no longer required by the profile form.
+    const isNewUser = isBlankOrGeneratedProfileValue(userData.username);
 
     // Redirect new users to profile edit page (except if they're already there)
     if (

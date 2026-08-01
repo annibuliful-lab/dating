@@ -1,213 +1,284 @@
 'use client';
 
 import { LineIcon } from '@/components/icons/LineIcon';
+import { useLocale } from '@/i18n/LocaleProvider';
 import {
+  Badge,
   Box,
   Button,
+  Card,
   Container,
+  Divider,
+  Flex,
   Image,
   Modal,
-  rem,
+  Paper,
   Stack,
   Text,
-  Flex,
+  ThemeIcon,
+  Title,
 } from '@mantine/core';
 import { useState } from 'react';
-import { useLocale } from '@/i18n/LocaleProvider';
+
+const LINE_PROFILES = {
+  singleMen: {
+    appUrl: 'line://ti/p/cFT31iUIWt',
+    webUrl: 'https://line.me/ti/p/cFT31iUIWt',
+  },
+  singleMenAlternative: {
+    appUrl: 'line://ti/p/qZEkGGf6pZ',
+    webUrl: 'https://line.me/ti/p/qZEkGGf6pZ',
+  },
+  couplesAndWomen: {
+    appUrl: 'line://ti/p/rOmbX0',
+    webUrl: 'https://line.me/ti/p/rOmbX0X',
+  },
+};
+
+function Step({
+  number,
+  children,
+}: {
+  number: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Flex gap="sm" align="flex-start">
+      <ThemeIcon size={26} radius="xl" color="yellow" variant="light">
+        <Text size="sm" fw={700} c="yellow.4">
+          {number}
+        </Text>
+      </ThemeIcon>
+      <Text size="sm" c="gray.2" pt={3}>
+        {children}
+      </Text>
+    </Flex>
+  );
+}
 
 export function VerifyPrompt() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { t } = useLocale();
 
-  const handleAddLineOA = () => {
-    // Open modal to show QR code
-    setIsModalOpen(true);
+  const openLineLink = (appUrl: string, webUrl: string) => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(
+      window.navigator.userAgent,
+    );
+
+    if (!isMobile) {
+      window.open(webUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const fallbackTimer = window.setTimeout(() => {
+      window.location.href = webUrl;
+    }, 1200);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        window.clearTimeout(fallbackTimer);
+        document.removeEventListener(
+          'visibilitychange',
+          handleVisibilityChange,
+        );
+      }
+    };
+
+    document.addEventListener(
+      'visibilitychange',
+      handleVisibilityChange,
+    );
+    window.location.href = appUrl;
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const lineButton = (
+    profile: keyof typeof LINE_PROFILES,
+    color: 'blue' | 'pink',
+    label = t('openLineToVerify'),
+  ) => {
+    const link = LINE_PROFILES[profile];
+    return (
+      <Button
+        component="a"
+        href={link.webUrl}
+        target="_blank"
+        rel="noreferrer"
+        fullWidth
+        color={color}
+        variant="filled"
+        styles={{ root: { border: 'none' } }}
+        leftSection={<LineIcon />}
+        onClick={(event) => {
+          event.preventDefault();
+          openLineLink(link.appUrl, link.webUrl);
+        }}
+      >
+        {label}
+      </Button>
+    );
   };
 
   return (
-    <>
-      <Container
-        px="md"
+    <Container size="xs" px="md" py="xl">
+      <Card
+        radius="lg"
+        padding="xl"
+        withBorder
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: rem(812),
-          maxWidth: rem(375),
-          justifyContent: 'center',
+          background:
+            'linear-gradient(145deg, #1d1d1d 0%, #121212 100%)',
+          borderColor: 'rgba(255, 212, 0, 0.35)',
         }}
       >
-        <Stack gap="xl" align="center">
-          <Box
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: rem(120),
-              height: rem(120),
-              borderRadius: '50%',
-              backgroundColor: '#131313',
-              border: '2px solid #FFD400',
-            }}
-          >
-            <LineIcon />
-          </Box>
-
-          <Stack gap="md" align="center">
-            <Text size="xl" fw={700} ta="center">
-              {t('addLine')}
-            </Text>
-            <Text size="sm" c="dimmed" ta="center">
-              {t('addLineDescription')}
-            </Text>
-            <Text size="l" ta="center" fw="bold">
-              {t('verificationRequired')}
-            </Text>
-          </Stack>
-
-          <Stack gap="md" w="100%">
-            <Button
-              fullWidth
-              variant="primary"
-              leftSection={<LineIcon />}
-              onClick={handleAddLineOA}
+        <Stack gap="lg">
+          <Stack gap="sm" align="center">
+            <ThemeIcon
+              size={76}
+              radius="xl"
+              color="yellow"
+              variant="light"
             >
-              {t('addLine')}
-            </Button>
+              <LineIcon />
+            </ThemeIcon>
+            <Badge color="yellow" variant="light">
+              LINE Verification
+            </Badge>
+            <Title order={2} ta="center" c="white">
+              {t('verifyTitle')}
+            </Title>
+            <Text ta="center" c="dimmed" size="sm" maw={330}>
+              {t('verifyIntro')}
+            </Text>
           </Stack>
 
-          {/* <Text size="xs" c="dimmed" ta="center">
-            หากข้าม คุณสามารถใช้งานได้ แต่จะไม่มีเครื่องหมาย verify
-            และสถานะจะยังเป็นรอยืนยันตัวตน
-          </Text> */}
-        </Stack>
-      </Container>
+          <Stack gap="sm">
+            <Step number="1">{t('verifyStepOne')}</Step>
+            <Step number="2">{t('verifyStepTwo')}</Step>
+            <Step number="3">{t('verifyStepThree')}</Step>
+          </Stack>
 
-      {/* Modal for LINE OA QR Code */}
+          <Button
+            fullWidth
+            size="md"
+            color="yellow"
+            leftSection={<LineIcon />}
+            onClick={() => setIsModalOpen(true)}
+          >
+            {t('addLine')}
+          </Button>
+
+          <Text size="xs" c="dimmed" ta="center">
+            {t('verificationRequired')}
+          </Text>
+        </Stack>
+      </Card>
+
       <Modal
         opened={isModalOpen}
-        onClose={handleCloseModal}
-        title={
-          <Text size="lg" fw={700}>
-            {t('scanLine')}
-          </Text>
-        }
+        onClose={() => setIsModalOpen(false)}
+        title={<Text fw={700}>{t('verifyTitle')}</Text>}
         centered
-        size="lg"
+        size="md"
         styles={{
-          content: {
-            backgroundColor: '#1a1a1a',
-          },
+          content: { backgroundColor: '#1a1a1a' },
           header: {
             backgroundColor: '#1a1a1a',
             borderBottom: '1px solid #333',
           },
-          title: {
-            color: 'white',
-          },
-          close: {
-            color: 'white',
-            '&:hover': {
-              backgroundColor: '#333',
-            },
-          },
+          title: { color: 'white' },
+          close: { color: 'white' },
         }}
       >
-        <Stack gap="lg" align="center" py="md">
-          <Box>
-            <Box
-              style={{
-                backgroundColor: 'white',
-                padding: rem(16),
-                borderRadius: rem(12),
-              }}
-            >
-              <Image
-                src="/line-qr/woman-relation.png"
-                alt="LINE OA QR Code woman-relation"
-                width={280}
-                height={280}
-                fit="contain"
-              />
-            </Box>
-            <Text
-              fz="h4"
-              mt={12}
-              style={{
-                textAlign: 'center',
-              }}
-            >
-              ผู้หญิงและคู่รัก
-            </Text>
-          </Box>
-
-          <Flex justify="space-evenly" gap={32}>
-            <Box
-              style={{
-                backgroundColor: 'white',
-                padding: rem(16),
-                borderRadius: rem(12),
-              }}
-            >
-              <Image
-                src="/line-qr/man-1.png"
-                alt="LINE OA QR Code man-1"
-                width={280}
-                height={280}
-                fit="contain"
-              />
-            </Box>
-            <Box
-              style={{
-                backgroundColor: 'white',
-                padding: rem(16),
-                borderRadius: rem(12),
-              }}
-            >
-              <Image
-                src="/line-qr/man-2.png"
-                alt="LINE OA QR Code man-2"
-                width={280}
-                height={280}
-                fit="contain"
-              />
-            </Box>
-          </Flex>
-          <Text fz="h4" style={{ textAlign: 'center' }}>
-            ผู้ชาย
+        <Stack gap="lg">
+          <Text size="sm" c="dimmed">
+            {t('lineLinks')}
           </Text>
 
-          <Stack gap="sm" align="center">
-            <Text size="sm" ta="center" c="white">
-              {t('openLine')}
+          <Paper
+            p="md"
+            radius="md"
+            withBorder
+            bg="#222"
+            style={{ borderColor: '#333' }}
+          >
+            <Stack gap="sm">
+              <Text fw={700} c="white">
+                {t('verifySingleMen')}
+              </Text>
+              {lineButton('singleMen', 'blue')}
+              <Text ta="center" size="xs" c="dimmed">
+                หรือ
+              </Text>
+              {lineButton('singleMenAlternative', 'blue')}
+            </Stack>
+          </Paper>
+
+          <Paper
+            p="md"
+            radius="md"
+            withBorder
+            bg="#222"
+            style={{ borderColor: '#333' }}
+          >
+            <Stack gap="sm">
+              <Text fw={700} c="white">
+                {t('verifyCouplesWomen')}
+              </Text>
+              {lineButton('couplesAndWomen', 'pink')}
+            </Stack>
+          </Paper>
+
+          <Divider
+            label={t('scanQrInstead')}
+            labelPosition="center"
+            color="dark.4"
+          />
+
+          <Stack gap="sm">
+            <Text fw={600} size="sm">
+              {t('verifySingleMen')}
             </Text>
-            <Text size="xs" ta="center" c="dimmed">
-              {t('adminReview')}
-            </Text>
-            <Text size="l" ta="center" fw="bold">
-              {t('verificationRequired')}
-            </Text>
+            <Flex gap="sm" justify="center">
+              <Image
+                src="/line-qr/man-1.png"
+                alt="LINE QR Code 1"
+                w={130}
+                fit="contain"
+              />
+              <Image
+                src="/line-qr/man-2.png"
+                alt="LINE QR Code 2"
+                w={130}
+                fit="contain"
+              />
+            </Flex>
           </Stack>
 
-          <Stack gap="sm" w="100%">
-            <Button
-              fullWidth
-              variant="primary"
-              onClick={handleCloseModal}
-              styles={{
-                root: {
-                  color: 'white',
-                },
-              }}
-            >
-              {t('close')}
-            </Button>
-          </Stack>
+          <Box>
+            <Text fw={600} size="sm" mb="sm">
+              {t('verifyCouplesWomen')}
+            </Text>
+            <Image
+              src="/line-qr/woman-relation.png"
+              alt="LINE QR Code"
+              w={180}
+              mx="auto"
+              fit="contain"
+            />
+          </Box>
+
+          <Text size="xs" c="dimmed" ta="center">
+            {t('adminReview')}
+          </Text>
+          <Button
+            variant="subtle"
+            color="gray"
+            onClick={() => setIsModalOpen(false)}
+          >
+            {t('close')}
+          </Button>
         </Stack>
       </Modal>
-    </>
+    </Container>
   );
 }

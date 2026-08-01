@@ -1,103 +1,73 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for AI coding agents working in this repository. `AGENTS.md` contains the full project map; keep both files aligned when behavior changes.
 
 ## Commands
 
 ```bash
-npm run dev          # Start dev server on port 8080 (Turbopack)
-npm run build        # Production build
-npm run lint         # ESLint
-
-npm run prisma:migrate      # Run Prisma migrations
-npm run prisma:db-push      # Push schema without migration history
-npm run prisma:studio       # Open Prisma Studio GUI
-
-npm run supabase:generate:types  # Regenerate TypeScript types from Supabase schema
+pnpm dev
+pnpm build
+pnpm lint
+pnpm prisma:validate
+pnpm prisma:generate
+pnpm prisma:migrate
+pnpm prisma:db-push
+pnpm prisma:db-pull
+pnpm prisma:studio
+pnpm supabase:generate:types
 ```
 
-There are no test scripts configured in this project.
+There is no test script. Production builds may need network access because `next/font/google` fetches Inter.
 
-## Architecture
+## Stack and architecture
 
-**Stack:** Next.js 16 App Router + React 19 + TypeScript, Mantine 8 UI, Prisma 6 ORM, PostgreSQL via Supabase, NextAuth v5 (beta).
+- Next.js 16 App Router, React 19, TypeScript.
+- Mantine 8, dark/mobile-first UI.
+- NextAuth v5 beta with Credentials, Google, and LINE.
+- Prisma 6 owns schema/migrations; Supabase client owns runtime queries, mutations, and storage.
+- Use pnpm, not npm.
 
-**Dual data access pattern — this is the most important architectural fact:**
-- **Prisma** owns the schema and migrations (`prisma/schema.prisma`). Run migrations/pushes through Prisma CLI.
-- **Supabase client** (`src/client/supabase.ts`) is used at runtime for all queries, mutations, and storage. API routes and services call Supabase directly, not Prisma.
-- When a column is added, update `prisma/schema.prisma`, run `prisma:db-push`, then run `supabase:generate:types` to keep TS types in sync.
+When changing schema, update `prisma/schema.prisma`, run the appropriate Prisma command, regenerate Supabase types when needed, and update queries/casts/service payloads.
 
-## Routing
+## Auth and routing
 
-App Router under `src/app/`. Key areas:
-- `/feed`, `/create`, `/profile`, `/inbox` — authenticated user pages
-- `/profile/[userId]` — public profile view
-- `/inbox/[chatId]` — real-time chat
-- `/admin/*` — admin dashboard (users, posts, chats)
-- `/api/*` — Next.js API routes (auth, chat operations, user actions)
+- Canonical user id: `session.user.id`.
+- JWT sessions are configured in `src/auth.ts`.
+- `/signin` and `/signup` show credentials UI. LINE remains available at `/line-auth-test`.
+- New OAuth users get a UUID-like username, empty legacy `fullName`, `ACTIVE` status, and `isVerified = false`.
+- Passwords currently use plain values in `passwordHash`; do not treat this as secure or expand it casually.
+- `src/proxy.ts` protects user/admin routes, restricts suspended accounts to `/feed`, and forces empty/UUID-like usernames to `/profile/edit`.
+- `ClientLayout` is a second client-side gate for loading, suspension, and admin-controlled verification.
 
-## Authentication (`src/auth.ts`)
+Verification is never completed by LINE scanning. Only admin verify/unverify routes may change `User.isVerified`. Preserve NextAuth callbacks, proxy rules, and client layout behavior together.
 
-NextAuth v5 with three providers: Credentials (email + passwordHash), Google, LINE.
+## Profile rules
 
-Session flow: `signIn` callback → `upsertUserAccount()` creates User + OAuthAccount if new → `jwt` callback stores provider info → `session` callback resolves `userId` from OAuthAccount by `providerAccountId` and appends it to the session.
+Files: `src/app/profile/*`, `src/services/profile/*`, `src/hooks/useUserProfile.tsx`.
 
-Suspension is enforced at every stage (signIn, JWT, session). Suspended users are blocked regardless of provider.
+The edit form requires username, birthday, weight, height, gender, relationship status, and email. Relationship status uses `User.relationShipStatus` with options `ชาย`, `หญิง`, and `คู่รัก`. First/last name fields and display are removed from the current UI; the legacy required database `fullName` column remains for compatibility and should not be reintroduced into the form.
 
-Session shape is extended in `src/@types/next-auth.d.ts` — `session.user.id` is the primary user identifier throughout the app.
+Profile images use Supabase Storage bucket `dating`, are compressed client-side, and must trigger `notifyUserProfileUpdated()` after save before navigation.
 
-`src/proxy.ts` treats users as incomplete/new when `fullName` is empty or `username.length > 30`. Do not let profile save flows preserve a UUID-like generated username if the user should be able to navigate to `/feed`.
+## Localization
 
-## Verification Workflow
+- `src/i18n/messages.ts` stores Thai (`th`) and English (`en`) messages.
+- `src/i18n/LocaleProvider.tsx` is mounted in `src/app/layout.tsx`.
+- Thai is the default; the selected locale is persisted in localStorage.
+- `LocaleSwitcher` remains implemented but its UI is intentionally hidden for now.
+- New user-visible labels should use `useLocale()`/translation keys. Current profile terminology includes `แนะนำตัว`, `รหัสผ่าน`, `ไลน์ ไอดี`, `แก้ไขโปรไฟล์`, and `ออกจากระบบ`.
 
-User verification is admin-controlled only.
+## Services and performance
 
-- New users from Credentials, Google, or LINE are created with `User.isVerified = false`.
-- Logging in must not auto-verify the user.
-- Users can see the LINE OA verification prompt and scan/add LINE, but that client flow must not update `User.isVerified`.
-- Only admins manually verify or unverify users.
-- Admin verification uses `/api/users/[userId]/verify`; admin unverification uses `/api/users/[userId]/unverify`.
-- `/api/users/[userId]/verify` must reject non-admin self-verification.
+Prefer domain services and hooks over new raw Supabase calls in pages. Important services include `src/services/supabase/{users,posts,messages,media,storage,ads}.ts`, `src/services/profile/*`, and `src/services/{admin,user,post}.ts`.
 
-`src/components/layout/ClientLayout.tsx` wraps authenticated routes and can block page rendering while session/profile state loads, or show `VerifyPrompt` for unverified users. A perceived `/feed` loading issue may actually be stale profile state or the verification gate.
+Use batch user lookup patterns to avoid N+1 queries. Feed pending-request deduplication must clear entries in `finally`, including failures/timeouts. Supabase builders are `PromiseLike<T>`; timeout helpers must support that type.
 
-## Service Layer (`src/services/`)
+## UI conventions
 
-All data access goes through services — never call Supabase directly from page/component files.
+- Reuse `TOP_NAVBAR_HEIGHT_PX` and `BOTTOM_NAVBAR_HEIGHT_PX`.
+- Preserve safe-area insets on fixed mobile navigation.
+- Shared runtime shell is `MantineAppProvider` → `LocaleProvider` → `ClientLayout`.
+- Admin authorization is role-based through `User.role`; admin APIs return `401`/`403`, not redirects.
 
-- `services/profile/` — get, update, images for user profiles
-- `services/supabase/` — query helpers for users, posts, messages, media
-- `services/post.ts`, `services/user.ts` — feed and batch user fetching
-
-The batch user fetch pattern in `services/user.ts` (getUsersByIds) exists specifically to prevent N+1 queries on the feed. Use it whenever fetching author data for a list of posts/messages.
-
-`useUserProfile()` has a module cache and `notifyUserProfileUpdated()`. After successful profile edits or profile image saves, call `notifyUserProfileUpdated()` before route navigation so `/profile`, `/feed`, and `ClientLayout` see fresh user state.
-
-Feed post loading in `src/services/supabase/posts.ts` uses cache and pending-request deduplication. Pending request maps must delete entries in `finally`, including timeout/error paths, or a stuck Supabase request can be reused and keep `/feed` loading forever. Supabase PostgREST builders are awaitable but typed as `PromiseLike<T>`, so timeout helpers wrapping them should accept `PromiseLike<T>`, not only `Promise<T>`.
-
-## Hooks (`src/hooks/`)
-
-Custom hooks wrap all data fetching:
-- `useApiQuery` / `useApiMutation` / `useInfiniteQuery` — generic fetch wrappers with retry logic and `enabled` flag for conditional fetching
-- Domain hooks (`usePosts`, `useChatMessages`, `useUnreadCount`, etc.) build on these generics
-
-Prefer domain hooks in components over calling services or fetch directly.
-
-## UI Conventions
-
-- **Mantine 8** for all UI. Dark theme by default; theme config is in `src/styles/theme`.
-- Safe-area insets (`env(safe-area-inset-top)`) are used throughout for mobile PWA compatibility — maintain this pattern when adding fixed headers/footers.
-- Profile edit page uses `TOP_NAVBAR_HEIGHT_PX` from `src/components/element/TopNavbar` to offset fixed header — import and reuse this constant.
-- Images are uploaded to Supabase Storage bucket `dating` under `users/{userId}/` paths, compressed first via `src/lib/image-compression.ts`.
-
-## Environment Variables
-
-```
-DATABASE_URL          # Supabase connection pool (Prisma)
-DIRECT_URL            # Direct connection (migrations only)
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-AUTH_SECRET
-AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET
-AUTH_LINE_ID / AUTH_LINE_SECRET
-```
+Before editing auth, profile, chat, admin, or schema code, read the corresponding source files and verify current behavior rather than relying only on documentation. Preserve business behavior and update `AGENTS.md` when the map changes.

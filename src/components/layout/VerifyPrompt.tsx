@@ -1,7 +1,7 @@
 'use client';
 
 import { LineIcon } from '@/components/icons/LineIcon';
-import { trackEvent } from '@/lib/mixpanel';
+import { identifyUser, trackEvent } from '@/lib/mixpanel';
 import { useLocale } from '@/i18n/LocaleProvider';
 import {
   Badge,
@@ -17,6 +17,8 @@ import {
   Title,
 } from '@mantine/core';
 import { useState } from 'react';
+import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 const LINE_PROFILES = {
   singleMen: {
@@ -76,6 +78,12 @@ function Step({
 export function VerifyPrompt() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { t } = useLocale();
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (userId) identifyUser(userId);
+  }, [session?.user?.id]);
 
   const openLineLink = (appUrl: string, webUrl: string) => {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(

@@ -83,6 +83,7 @@ Rules:
 
 - `src/components/layout/VerifyPrompt.tsx` sends a best-effort Mixpanel event before opening LINE.
 - `src/lib/mixpanel.ts` exposes generic `trackEvent()` and lazily initializes `mixpanel-browser` using `NEXT_PUBLIC_MIXPANEL_TOKEN`.
+- `VerifyPrompt` calls `identifyUser(session.user.id)` before tracking so LINE verification events are associated with the authenticated app user.
 - Event name is `Line Verification Click`.
 - Stable event properties are `line_type` (`single_men` or `couples_single_women`) and `link_type` (`primary` or `alternative`).
 - Tracking must never block or prevent the LINE deep link/web fallback from opening.

@@ -57,7 +57,7 @@ Profile images use Supabase Storage bucket `dating`, are compressed client-side,
 - `LocaleSwitcher` remains implemented but its UI is intentionally hidden for now.
 - New user-visible labels should use `useLocale()`/translation keys. Current profile terminology includes `แนะนำตัว`, `รหัสผ่าน`, `ไลน์ ไอดี`, `แก้ไขโปรไฟล์`, and `ออกจากระบบ`.
 
-LINE verification button clicks are tracked by `VerifyPrompt` through generic `trackEvent()` in `src/lib/mixpanel.ts`. `identifyUser(session.user.id, profileProperties)` associates events with the authenticated app user and updates Mixpanel user profile properties. If no authenticated user id exists, skip identify/profile updates and click tracking while still opening LINE. The event is `Line Verification Click` with `line_type` (`single_men` or `couples_single_women`) and `link_type` (`primary`/`alternative`). The token is `NEXT_PUBLIC_MIXPANEL_TOKEN`; tracking is best-effort and must not block LINE deep-link fallback.
+LINE verification button clicks are tracked by `VerifyPrompt` through generic `trackEvent()` in `src/lib/mixpanel.ts`. `identifyUser(session.user.id, profileProperties)` associates events with the authenticated app user and updates Mixpanel user profile properties. If no authenticated user id exists, skip identify/profile updates and click tracking while still opening LINE. Mixpanel uses its batched queue and page-hide/page-exit flush behavior rather than a raw request for every event. The event is `Line Verification Click` with `line_type` (`single_men` or `couples_single_women`) and `link_type` (`primary`/`alternative`). The token is `NEXT_PUBLIC_MIXPANEL_TOKEN`; tracking is best-effort and must not block LINE deep-link fallback.
 
 ## Services and performance
 

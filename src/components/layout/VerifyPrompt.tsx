@@ -161,10 +161,12 @@ export function VerifyPrompt() {
         leftSection={<LineIcon />}
         onClick={(event) => {
           event.preventDefault();
+
           trackEvent('Line Verification Click', {
             line_type: link.lineType,
             link_type: link.linkType,
           });
+
           openLineLink(link.appUrl, link.webUrl);
         }}
       >

@@ -42,15 +42,15 @@ export default function Home() {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
-          height: rem(812), // iPhone 11 size in your screenshot
+          justifyContent: 'center',
+          height: 'calc(100dvh - 72px)', // ClientLayout reserves space for the bottom navbar
           maxWidth: rem(375),
         }}
       >
         <Box
           style={{
-            flex: 1,
-            display: 'flex',
+            // flex: 1,
+            // display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -64,7 +64,7 @@ export default function Home() {
           />
         </Box>
 
-        <Stack gap="xs" pb="xl">
+        <Stack gap="xs" mt="lg">
           <Button fullWidth onClick={handleClickLogin}>
             {t('loginTo')}
           </Button>

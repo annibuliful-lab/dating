@@ -4,13 +4,10 @@ import { LineIcon } from '@/components/icons/LineIcon';
 import { useLocale } from '@/i18n/LocaleProvider';
 import {
   Badge,
-  Box,
   Button,
   Card,
   Container,
-  Divider,
   Flex,
-  Image,
   Modal,
   Paper,
   Stack,
@@ -31,8 +28,17 @@ const LINE_PROFILES = {
   },
   couplesAndWomen: {
     appUrl: 'line://ti/p/rOmbX0',
-    webUrl: 'https://line.me/ti/p/rOmbX0X',
+    webUrl: 'https://lin.ee/rOmbX0',
   },
+};
+
+const VERIFY_COLORS = {
+  primary: '#FFD400',
+  background: '#0F0F0F',
+  surface: '#1A1A1A',
+  surfaceElevated: '#242424',
+  male: '#3B82F6',
+  couplesWomen: '#EC4899',
 };
 
 function Step({
@@ -44,12 +50,16 @@ function Step({
 }) {
   return (
     <Flex gap="sm" align="flex-start">
-      <ThemeIcon size={26} radius="xl" color="yellow" variant="light">
-        <Text size="sm" fw={700} c="yellow.4">
+      <ThemeIcon
+        size={26}
+        radius="xl"
+        style={{ backgroundColor: VERIFY_COLORS.primary }}
+      >
+        <Text size="md" fw={700} c={VERIFY_COLORS.background}>
           {number}
         </Text>
       </ThemeIcon>
-      <Text size="sm" c="gray.2" pt={3}>
+      <Text size="md" c="gray.2" pt={2}>
         {children}
       </Text>
     </Flex>
@@ -97,6 +107,10 @@ export function VerifyPrompt() {
     label = t('openLineToVerify'),
   ) => {
     const link = LINE_PROFILES[profile];
+    const buttonColor =
+      color === 'blue'
+        ? VERIFY_COLORS.male
+        : VERIFY_COLORS.couplesWomen;
     return (
       <Button
         component="a"
@@ -106,7 +120,13 @@ export function VerifyPrompt() {
         fullWidth
         color={color}
         variant="filled"
-        styles={{ root: { border: 'none' } }}
+        styles={{
+          root: {
+            backgroundColor: buttonColor,
+            border: 'none',
+            color: '#FFFFFF',
+          },
+        }}
         leftSection={<LineIcon />}
         onClick={(event) => {
           event.preventDefault();
@@ -125,8 +145,7 @@ export function VerifyPrompt() {
         padding="xl"
         withBorder
         style={{
-          background:
-            'linear-gradient(145deg, #1d1d1d 0%, #121212 100%)',
+          background: `linear-gradient(145deg, ${VERIFY_COLORS.surface} 0%, ${VERIFY_COLORS.background} 100%)`,
           borderColor: 'rgba(255, 212, 0, 0.35)',
         }}
       >
@@ -135,18 +154,27 @@ export function VerifyPrompt() {
             <ThemeIcon
               size={76}
               radius="xl"
-              color="yellow"
-              variant="light"
+              style={{
+                backgroundColor: VERIFY_COLORS.primary,
+                color: VERIFY_COLORS.background,
+              }}
             >
               <LineIcon />
             </ThemeIcon>
-            <Badge color="yellow" variant="light">
+            <Badge
+              size="lg"
+              variant="light"
+              style={{
+                backgroundColor: 'rgba(255, 212, 0, 0.16)',
+                color: VERIFY_COLORS.primary,
+              }}
+            >
               LINE Verification
             </Badge>
-            <Title order={2} ta="center" c="white">
+            <Title order={1} ta="center" c="white">
               {t('verifyTitle')}
             </Title>
-            <Text ta="center" c="dimmed" size="sm" maw={330}>
+            <Text ta="center" c="dimmed" size="md" maw={380}>
               {t('verifyIntro')}
             </Text>
           </Stack>
@@ -159,15 +187,22 @@ export function VerifyPrompt() {
 
           <Button
             fullWidth
-            size="md"
+            size="lg"
             color="yellow"
             leftSection={<LineIcon />}
+            styles={{
+              root: {
+                backgroundColor: VERIFY_COLORS.primary,
+                border: 'none',
+                color: VERIFY_COLORS.background,
+              },
+            }}
             onClick={() => setIsModalOpen(true)}
           >
             {t('addLine')}
           </Button>
 
-          <Text size="xs" c="dimmed" ta="center">
+          <Text size="sm" c="dimmed" ta="center">
             {t('verificationRequired')}
           </Text>
         </Stack>
@@ -180,9 +215,18 @@ export function VerifyPrompt() {
         centered
         size="md"
         styles={{
-          content: { backgroundColor: '#1a1a1a' },
+          inner: {
+            alignItems: 'center',
+            paddingTop: 16,
+            paddingBottom: 16,
+          },
+          content: {
+            backgroundColor: VERIFY_COLORS.surface,
+            maxHeight: 'calc(100dvh - 32px)',
+            overflowY: 'auto',
+          },
           header: {
-            backgroundColor: '#1a1a1a',
+            backgroundColor: VERIFY_COLORS.surface,
             borderBottom: '1px solid #333',
           },
           title: { color: 'white' },
@@ -190,7 +234,7 @@ export function VerifyPrompt() {
         }}
       >
         <Stack gap="lg">
-          <Text size="sm" c="dimmed">
+          <Text size="md" c="dimmed" mt="md" mb="-8px">
             {t('lineLinks')}
           </Text>
 
@@ -198,15 +242,15 @@ export function VerifyPrompt() {
             p="md"
             radius="md"
             withBorder
-            bg="#222"
+            bg={VERIFY_COLORS.surfaceElevated}
             style={{ borderColor: '#333' }}
           >
             <Stack gap="sm">
-              <Text fw={700} c="white">
+              <Text fw={700} c="white" size="lg">
                 {t('verifySingleMen')}
               </Text>
               {lineButton('singleMen', 'blue')}
-              <Text ta="center" size="xs" c="dimmed">
+              <Text ta="center" size="sm" c="dimmed">
                 หรือ
               </Text>
               {lineButton('singleMenAlternative', 'blue')}
@@ -217,25 +261,25 @@ export function VerifyPrompt() {
             p="md"
             radius="md"
             withBorder
-            bg="#222"
+            bg={VERIFY_COLORS.surfaceElevated}
             style={{ borderColor: '#333' }}
           >
             <Stack gap="sm">
-              <Text fw={700} c="white">
+              <Text fw={700} c="white" size="lg">
                 {t('verifyCouplesWomen')}
               </Text>
               {lineButton('couplesAndWomen', 'pink')}
             </Stack>
           </Paper>
 
-          <Divider
+          {/* <Divider
             label={t('scanQrInstead')}
             labelPosition="center"
             color="dark.4"
           />
 
           <Stack gap="sm">
-            <Text fw={600} size="sm">
+            <Text fw={600} size="md">
               {t('verifySingleMen')}
             </Text>
             <Flex gap="sm" justify="center">
@@ -255,7 +299,7 @@ export function VerifyPrompt() {
           </Stack>
 
           <Box>
-            <Text fw={600} size="sm" mb="sm">
+            <Text fw={600} size="md" mb="sm">
               {t('verifyCouplesWomen')}
             </Text>
             <Image
@@ -265,9 +309,9 @@ export function VerifyPrompt() {
               mx="auto"
               fit="contain"
             />
-          </Box>
+          </Box> */}
 
-          <Text size="xs" c="dimmed" ta="center">
+          <Text size="sm" c="dimmed" ta="center">
             {t('adminReview')}
           </Text>
           <Button

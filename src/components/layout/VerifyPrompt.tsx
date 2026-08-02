@@ -1,6 +1,7 @@
 'use client';
 
 import { LineIcon } from '@/components/icons/LineIcon';
+import { trackEvent } from '@/lib/mixpanel';
 import { useLocale } from '@/i18n/LocaleProvider';
 import {
   Badge,
@@ -19,14 +20,20 @@ import { useState } from 'react';
 
 const LINE_PROFILES = {
   singleMen: {
+    lineType: 'single_men' as const,
+    linkType: 'primary' as const,
     appUrl: 'line://ti/p/cFT31iUIWt',
     webUrl: 'https://line.me/ti/p/cFT31iUIWt',
   },
   singleMenAlternative: {
+    lineType: 'single_men' as const,
+    linkType: 'alternative' as const,
     appUrl: 'line://ti/p/qZEkGGf6pZ',
     webUrl: 'https://line.me/ti/p/qZEkGGf6pZ',
   },
   couplesAndWomen: {
+    lineType: 'couples_single_women' as const,
+    linkType: 'primary' as const,
     appUrl: 'line://ti/p/rOmbX0',
     webUrl: 'https://lin.ee/rOmbX0',
   },
@@ -130,6 +137,10 @@ export function VerifyPrompt() {
         leftSection={<LineIcon />}
         onClick={(event) => {
           event.preventDefault();
+          trackEvent('Line Verification Click', {
+            line_type: link.lineType,
+            link_type: link.linkType,
+          });
           openLineLink(link.appUrl, link.webUrl);
         }}
       >

@@ -11,7 +11,12 @@ import { Box, Button, Container, Stack, Text } from '@mantine/core';
 import { usePathname } from 'next/navigation';
 import { useLocale } from '@/i18n/LocaleProvider';
 
-const ROUTES_WITHOUT_NAVBAR = ['/signin', '/signup', '/auth/error', '/line-auth-test'];
+const ROUTES_WITHOUT_NAVBAR = [
+  '/signin',
+  '/signup',
+  '/auth/error',
+  '/line-auth-test',
+];
 const UUID_LIKE_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -68,10 +73,11 @@ export function ClientLayout({
       isBlankOrGeneratedProfileValue(userProfile.username));
 
   if (
-    status === 'authenticated' &&
-    userProfile &&
-    !userProfile.isVerified &&
-    !(isProfileEditRoute && isIncompleteProfile)
+    // status === 'authenticated' &&
+    // userProfile &&
+    // !userProfile.isVerified &&
+    // !(isProfileEditRoute && isIncompleteProfile)
+    true
   ) {
     return <VerifyPrompt />;
   }

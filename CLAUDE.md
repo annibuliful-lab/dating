@@ -57,6 +57,8 @@ Profile images use Supabase Storage bucket `dating`, are compressed client-side,
 - `LocaleSwitcher` remains implemented but its UI is intentionally hidden for now.
 - New user-visible labels should use `useLocale()`/translation keys. Current profile terminology includes `แนะนำตัว`, `รหัสผ่าน`, `ไลน์ ไอดี`, `แก้ไขโปรไฟล์`, and `ออกจากระบบ`.
 
+LINE verification button clicks are tracked by `VerifyPrompt` through generic `trackEvent()` in `src/lib/mixpanel.ts`. The event is `Line Verification Click` with `line_type` (`single_men` or `couples_single_women`) and `link_type` (`primary`/`alternative`). The token is `NEXT_PUBLIC_MIXPANEL_TOKEN`; tracking is best-effort and must not block LINE deep-link fallback.
+
 ## Services and performance
 
 Prefer domain services and hooks over new raw Supabase calls in pages. Important services include `src/services/supabase/{users,posts,messages,media,storage,ads}.ts`, `src/services/profile/*`, and `src/services/{admin,user,post}.ts`.

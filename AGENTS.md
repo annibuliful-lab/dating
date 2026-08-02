@@ -79,6 +79,15 @@ Rules:
 - The locale switcher component exists but its visible controls are currently hidden. Do not remove the provider or message dictionaries; the switcher may be re-enabled later.
 - New user-facing text should use a translation key, especially in shared UI and profile/auth flows. Avoid adding new hardcoded English labels.
 
+## LINE verification click tracking
+
+- `src/components/layout/VerifyPrompt.tsx` sends a best-effort Mixpanel event before opening LINE.
+- `src/lib/mixpanel.ts` exposes generic `trackEvent()` and lazily initializes `mixpanel-browser` using `NEXT_PUBLIC_MIXPANEL_TOKEN`.
+- Event name is `Line Verification Click`.
+- Stable event properties are `line_type` (`single_men` or `couples_single_women`) and `link_type` (`primary` or `alternative`).
+- Tracking must never block or prevent the LINE deep link/web fallback from opening.
+- When changing LINE URLs or button categories, update the client constants, API allowlist, and tracking docs together.
+
 ## Feature map
 
 ### Feed

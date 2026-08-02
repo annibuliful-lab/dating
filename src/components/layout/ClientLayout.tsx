@@ -73,11 +73,10 @@ export function ClientLayout({
       isBlankOrGeneratedProfileValue(userProfile.username));
 
   if (
-    // status === 'authenticated' &&
-    // userProfile &&
-    // !userProfile.isVerified &&
-    // !(isProfileEditRoute && isIncompleteProfile)
-    true
+    status === 'authenticated' &&
+    userProfile &&
+    !userProfile.isVerified &&
+    !(isProfileEditRoute && isIncompleteProfile)
   ) {
     return <VerifyPrompt />;
   }

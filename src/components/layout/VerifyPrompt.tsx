@@ -1,6 +1,7 @@
 'use client';
 
 import { LineIcon } from '@/components/icons/LineIcon';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { identifyUser, trackEvent } from '@/lib/mixpanel';
 import { useLocale } from '@/i18n/LocaleProvider';
 import {
@@ -79,11 +80,26 @@ export function VerifyPrompt() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { t } = useLocale();
   const { data: session } = useSession();
+  const { userProfile } = useUserProfile();
 
   useEffect(() => {
     const userId = session?.user?.id;
-    if (userId) identifyUser(userId);
-  }, [session?.user?.id]);
+    if (!userId) return;
+
+    identifyUser(userId, {
+      $name: userProfile?.username ?? undefined,
+      username: userProfile?.username ?? undefined,
+      gender: userProfile?.gender ?? undefined,
+      age: userProfile?.age ?? undefined,
+      relationship_status:
+        userProfile?.relationShipStatus ?? undefined,
+      is_verified: userProfile?.isVerified ?? undefined,
+      role: userProfile?.role ?? undefined,
+      account_status: userProfile?.userStatus ?? undefined,
+    });
+  }, [session?.user?.id, userProfile]);
+
+  const authenticatedUserId = session?.user?.id;
 
   const openLineLink = (appUrl: string, webUrl: string) => {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(

@@ -22,9 +22,17 @@ function initializeMixpanel() {
   return true;
 }
 
-export function identifyUser(userId: string) {
+export function identifyUser(
+  userId: string,
+  profileProperties?: MixpanelProperties,
+) {
+  if (!userId?.trim()) return;
   if (!initializeMixpanel()) return;
   mixpanel.identify(userId);
+
+  if (profileProperties) {
+    mixpanel.people.set(profileProperties);
+  }
 }
 
 export function trackEvent(

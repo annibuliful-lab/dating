@@ -71,7 +71,7 @@ export function TopNavbar({
         style={{ position: 'relative' }}
       >
         <Box
-          w={84}
+          w={120}
           onClick={showBack ? handleBack : undefined}
           style={{ cursor: showBack ? 'pointer' : 'default' }}
         >
@@ -96,7 +96,14 @@ export function TopNavbar({
           {resolvedTitle}
         </Text>
 
-        <Box w={84} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Box
+          w={84}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+          }}
+        >
           {rightSlot}
         </Box>
       </Group>

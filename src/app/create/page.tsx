@@ -49,7 +49,7 @@ function CreatePostPage() {
   }, [router, status]);
 
   const handleImageSelect = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
@@ -58,7 +58,10 @@ function CreatePostPage() {
     if (selectedImages.length + files.length > MAX_IMAGES) {
       notifications.show({
         title: t('tooManyImages'),
-        message: t('maxImages').replace('{count}', String(MAX_IMAGES)),
+        message: t('maxImages').replace(
+          '{count}',
+          String(MAX_IMAGES),
+        ),
         color: 'red',
       });
       return;
@@ -74,8 +77,7 @@ function CreatePostPage() {
       if (!validation.valid) {
         notifications.show({
           title: t('invalidFile'),
-          message:
-            validation.error || t('validImageRequired'),
+          message: validation.error || t('validImageRequired'),
           color: 'red',
         });
         continue;
@@ -87,7 +89,7 @@ function CreatePostPage() {
           file,
           1920,
           1920,
-          0.8
+          0.8,
         );
         validFiles.push(compressedFile);
         const preview = mediaService.createPreviewUrl(compressedFile);
@@ -134,7 +136,10 @@ function CreatePostPage() {
     if (content.length > MAX_CHARACTERS) {
       notifications.show({
         title: t('error'),
-        message: t('maxCharacters').replace('{count}', String(MAX_CHARACTERS)),
+        message: t('maxCharacters').replace(
+          '{count}',
+          String(MAX_CHARACTERS),
+        ),
         color: 'red',
       });
       return;
@@ -158,7 +163,7 @@ function CreatePostPage() {
         const uploadResults = await mediaService.uploadMultipleMedia(
           selectedImages,
           'dating',
-          'posts'
+          'posts',
         );
         imageUrls = uploadResults.map((result) => result.publicUrl);
       }
@@ -220,6 +225,10 @@ function CreatePostPage() {
     return null;
   }
 
+  const isPostDisabled =
+    (!content.trim() && selectedImages.length === 0) ||
+    content.length > MAX_CHARACTERS;
+
   return (
     <Box>
       <TopNavbar
@@ -227,15 +236,16 @@ function CreatePostPage() {
         showBack
         rightSlot={
           <Button
-            variant="subtle"
-            color="white"
+            variant={isPostDisabled ? 'subtle' : 'primary'}
+            color={isPostDisabled ? 'white' : undefined}
             size="sm"
+            style={{ height: 'auto', alignSelf: 'center' }}
+            styles={{
+              root: { borderColor: 'transparent' },
+            }}
             onClick={handleSubmit}
             loading={isSubmitting}
-            disabled={
-              (!content.trim() && selectedImages.length === 0) ||
-              content.length > MAX_CHARACTERS
-            }
+            disabled={isPostDisabled}
           >
             Post
           </Button>

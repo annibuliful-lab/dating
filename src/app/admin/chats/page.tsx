@@ -28,6 +28,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 type ChatParticipant = {
   id: string;
@@ -65,6 +66,7 @@ type Chat = {
 };
 
 export default function AdminChatsPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const { status } = useSession();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -526,7 +528,7 @@ export default function AdminChatsPage() {
                       >
                         <Group gap="xs" mb={4}>
                           <Text size="xs" fw={600} c="white">
-                            {message.User?.fullName || 'Unknown'}
+                            {message.User?.fullName || t('unknown')}
                           </Text>
                           <Text size="xs" c="dimmed">
                             {formatDate(message.createdAt)}
@@ -560,8 +562,8 @@ export default function AdminChatsPage() {
       >
         <Stack gap="md">
           <TextInput
-            label="User ID"
-            placeholder="กรอก User ID"
+            label={t('userId')}
+            placeholder={t('enterUserId')}
             value={userIdToAdd}
             onChange={(e) => setUserIdToAdd(e.target.value)}
             styles={{
@@ -602,8 +604,8 @@ export default function AdminChatsPage() {
       >
         <Stack gap="md">
           <TextInput
-            label="User ID"
-            placeholder="กรอก User ID"
+            label={t('userId')}
+            placeholder={t('enterUserId')}
             value={userIdToRemove}
             onChange={(e) => setUserIdToRemove(e.target.value)}
             styles={{

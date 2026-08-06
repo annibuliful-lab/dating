@@ -36,6 +36,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import type { EmblaCarouselType } from 'embla-carousel';
 import { useSession } from 'next-auth/react';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -60,6 +61,7 @@ type Post = {
 };
 
 function FeedPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const { status, data: session } = useSession();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -315,7 +317,7 @@ function FeedPage() {
   if (loading) {
     return (
       <Box>
-        <TopNavbar title="Feed and Contents" />
+        <TopNavbar title={t('feed')} />
         <Container
           size="xs"
           pt="md"
@@ -339,7 +341,7 @@ function FeedPage() {
   if (error) {
     return (
       <Box>
-        <TopNavbar title="Feed and Contents" />
+        <TopNavbar title={t('feed')} />
         <Container
           size="xs"
           pt="md"
@@ -347,7 +349,7 @@ function FeedPage() {
           mt={rem(TOP_NAVBAR_HEIGHT_PX)}
           style={{ marginLeft: 'auto', marginRight: 'auto' }}
         >
-          <Text c="red">Error loading posts: {error.message}</Text>
+          <Text c="red">{t('failedToLoadPosts')}: {error.message}</Text>
         </Container>
       </Box>
     );
@@ -356,7 +358,7 @@ function FeedPage() {
   return (
     <Box>
       <SuspendedUserRedirect />
-      <TopNavbar title="Feed and Contents" />
+      <TopNavbar title={t('feed')} />
       <Container
         size="xs"
         pt="md"
@@ -606,7 +608,7 @@ function FeedPage() {
                                   : 1,
                             }}
                           >
-                            <Text c="yellow">Message</Text>
+                            <Text c="yellow">{t('message')}</Text>
                           </Box>
                         </Group>
                       )}
@@ -635,7 +637,7 @@ function FeedPage() {
       <Modal
         opened={infographicModalOpened}
         onClose={() => setInfographicModalOpened(false)}
-        title="Infographic"
+        title={t('infographic')}
         size="lg"
         centered
         styles={{
@@ -659,7 +661,7 @@ function FeedPage() {
         <Box>
           <Image
             src="/infographic/LINE_20251114_235452.jpg"
-            alt="Infographic"
+            alt={t('infographic')}
             fit="contain"
             radius="md"
           />

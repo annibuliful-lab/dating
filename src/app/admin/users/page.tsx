@@ -7,6 +7,7 @@ import {
   TopNavbar,
 } from '@/components/element/TopNavbar';
 import { useAdminUsers } from '@/hooks/useAdmin';
+import { useLocale } from '@/i18n/LocaleProvider';
 import {
   Box,
   Button,
@@ -46,6 +47,7 @@ type User = {
 type StatusType = 'verification' | 'usage' | 'account';
 
 export default function AdminUsersPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const { status } = useSession();
 
@@ -214,7 +216,7 @@ export default function AdminUsersPage() {
   if (initialLoading) {
     return (
       <Box>
-        <TopNavbar title="User Status" showBack />
+        <TopNavbar title={t('userStatus')} showBack />
         <Container
           size="xs"
           pt="md"
@@ -231,7 +233,7 @@ export default function AdminUsersPage() {
 
   return (
     <Box>
-      <TopNavbar title="User Status" showBack />
+      <TopNavbar title={t('userStatus')} showBack />
       <Container
         size="xl"
         pt="md"

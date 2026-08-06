@@ -31,6 +31,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 type ChatPreview = {
   id: string;
@@ -62,6 +63,7 @@ type UserSearchResult = {
 };
 
 function InboxPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const { status, data: session } = useSession();
   const [chats, setChats] = useState<ChatPreview[]>([]);
@@ -105,28 +107,28 @@ function InboxPage() {
             ) || [];
 
           // Generate chat name based on participants
-          let chatName = 'Unknown';
+          let chatName = t('unknown');
           if (chat.isGroup && chat.name) {
             chatName = chat.name;
           } else if (otherParticipants.length > 0) {
             chatName = otherParticipants
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .map((p: any) => p.User?.fullName || 'Unknown')
+              .map((p: any) => p.User?.fullName || t('unknown'))
               .join(', ');
           } else {
             chatName = `Chat ${chat.id.slice(0, 8)}`;
           }
 
           // Generate preview text
-          let preview = 'No messages yet';
+          let preview = t('noMessagesYet');
           if (latestMessage) {
-            preview = latestMessage.text || 'Media message';
+            preview = latestMessage.text || t('mediaMessage');
           }
 
           // Format date
           const dateLabel = latestMessage
             ? formatRelativeDate(new Date(latestMessage.createdAt))
-            : 'New';
+            : t('new');
 
           // Determine if unread based on lastReadAt vs latest message
           const unread = chat.hasUnread || false;
@@ -145,7 +147,7 @@ function InboxPage() {
                 );
                 return {
                   id: p.userId,
-                  fullName: p.User?.fullName || 'Unknown',
+                  fullName: p.User?.fullName || t('unknown'),
                   profileImageKey: p.User?.profileImageKey || null,
                   profileImageUrl,
                 };
@@ -164,13 +166,11 @@ function InboxPage() {
       setChats(transformedChats);
     } catch (err) {
       console.error('Error fetching chats:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to load chats'
-      );
+      setError(err instanceof Error ? err.message : t('failedToLoadPosts'));
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, t]);
 
   // Auto-refresh chat list every 2 minutes (Facebook-style)
   useEffect(() => {
@@ -292,7 +292,7 @@ function InboxPage() {
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
       console.error('Error creating chat:', err);
-      alert('Failed to start chat. Please try again.');
+      alert(t('failedToStartChat'));
     } finally {
       setCreatingChat(false);
     }
@@ -300,12 +300,12 @@ function InboxPage() {
 
   const handleCreateGroupChat = async () => {
     if (!session?.user?.id || selectedUsers.length === 0) {
-      alert('Please select at least one user to create a group chat');
+      alert(t('selectUsersForGroup'));
       return;
     }
 
     if (!groupChatName.trim()) {
-      alert('Please enter a group name');
+      alert(t('groupNameRequired'));
       return;
     }
 
@@ -324,7 +324,7 @@ function InboxPage() {
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
       console.error('Error creating group chat:', err);
-      alert('Failed to create group chat. Please try again.');
+      alert(t('failedToCreateGroupChat'));
     } finally {
       setCreatingChat(false);
     }
@@ -353,7 +353,7 @@ function InboxPage() {
     return (
       <Box>
         <TopNavbar
-          title="Inbox"
+          title={t('inbox')}
           rightSlot={
             <ActionIcon
               variant="subtle"
@@ -383,7 +383,7 @@ function InboxPage() {
     return (
       <Box>
         <TopNavbar
-          title="Inbox"
+          title={t('inbox')}
           rightSlot={
             <ActionIcon
               variant="subtle"
@@ -424,7 +424,7 @@ function InboxPage() {
     <Box>
       <SuspendedUserRedirect />
       <TopNavbar
-        title="Inbox"
+        title={t('inbox')}
         rightSlot={
           <Group gap="xs">
             <ActionIcon
@@ -456,11 +456,10 @@ function InboxPage() {
             <Center py="xl">
               <Stack align="center" gap="md">
                 <Text c="dimmed" ta="center">
-                  No conversations yet
+                  {t('noConversations')}
                 </Text>
                 <Text size="sm" c="dimmed" ta="center">
-                  Start chatting with other users to see conversations
-                  here
+                  {t('startChatting')}
                 </Text>
               </Stack>
             </Center>
@@ -565,7 +564,7 @@ function InboxPage() {
         opened={opened}
         onClose={close}
         title={
-          isGroupChatMode ? 'Create Group Chat' : 'Start New Chat'
+          isGroupChatMode ? t('createGroupChat') : t('startNewChat')
         }
         size="md"
         centered
@@ -573,20 +572,20 @@ function InboxPage() {
         <Stack gap="md">
           <Group justify="space-between">
             <Text size="sm" fw={500}>
-              {isGroupChatMode ? 'Group Chat' : 'Direct Chat'}
+              {isGroupChatMode ? t('groupChat') : t('directChat')}
             </Text>
             <Button
               variant={isGroupChatMode ? 'filled' : 'outline'}
               size="xs"
               onClick={handleToggleGroupChatMode}
             >
-              {isGroupChatMode ? 'Switch to Direct' : 'Create Group'}
+              {isGroupChatMode ? t('switchToDirect') : t('createGroup')}
             </Button>
           </Group>
 
           {isGroupChatMode && (
             <TextInput
-              placeholder="Enter group name..."
+              placeholder={t('enterGroupName')}
               value={groupChatName}
               onChange={(e) =>
                 setGroupChatName(e.currentTarget.value)
@@ -603,7 +602,7 @@ function InboxPage() {
           {isGroupChatMode && selectedUsers.length > 0 && (
             <Box>
               <Text size="sm" fw={600} mb="xs">
-                Selected Users ({selectedUsers.length})
+                {t('selectedUsers')} ({selectedUsers.length})
               </Text>
               <Stack gap="xs">
                 {selectedUsers.map((userId) => {
@@ -642,7 +641,7 @@ function InboxPage() {
           )}
 
           <TextInput
-            placeholder="Search users by name or username..."
+            placeholder={t('searchUsers')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
             autoComplete="off"
@@ -660,10 +659,10 @@ function InboxPage() {
             <Center py="xl">
               <Text c="dimmed" size="sm">
                 {searchQuery.trim().length === 1
-                  ? 'Type at least 2 characters to search'
+                  ? t('typeTwoCharacters')
                   : searchQuery.trim().length >= 2
-                    ? 'No users found'
-                    : 'No active users available'}
+                    ? t('noUsersFound')
+                    : t('noActiveUsers')}
               </Text>
             </Center>
           ) : (
@@ -712,7 +711,7 @@ function InboxPage() {
                           )}
                           {user.age && (
                             <Text c="dimmed" size="sm">
-                              • {user.age} years
+                              • {user.age} {t('years')}
                             </Text>
                           )}
                           {user.gender && (
@@ -744,7 +743,7 @@ function InboxPage() {
               }
               fullWidth
             >
-              Create Group Chat ({selectedUsers.length} members)
+              {t('createGroupChat')} ({selectedUsers.length} {t('members')})
             </Button>
           )}
 

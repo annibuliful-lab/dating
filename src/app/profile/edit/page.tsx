@@ -131,8 +131,8 @@ function EditProfilePage() {
       if (!data.available) {
         notifications.show({
           color: 'red',
-          title: 'Username taken',
-          message: 'This username is already in use',
+          title: t('usernameTaken'),
+          message: t('usernameAlreadyUsed'),
         });
       }
     } catch (error) {
@@ -181,13 +181,13 @@ function EditProfilePage() {
         console.error(err);
         notifications.show({
           color: 'red',
-          title: 'Load failed',
+          title: t('loadFailed'),
           message:
-            (err as Error).message ?? 'Could not load your profile.',
+            (err as Error).message ?? t('failedToLoadProfile'),
         });
       }
     })();
-  }, [userId]);
+  }, [userId, t]);
 
   // Update age when birthday changes
   useEffect(() => {
@@ -224,16 +224,16 @@ function EditProfilePage() {
     if (!validTypes.includes(file.type)) {
       notifications.show({
         color: 'red',
-        title: 'Invalid file type',
-        message: 'Only PNG, JPG, or WEBP allowed.',
+        title: t('invalidFileType'),
+        message: t('imageTypesAllowed'),
       });
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
       notifications.show({
         color: 'red',
-        title: 'File too large',
-        message: 'Max 5MB.',
+        title: t('fileTooLarge'),
+        message: t('maxFiveMb'),
       });
       return;
     }
@@ -265,7 +265,7 @@ function EditProfilePage() {
       console.error(err);
       notifications.show({
         color: 'red',
-        title: 'Upload failed',
+        title: t('uploadFailed'),
         message: (err as Error).message ?? 'Upload failed',
       });
     } finally {
@@ -284,8 +284,8 @@ function EditProfilePage() {
     if (profileImages.length + files.length > 5) {
       notifications.show({
         color: 'red',
-        title: 'Error',
-        message: 'Maximum 5 images allowed',
+        title: t('error'),
+        message: t('maxFiveImages'),
       });
       return;
     }
@@ -301,8 +301,8 @@ function EditProfilePage() {
     if (invalidFiles.length > 0) {
       notifications.show({
         color: 'red',
-        title: 'Error',
-        message: 'Only PNG, JPG, or WEBP allowed. Max 5MB per file.',
+        title: t('error'),
+        message: t('imageTypesAndSize'),
       });
       return;
     }
@@ -346,7 +346,7 @@ function EditProfilePage() {
       console.error(err);
       notifications.show({
         color: 'red',
-        title: 'Upload failed',
+        title: t('uploadFailed'),
         message: (err as Error).message ?? 'Could not upload images',
       });
     } finally {
@@ -381,7 +381,7 @@ function EditProfilePage() {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: 'ชื่อผู้ใช้จำเป็นต้องกรอก',
       });
       return;
@@ -391,7 +391,7 @@ function EditProfilePage() {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: 'กรุณาเปลี่ยนชื่อผู้ใช้ก่อนบันทึกโปรไฟล์',
       });
       return;
@@ -401,7 +401,7 @@ function EditProfilePage() {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น',
       });
       return;
@@ -411,7 +411,7 @@ function EditProfilePage() {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: 'เพศจำเป็นต้องเลือก',
       });
       return;
@@ -421,7 +421,7 @@ function EditProfilePage() {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: 'วันเกิดจำเป็นต้องกรอก',
       });
       return;
@@ -431,7 +431,7 @@ function EditProfilePage() {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: 'สถานะจำเป็นต้องเลือก',
       });
       return;
@@ -450,7 +450,7 @@ function EditProfilePage() {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: 'กรุณากรอกน้ำหนักและส่วนสูง',
       });
       return;
@@ -460,7 +460,7 @@ function EditProfilePage() {
       setShowConfirmModal(false);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: 'อีเมลจำเป็นต้องกรอก',
       });
       return;
@@ -503,8 +503,8 @@ function EditProfilePage() {
 
       notifications.show({
         color: 'green',
-        title: 'Success',
-        message: 'Profile saved successfully',
+        title: t('success'),
+        message: t('profileSaved'),
       });
 
       notifyUserProfileUpdated();
@@ -513,7 +513,7 @@ function EditProfilePage() {
       console.error('Error saving profile:', err);
       notifications.show({
         color: 'red',
-        title: 'Error',
+        title: t('error'),
         message: (err as Error).message ?? 'Failed to save profile',
       });
     } finally {
@@ -618,7 +618,7 @@ function EditProfilePage() {
                   cursor: 'pointer',
                 }}
                 onClick={openFilePicker}
-                title="Change avatar"
+                title={t('changeAvatar')}
               />
 
               <ThemeIcon
@@ -637,7 +637,7 @@ function EditProfilePage() {
                 variant="light"
                 color="dark.4"
                 onClick={openFilePicker}
-                title="Upload"
+                title={t('upload')}
               >
                 <CameraIcon />
               </ThemeIcon>
@@ -733,8 +733,8 @@ function EditProfilePage() {
 
             {/* Email - Editable */}
             <TextInput
-              label="Email *"
-              placeholder="Email"
+              label={`${t('email')} *`}
+              placeholder={t('email')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.currentTarget.value)}

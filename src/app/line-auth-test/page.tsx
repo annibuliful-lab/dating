@@ -1,6 +1,7 @@
 'use client';
 
 import { LineSignIn } from '@/components/social-button/LineSignIn';
+import { useLocale } from '@/i18n/LocaleProvider';
 import {
   Container,
   Divider,
@@ -11,6 +12,7 @@ import {
 } from '@mantine/core';
 
 export default function LineAuthTestPage() {
+  const { t } = useLocale();
   return (
     <Container
       px="md"
@@ -40,11 +42,11 @@ export default function LineAuthTestPage() {
           main sign-in and signup pages.
         </Text>
 
-        <LineSignIn label="Test LINE sign in" />
+        <LineSignIn label={t('testLineSignIn')} />
 
         <Divider color="gray" />
 
-        <LineSignIn label="Test LINE sign up" />
+        <LineSignIn label={t('testLineSignUp')} />
 
         <Text size="xs" c="dimmed">
           Both buttons use the same LINE OAuth provider. New and returning user

@@ -16,10 +16,12 @@ import {
   Title,
 } from '@mantine/core';
 import { useSession } from 'next-auth/react';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function AdminDashboardPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const { status, data: session } = useSession();
   const [isUserAdmin, setIsUserAdmin] = useState(false);
@@ -61,7 +63,7 @@ export default function AdminDashboardPage() {
   if (loading || !isUserAdmin) {
     return (
       <Box>
-        <TopNavbar title="Admin Dashboard" />
+        <TopNavbar title={t('adminDashboard')} />
         <Container
           size="xs"
           pt="md"

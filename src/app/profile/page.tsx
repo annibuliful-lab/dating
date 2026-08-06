@@ -36,7 +36,7 @@ function ProfilePage() {
   if (error || !userProfile) {
     return (
       <Box>
-        <TopNavbar title="Profile" />
+        <TopNavbar title={t('profile')} />
         <Container
           size="xs"
           pt="md"
@@ -44,7 +44,7 @@ function ProfilePage() {
           mt={rem(TOP_NAVBAR_HEIGHT_PX)}
         >
           <Text c="red" ta="center">
-            {error?.message || 'Failed to load profile'}
+            {error?.message || t('failedToLoadProfile')}
           </Text>
         </Container>
       </Box>
@@ -54,7 +54,7 @@ function ProfilePage() {
   return (
     <Box>
       <SuspendedUserRedirect />
-      <TopNavbar title="Profile" />
+      <TopNavbar title={t('profile')} />
       <Container
         size="xs"
         pt="md"

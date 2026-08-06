@@ -7,6 +7,7 @@ import {
 } from '@mantine/core';
 import { useDebouncedCallback } from '@mantine/hooks';
 import { memo, useCallback, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 type SearchInputProps = Omit<
   TextInputProps,
@@ -27,6 +28,7 @@ export const SearchInput = memo(
     defaultValue = '',
     ...textInputProps
   }: SearchInputProps) => {
+    const { t } = useLocale();
     const [internalValue, setInternalValue] = useState(defaultValue);
 
     const debouncedSearch = useDebouncedCallback(
@@ -66,7 +68,7 @@ export const SearchInput = memo(
             <CloseButton
               size="sm"
               onClick={handleClear}
-              aria-label="Clear search"
+              aria-label={t('clearSearch')}
               style={{ opacity: 0.6 }}
             />
           )

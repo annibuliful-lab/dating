@@ -99,8 +99,6 @@ export function VerifyPrompt() {
     });
   }, [session?.user?.id, userProfile]);
 
-  const authenticatedUserId = session?.user?.id;
-
   const openLineLink = (appUrl: string, webUrl: string) => {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(
       window.navigator.userAgent,

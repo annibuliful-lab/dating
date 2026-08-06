@@ -4,6 +4,7 @@ import { Button, Container, rem, Stack, Text, Title } from "@mantine/core";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { useLocale } from '@/i18n/LocaleProvider';
 
 function AuthErrorContent() {
   const searchParams = useSearchParams();
@@ -96,6 +97,7 @@ function AuthErrorContent() {
 }
 
 export default function AuthErrorPage() {
+  const { t } = useLocale();
   return (
     <Suspense
       fallback={
@@ -109,7 +111,7 @@ export default function AuthErrorPage() {
             justifyContent: "center",
           }}
         >
-          <Text ta="center">Loading...</Text>
+          <Text ta="center">{t('loading')}</Text>
         </Container>
       }
     >

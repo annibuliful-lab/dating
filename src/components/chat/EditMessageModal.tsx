@@ -7,6 +7,7 @@ import {
   Stack,
   TextInput,
 } from '@mantine/core';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface EditMessageModalProps {
   opened: boolean;
@@ -23,18 +24,19 @@ export function EditMessageModal({
   setEditText,
   onSave,
 }: EditMessageModalProps) {
+  const { t } = useLocale();
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Edit Message"
+      title={t('editMessage')}
       size="md"
     >
       <Stack gap="md">
         <TextInput
           value={editText}
           onChange={(e) => setEditText(e.currentTarget.value)}
-          placeholder="Edit your message..."
+          placeholder={t('editMessagePlaceholder')}
           size="md"
           autoComplete="off"
           autoCorrect="off"
@@ -44,10 +46,10 @@ export function EditMessageModal({
         />
         <Group justify="flex-end" gap="sm">
           <Button variant="subtle" onClick={onClose}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button onClick={onSave} disabled={!editText.trim()}>
-            Save
+            {t('save')}
           </Button>
         </Group>
       </Stack>

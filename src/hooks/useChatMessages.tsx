@@ -10,6 +10,7 @@ import { messageService } from '@/services/supabase/messages';
 import { getProfileImageUrl } from '@/services/supabase/storage';
 import { useSession } from 'next-auth/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface UseChatMessagesProps {
   chatId: string;
@@ -17,6 +18,7 @@ interface UseChatMessagesProps {
 
 export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const { data: session } = useSession();
+  const { t } = useLocale();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,7 +140,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             author:
               msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
-            senderName: msg.User?.fullName || 'Unknown',
+            senderName: msg.User?.fullName || t('unknown'),
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
             senderRole: msg.User?.role || 'USER',
@@ -160,12 +162,12 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     } catch (err) {
       console.error('Error fetching messages:', err);
       setError(
-        err instanceof Error ? err.message : 'Failed to load messages'
+        err instanceof Error ? err.message : t('failedToLoadPosts')
       );
     } finally {
       setLoading(false);
     }
-  }, [chatId, session?.user?.id, formatMessageTime]);
+  }, [chatId, session?.user?.id, formatMessageTime, t]);
 
   const loadOlderMessages = useCallback(async () => {
     if (
@@ -207,7 +209,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             author:
               msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
-            senderName: msg.User?.fullName || 'Unknown',
+            senderName: msg.User?.fullName || t('unknown'),
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
             senderRole: msg.User?.role || 'USER',
@@ -248,6 +250,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     hasOlderMessages,
     session?.user?.id,
     formatMessageTime,
+    t,
   ]);
 
   const setupRealtimeSubscription = useCallback(() => {
@@ -278,7 +281,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
               ? 'me'
               : 'other',
           senderId: newMessage.senderId,
-          senderName: newMessage.User?.fullName || 'Unknown',
+          senderName: newMessage.User?.fullName || t('unknown'),
           senderAvatar: senderAvatarUrl,
           senderIsVerified: newMessage.User?.isVerified || false,
           senderRole:
@@ -346,6 +349,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     session?.user?.id,
     playNotificationSound,
     formatMessageTime,
+    t,
   ]);
 
   const handleSend = useCallback(async () => {
@@ -509,7 +513,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   const handleDeleteMessage = useCallback(
     async (messageId: string) => {
-      if (!confirm('Are you sure you want to delete this message?'))
+      if (!confirm(t('deleteMessageConfirm')))
         return;
 
       try {
@@ -521,7 +525,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         console.error('Error deleting message:', err);
       }
     },
-    []
+    [t]
   );
 
   const closeEditModal = useCallback(() => {
@@ -630,7 +634,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setMessages((prev) =>
         prev.filter((msg) => !messageIds.includes(msg.id))
       );
-      alert('Failed to send media. Please try again.');
+      alert(t('failedToSendMedia'));
     } finally {
       setUploadingMedia(false);
     }
@@ -641,6 +645,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     session?.user?.image,
     uploadingMedia,
     formatMessageTime,
+    t,
   ]);
 
   const handleRemoveMedia = useCallback(

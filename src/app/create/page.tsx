@@ -27,11 +27,13 @@ import { notifications } from '@mantine/notifications';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 const MAX_IMAGES = 5;
 const MAX_CHARACTERS = 300;
 
 function CreatePostPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const { data: session, status } = useSession();
   const [content, setContent] = useState('');
@@ -55,8 +57,8 @@ function CreatePostPage() {
     // Check if adding these files would exceed the limit
     if (selectedImages.length + files.length > MAX_IMAGES) {
       notifications.show({
-        title: 'Too Many Images',
-        message: `You can only add up to ${MAX_IMAGES} images`,
+        title: t('tooManyImages'),
+        message: t('maxImages').replace('{count}', String(MAX_IMAGES)),
         color: 'red',
       });
       return;
@@ -71,9 +73,9 @@ function CreatePostPage() {
       const validation = mediaService.validateFile(file);
       if (!validation.valid) {
         notifications.show({
-          title: 'Invalid File',
+          title: t('invalidFile'),
           message:
-            validation.error || 'Please select a valid image file',
+            validation.error || t('validImageRequired'),
           color: 'red',
         });
         continue;
@@ -122,9 +124,8 @@ function CreatePostPage() {
   const handleSubmit = async () => {
     if (!content.trim() && selectedImages.length === 0) {
       notifications.show({
-        title: 'Error',
-        message:
-          'Please enter some content or select an image for your post',
+        title: t('error'),
+        message: t('postContentRequired'),
         color: 'red',
       });
       return;
@@ -132,8 +133,8 @@ function CreatePostPage() {
 
     if (content.length > MAX_CHARACTERS) {
       notifications.show({
-        title: 'Error',
-        message: `Content must be ${MAX_CHARACTERS} characters or less`,
+        title: t('error'),
+        message: t('maxCharacters').replace('{count}', String(MAX_CHARACTERS)),
         color: 'red',
       });
       return;
@@ -141,8 +142,8 @@ function CreatePostPage() {
 
     if (!session?.user?.id) {
       notifications.show({
-        title: 'Error',
-        message: 'You must be logged in to create a post',
+        title: t('error'),
+        message: t('loginRequiredToPost'),
         color: 'red',
       });
       return;
@@ -174,8 +175,8 @@ function CreatePostPage() {
       await postService.createPost(postData);
 
       notifications.show({
-        title: 'Success',
-        message: 'Post created successfully!',
+        title: t('success'),
+        message: t('postCreated'),
         color: 'green',
       });
 
@@ -187,11 +188,11 @@ function CreatePostPage() {
       router.push('/feed');
     } catch (error) {
       notifications.show({
-        title: 'Error',
+        title: t('error'),
         message:
           error instanceof Error
             ? error.message
-            : 'Failed to create post',
+            : t('failedToCreatePost'),
         color: 'red',
       });
     } finally {
@@ -202,14 +203,14 @@ function CreatePostPage() {
   if (status === 'loading') {
     return (
       <Box>
-        <TopNavbar title="Create post" showBack />
+        <TopNavbar title={t('createPost')} showBack />
         <Container
           size="xs"
           pt="md"
           px="md"
           mt={rem(TOP_NAVBAR_HEIGHT_PX)}
         >
-          <Text>Loading...</Text>
+          <Text>{t('loading')}</Text>
         </Container>
       </Box>
     );
@@ -222,7 +223,7 @@ function CreatePostPage() {
   return (
     <Box>
       <TopNavbar
-        title="Create post"
+        title={t('createPost')}
         showBack
         rightSlot={
           <Button
@@ -266,7 +267,7 @@ function CreatePostPage() {
           {/* Content Input */}
           <Stack gap="xs">
             <Textarea
-              placeholder="Your heart has something to say?"
+              placeholder={t('createPostPlaceholder')}
               value={content}
               onChange={(event) =>
                 setContent(event.currentTarget.value)

@@ -3,6 +3,7 @@
 import { ChatMessage as ChatMessageType } from "@/@types/message";
 import { Avatar, Box, Group, Menu, Stack, Text } from "@mantine/core";
 import Image from "next/image";
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -25,6 +26,7 @@ export function ChatMessage({
   formatMessageTime,
   onViewProfile,
 }: ChatMessageProps) {
+  const { t } = useLocale();
   return (
     <Box>
       {showTimestamp && (
@@ -68,7 +70,7 @@ export function ChatMessage({
                 {message.imageUrl && (
                   <Image
                     src={message.imageUrl}
-                    alt="Message attachment"
+                    alt={t('messageAttachment')}
                     width={300}
                     height={200}
                     style={{
@@ -96,12 +98,12 @@ export function ChatMessage({
               </Box>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item onClick={() => onEdit(message)}>Edit</Menu.Item>
+              <Menu.Item onClick={() => onEdit(message)}>{t('edit')}</Menu.Item>
               <Menu.Item color="red" onClick={() => onDelete(message.id)}>
-                Delete
+                {t('delete')}
               </Menu.Item>
-              <Menu.Item>Copy</Menu.Item>
-              <Menu.Item>Reply</Menu.Item>
+              <Menu.Item>{t('copy')}</Menu.Item>
+              <Menu.Item>{t('reply')}</Menu.Item>
             </Menu.Dropdown>
           </Menu>
         </Stack>
@@ -148,8 +150,8 @@ export function ChatMessage({
                   }}
                   title={
                     message.senderRole === "ADMIN"
-                      ? "Verified by Admin"
-                      : "Verified by User"
+                      ? t('verifiedByAdmin')
+                      : t('verifiedByUser')
                   }
                 >
                   VERIFIED
@@ -179,7 +181,7 @@ export function ChatMessage({
                   {message.imageUrl && (
                     <Image
                       src={message.imageUrl}
-                      alt="Message attachment"
+                    alt={t('messageAttachment')}
                       width={300}
                       height={200}
                       style={{
@@ -207,12 +209,12 @@ export function ChatMessage({
                 </Box>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Item onClick={() => onEdit(message)}>Edit</Menu.Item>
+                <Menu.Item onClick={() => onEdit(message)}>{t('edit')}</Menu.Item>
                 <Menu.Item color="red" onClick={() => onDelete(message.id)}>
-                  Delete
+                  {t('delete')}
                 </Menu.Item>
-                <Menu.Item>Copy</Menu.Item>
-                <Menu.Item>Reply</Menu.Item>
+                <Menu.Item>{t('copy')}</Menu.Item>
+                <Menu.Item>{t('reply')}</Menu.Item>
               </Menu.Dropdown>
             </Menu>
           </Stack>

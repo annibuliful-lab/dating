@@ -16,6 +16,7 @@ import {
 } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { useEffect, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface User {
   id: string;
@@ -40,6 +41,7 @@ export function InviteUserModal({
   currentParticipantIds,
   onInvite,
 }: InviteUserModalProps) {
+  const { t } = useLocale();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch] = useDebouncedValue(searchTerm, 300);
   const [users, setUsers] = useState<User[]>([]);
@@ -96,7 +98,7 @@ export function InviteUserModal({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title="Invite Users to Chat"
+      title={t('inviteUsersToChat')}
       size="md"
       centered
     >
@@ -107,7 +109,7 @@ export function InviteUserModal({
           autoCapitalize="off"
           spellCheck={false}
           inputMode="text"
-          placeholder="Search by name or username..."
+          placeholder={t('searchByNameOrUsername')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.currentTarget.value)}
           size="md"

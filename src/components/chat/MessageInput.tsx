@@ -16,6 +16,7 @@ import {
   useImperativeHandle,
   useRef,
 } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface MessageInputProps {
   message: string;
@@ -49,6 +50,7 @@ export const MessageInput = forwardRef<
     },
     ref
   ) => {
+    const { t } = useLocale();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -190,7 +192,7 @@ export const MessageInput = forwardRef<
               value={message}
               onChange={handleMessageChange}
               onKeyDown={handleKeyPress}
-              placeholder="Message"
+              placeholder={t('message')}
               style={{ flex: 1 }}
               radius="xl"
               size="md"

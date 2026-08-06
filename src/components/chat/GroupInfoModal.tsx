@@ -23,6 +23,7 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useSession } from 'next-auth/react';
 import { useCallback, useEffect, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface User {
   id: string;
@@ -65,6 +66,7 @@ export function GroupInfoModal({
   onNameUpdated,
   onViewProfile,
 }: GroupInfoModalProps) {
+  const { t } = useLocale();
   const { data: session } = useSession();
   const [participants, setParticipants] = useState<ChatParticipant[]>(
     []
@@ -105,14 +107,14 @@ export function GroupInfoModal({
     } catch (error) {
       console.error('Error fetching participants:', error);
       notifications.show({
-        title: 'Error',
-        message: 'Failed to load participants',
+        title: t('error'),
+        message: t('failedToLoadParticipants'),
         color: 'red',
       });
     } finally {
       setLoading(false);
     }
-  }, [chatId]);
+  }, [chatId, t]);
 
   // Fetch participants
   useEffect(() => {
@@ -155,8 +157,8 @@ export function GroupInfoModal({
   const handleUpdateName = async () => {
     if (!newName.trim()) {
       notifications.show({
-        title: 'Error',
-        message: 'Chat name cannot be empty',
+        title: t('error'),
+        message: t('chatNameRequired'),
         color: 'red',
       });
       return;
@@ -181,8 +183,8 @@ export function GroupInfoModal({
       }
 
       notifications.show({
-        title: 'Success',
-        message: 'Chat name updated successfully',
+        title: t('success'),
+        message: t('chatNameUpdated'),
         color: 'green',
       });
       setEditingName(false);
@@ -194,7 +196,7 @@ export function GroupInfoModal({
     } catch (error) {
       console.error('Error updating chat name:', error);
       notifications.show({
-        title: 'Error',
+        title: t('error'),
         message:
           error instanceof Error
             ? error.message
@@ -209,8 +211,8 @@ export function GroupInfoModal({
   const handleRemoveMember = async (userId: string) => {
     if (userId === session?.user?.id) {
       notifications.show({
-        title: 'Error',
-        message: 'You cannot remove yourself from the chat',
+        title: t('error'),
+        message: t('cannotRemoveSelf'),
         color: 'red',
       });
       return;
@@ -240,14 +242,14 @@ export function GroupInfoModal({
       );
 
       notifications.show({
-        title: 'Success',
-        message: 'Member removed successfully',
+        title: t('success'),
+        message: t('memberRemoved'),
         color: 'green',
       });
     } catch (error) {
       console.error('Error removing member:', error);
       notifications.show({
-        title: 'Error',
+        title: t('error'),
         message:
           error instanceof Error
             ? error.message
@@ -282,14 +284,14 @@ export function GroupInfoModal({
       setSearchResults(searchResults.filter((u) => u.id !== userId));
 
       notifications.show({
-        title: 'Success',
-        message: 'User invited successfully',
+        title: t('success'),
+        message: t('userInvited'),
         color: 'green',
       });
     } catch (error) {
       console.error('Error inviting user:', error);
       notifications.show({
-        title: 'Error',
+        title: t('error'),
         message:
           error instanceof Error
             ? error.message
@@ -318,7 +320,7 @@ export function GroupInfoModal({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title={isGroup ? 'Group Info' : 'Conversation Info'}
+      title={isGroup ? t('groupInfo') : t('conversationInfo')}
       size="md"
       centered
     >
@@ -339,7 +341,7 @@ export function GroupInfoModal({
                   inputMode="text"
                   value={newName}
                   onChange={(e) => setNewName(e.currentTarget.value)}
-                  placeholder="Enter group name"
+                  placeholder={t('enterGroupNameShort')}
                   style={{ flex: 1 }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -378,7 +380,7 @@ export function GroupInfoModal({
                   size="sm"
                   onClick={() => setEditingName(true)}
                 >
-                  Edit
+                  {t('edit')}
                 </Button>
               </Group>
             )}
@@ -390,9 +392,9 @@ export function GroupInfoModal({
         <Tabs value={activeTab} onChange={setActiveTab}>
           <Tabs.List grow>
             <Tabs.Tab value="members">
-              Members ({participants.length})
+              {t('members')} ({participants.length})
             </Tabs.Tab>
-            <Tabs.Tab value="add">Add Members</Tabs.Tab>
+            <Tabs.Tab value="add">{t('addMembers')}</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="members" pt="md">
@@ -492,7 +494,7 @@ export function GroupInfoModal({
                 autoCapitalize="off"
                 spellCheck={false}
                 inputMode="text"
-                placeholder="Search by name or username..."
+                placeholder={t('searchByNameOrUsername')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.currentTarget.value)}
                 size="md"

@@ -28,10 +28,12 @@ import {
   Text,
 } from "@mantine/core";
 import { useSession } from "next-auth/react";
+import { useLocale } from "@/i18n/LocaleProvider";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 function ProfileViewPage() {
+  const { t } = useLocale();
   const params = useParams<{ userId: string }>();
   const router = useRouter();
   const { data: session } = useSession();
@@ -52,7 +54,7 @@ function ProfileViewPage() {
 
   const fetchProfile = useCallback(async () => {
     if (!params.userId) {
-      setError("User ID not provided");
+      setError(t('userIdNotProvided'));
       setLoading(false);
       return;
     }
@@ -63,11 +65,11 @@ function ProfileViewPage() {
       setProfile(userProfile);
     } catch (err) {
       console.error("Error fetching profile:", err);
-      setError("Failed to load profile");
+      setError(t('failedToLoadProfileShort'));
     } finally {
       setLoading(false);
     }
-  }, [params.userId]);
+  }, [params.userId, t]);
 
   useEffect(() => {
     fetchProfile();
@@ -83,7 +85,7 @@ function ProfileViewPage() {
     } catch (error) {
       if (error instanceof Error) {
         console.error("Error verifying user:", error);
-        alert(error?.message || "Failed to verify. Please try again.");
+        alert(error?.message || t('failedToVerify'));
       }
     } finally {
       setIsVerifying(false);
@@ -100,7 +102,7 @@ function ProfileViewPage() {
     } catch (error) {
       if (error instanceof Error) {
         console.error("Error unverifying user:", error);
-        alert(error?.message || "Failed to unverify. Please try again.");
+        alert(error?.message || t('failedToUnverify'));
       }
     } finally {
       setIsUnverifying(false);
@@ -124,7 +126,7 @@ function ProfileViewPage() {
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
       console.error("Error creating/finding chat:", err);
-      alert("Failed to start chat. Please try again.");
+      alert(t('failedToStartChat'));
     } finally {
       setIsStartingChat(false);
     }
@@ -148,7 +150,7 @@ function ProfileViewPage() {
   if (loading) {
     return (
       <Box>
-        <TopNavbar title="Profile" showBack />
+        <TopNavbar title={t('profile')} showBack />
         <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Center py="xl">
             <Loader size="lg" />
@@ -161,7 +163,7 @@ function ProfileViewPage() {
   if (error || !profile) {
     return (
       <Box>
-        <TopNavbar title="Profile" showBack />
+        <TopNavbar title={t('profile')} showBack />
         <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Center py="xl">
             <Text c="red" ta="center">
@@ -213,7 +215,7 @@ function ProfileViewPage() {
 
   return (
     <Box>
-      <TopNavbar title="Profile" showBack />
+      <TopNavbar title={t('profile')} showBack />
       <Box
         style={{
           height: `calc(100dvh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(
@@ -367,7 +369,7 @@ function ProfileViewPage() {
                 loading={isStartingChat}
                 fullWidth
               >
-                Message
+                {t('message')}
               </Button>
             )}
             {isAdmin && !isOwnProfile && (
@@ -381,7 +383,7 @@ function ProfileViewPage() {
                     loading={isUnverifying}
                     fullWidth
                   >
-                    Unverify User
+                    {t('unverifyUser')}
                   </Button>
                 ) : (
                   <Button
@@ -392,7 +394,7 @@ function ProfileViewPage() {
                     loading={isVerifying}
                     fullWidth
                   >
-                    Verify User (Admin)
+                    {t('verifyUserAdmin')}
                   </Button>
                 )}
               </>

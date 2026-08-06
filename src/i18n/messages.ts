@@ -159,6 +159,7 @@ export const messages = {
     clearSearch: 'ล้างการค้นหา',
     testLineSignIn: 'ทดสอบเข้าสู่ระบบด้วย LINE',
     testLineSignUp: 'ทดสอบสมัครสมาชิกด้วย LINE',
+    dragToReorderImages: 'ลากรูปภาพเพื่อจัดลำดับใหม่',
   },
   en: {
     language: 'Language',
@@ -322,6 +323,7 @@ export const messages = {
     clearSearch: 'Clear search',
     testLineSignIn: 'Test LINE sign in',
     testLineSignUp: 'Test LINE sign up',
+    dragToReorderImages: 'Drag images to reorder them',
   },
 } as const;
 

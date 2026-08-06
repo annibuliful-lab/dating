@@ -32,14 +32,25 @@ import { useLocale } from '@/i18n/LocaleProvider';
 const MAX_IMAGES = 5;
 const MAX_CHARACTERS = 300;
 
+type SelectedImage = {
+  id: string;
+  file: File;
+  previewUrl: string;
+};
+
 function CreatePostPage() {
   const { t } = useLocale();
   const router = useRouter();
   const { data: session, status } = useSession();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
+  const [dropTargetImageId, setDropTargetImageId] = useState<string | null>(
+    null,
+  );
+  const draggedImageIdRef = useRef<string | null>(null);
+  const dropTargetImageIdRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -68,8 +79,7 @@ function CreatePostPage() {
     }
 
     // Validate and compress all files
-    const validFiles: File[] = [];
-    const previews: string[] = [];
+    const validImages: SelectedImage[] = [];
 
     for (const file of files) {
       // Validate file
@@ -91,21 +101,24 @@ function CreatePostPage() {
           1920,
           0.8,
         );
-        validFiles.push(compressedFile);
-        const preview = mediaService.createPreviewUrl(compressedFile);
-        previews.push(preview);
+        validImages.push({
+          id: crypto.randomUUID(),
+          file: compressedFile,
+          previewUrl: mediaService.createPreviewUrl(compressedFile),
+        });
       } catch (error) {
         console.error('Error compressing image:', error);
         // Use original file if compression fails
-        validFiles.push(file);
-        const preview = mediaService.createPreviewUrl(file);
-        previews.push(preview);
+        validImages.push({
+          id: crypto.randomUUID(),
+          file,
+          previewUrl: mediaService.createPreviewUrl(file),
+        });
       }
     }
 
     // Update state
-    setSelectedImages((prev) => [...prev, ...validFiles]);
-    setImagePreviews((prev) => [...prev, ...previews]);
+    setSelectedImages((prev) => [...prev, ...validImages]);
 
     // Reset file input
     if (fileInputRef.current) {
@@ -115,12 +128,72 @@ function CreatePostPage() {
 
   const handleRemoveImage = (index: number) => {
     // Revoke preview URL
-    if (imagePreviews[index]) {
-      mediaService.revokePreviewUrl(imagePreviews[index]);
+    const image = selectedImages[index];
+    if (image) {
+      mediaService.revokePreviewUrl(image.previewUrl);
     }
-    // Remove from arrays
+    // Remove the image and its preview together so their order cannot diverge.
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleImagePointerDown = (
+    event: React.PointerEvent<HTMLElement>,
+    imageId: string,
+  ) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    draggedImageIdRef.current = imageId;
+    dropTargetImageIdRef.current = null;
+    setDraggedImageId(imageId);
+    setDropTargetImageId(null);
+  };
+
+  const handleImagePointerMove = (
+    event: React.PointerEvent<HTMLElement>,
+  ) => {
+    const draggedId = draggedImageIdRef.current;
+    if (!draggedId) return;
+
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-sortable-image-id]');
+    const targetId = target?.dataset.sortableImageId;
+    if (!targetId || targetId === draggedId) return;
+
+    dropTargetImageIdRef.current = targetId;
+    setDropTargetImageId(targetId);
+  };
+
+  const handleImagePointerUp = (
+    event: React.PointerEvent<HTMLElement>,
+  ) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    const draggedId = draggedImageIdRef.current;
+    const targetId = dropTargetImageIdRef.current;
+    if (draggedId && targetId && draggedId !== targetId) {
+      setSelectedImages((currentImages) => {
+        const fromIndex = currentImages.findIndex(
+          (image) => image.id === draggedId,
+        );
+        const toIndex = currentImages.findIndex(
+          (image) => image.id === targetId,
+        );
+        if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
+          return currentImages;
+        }
+
+        const reorderedImages = [...currentImages];
+        const [movedImage] = reorderedImages.splice(fromIndex, 1);
+        reorderedImages.splice(toIndex, 0, movedImage);
+        return reorderedImages;
+      });
+    }
+
+    draggedImageIdRef.current = null;
+    dropTargetImageIdRef.current = null;
+    setDraggedImageId(null);
+    setDropTargetImageId(null);
   };
 
   const handleSubmit = async () => {
@@ -161,7 +234,7 @@ function CreatePostPage() {
       // Upload all images if selected
       if (selectedImages.length > 0) {
         const uploadResults = await mediaService.uploadMultipleMedia(
-          selectedImages,
+          selectedImages.map((image) => image.file),
           'dating',
           'posts',
         );
@@ -186,8 +259,8 @@ function CreatePostPage() {
       });
 
       // Clean up preview URLs
-      imagePreviews.forEach((preview) => {
-        mediaService.revokePreviewUrl(preview);
+      selectedImages.forEach((image) => {
+        mediaService.revokePreviewUrl(image.previewUrl);
       });
 
       router.push('/feed');
@@ -314,20 +387,73 @@ function CreatePostPage() {
           </Stack>
 
           {/* Image Previews */}
-          {imagePreviews.length > 0 && (
-            <SimpleGrid
-              cols={imagePreviews.length === 1 ? 1 : 2}
-              spacing="sm"
-            >
-              {imagePreviews.map((preview, index) => (
-                <Box key={index} pos="relative">
+          {selectedImages.length > 0 && (
+            <Stack gap="xs">
+              <Text size="xs" c="dimmed">
+                {t('dragToReorderImages')}
+              </Text>
+              <SimpleGrid
+                cols={selectedImages.length === 1 ? 1 : 2}
+                spacing="sm"
+              >
+                {selectedImages.map((image, index) => (
+                <Box
+                  key={image.id}
+                  pos="relative"
+                  data-sortable-image-id={image.id}
+                  style={{
+                    cursor: 'default',
+                    opacity: draggedImageId === image.id ? 0.65 : 1,
+                    transform:
+                      draggedImageId === image.id ? 'scale(1.02)' : 'none',
+                    outline:
+                      dropTargetImageId === image.id
+                        ? '3px solid var(--mantine-color-blue-5)'
+                        : 'none',
+                    outlineOffset: 2,
+                    transition:
+                      'opacity 120ms ease, transform 120ms ease, outline 120ms ease',
+                  }}
+                >
                   <Image
-                    src={preview}
+                    src={image.previewUrl}
                     alt={`Preview ${index + 1}`}
                     radius="md"
                     fit="cover"
                     mah={300}
                   />
+                  <Box
+                    component="button"
+                    type="button"
+                    aria-label={t('dragToReorderImages')}
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      handleImagePointerDown(event, image.id);
+                    }}
+                    onPointerMove={handleImagePointerMove}
+                    onPointerUp={handleImagePointerUp}
+                    onPointerCancel={handleImagePointerUp}
+                    style={{
+                      position: 'absolute',
+                      left: 10,
+                      bottom: 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 36,
+                      height: 32,
+                      border: 0,
+                      borderRadius: 8,
+                      background: 'rgba(0, 0, 0, 0.65)',
+                      color: 'white',
+                      cursor: draggedImageId ? 'grabbing' : 'grab',
+                      touchAction: 'none',
+                      fontSize: 20,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ⋮⋮
+                  </Box>
                   <CloseButton
                     pos="absolute"
                     top={10}
@@ -335,6 +461,7 @@ function CreatePostPage() {
                     size="md"
                     radius="xl"
                     variant="filled"
+                    onPointerDown={(event) => event.stopPropagation()}
                     onClick={() => handleRemoveImage(index)}
                     style={{
                       backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -342,8 +469,9 @@ function CreatePostPage() {
                     }}
                   />
                 </Box>
-              ))}
-            </SimpleGrid>
+                ))}
+              </SimpleGrid>
+            </Stack>
           )}
 
           {/* Camera Button */}

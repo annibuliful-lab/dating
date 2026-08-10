@@ -64,16 +64,31 @@ export default function SignupPage() {
       const userId = data?.data?.user?.[0]?.id || '';
       await router.push(`/signup/verify?userId=${userId}`);
     },
-    onError: () => {
+    onError: (error) => {
+      const message =
+        error.message === 'INVALID_EMAIL_OR_USERNAME'
+          ? t('signUpEmailInvalid')
+          : error.message === 'EMAIL_OR_USERNAME_EXISTS'
+            ? t('signUpEmailOrUsernameExists')
+            : t('signUpFailed');
       notifications.show({
         title: t('signUp'),
-        message: t('signUpFailed'),
+        message,
         autoClose: 5000,
       });
     },
   });
 
   const handleSignup = () => {
+    if (!isEmailValid) {
+      notifications.show({
+        title: t('signUp'),
+        message: t('signUpEmailInvalid'),
+        autoClose: 5000,
+      });
+      return;
+    }
+
     mutate({ username: email, password });
   };
 
@@ -114,6 +129,7 @@ export default function SignupPage() {
           radius="md"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          error={email && !isEmailValid ? t('signUpEmailInvalid') : undefined}
           autoComplete="off"
           rightSection={isEmailValid && <ActiveCheckCircle />}
           styles={{
@@ -169,7 +185,7 @@ export default function SignupPage() {
           variant="primary"
           onClick={handleSignup}
           loading={loading}
-          disabled={!isPasswordValid}
+          disabled={!isEmailValid || !isPasswordValid}
         >
           {t('createAccount')}
         </Button>

@@ -40,6 +40,8 @@ export const messages = {
     alreadyAccount: 'มีบัญชีอยู่แล้วใช่ไหม?',
     signUpSuccess: 'สมัครสมาชิกสำเร็จ',
     signUpFailed: 'สมัครสมาชิกไม่สำเร็จ กรุณาติดต่อผู้ดูแลระบบ',
+    signUpEmailInvalid: 'อีเมลและชื่อผู้ใช้ต้องเป็นตัวพิมพ์เล็กและไม่มีช่องว่าง',
+    signUpEmailOrUsernameExists: 'อีเมลหรือชื่อผู้ใช้นี้ถูกใช้งานแล้ว',
     passwordMin: 'อย่างน้อย 8 ตัวอักษร',
     passwordNumber: 'มีตัวเลข',
     passwordUppercase: 'มีตัวพิมพ์ใหญ่',
@@ -200,6 +202,10 @@ export const messages = {
     alreadyAccount: 'Already have an account?',
     signUpSuccess: 'Sign up successfully',
     signUpFailed: 'Sign up failed, please contact administrator',
+    signUpEmailInvalid:
+      'Email and username must use lowercase letters and contain no spaces.',
+    signUpEmailOrUsernameExists:
+      'This email or username is already in use.',
     passwordMin: '8 characters minimum',
     passwordNumber: 'a number',
     passwordUppercase: 'an uppercase letter',

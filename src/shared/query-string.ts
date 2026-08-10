@@ -29,8 +29,17 @@ export async function fetchWithRetry<T>(
         signal: controller.signal,
       });
 
-      if (!res.ok)
-        throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        const message =
+          errorBody &&
+          typeof errorBody === 'object' &&
+          'message' in errorBody &&
+          typeof errorBody.message === 'string'
+            ? errorBody.message
+            : `HTTP ${res.status} ${res.statusText}`;
+        throw new Error(message);
+      }
       const data = await res.json();
       if (timeoutId) clearTimeout(timeoutId);
       return data;

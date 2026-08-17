@@ -38,7 +38,7 @@ const LINE_PROFILES = {
     lineType: 'couples_single_women' as const,
     linkType: 'primary' as const,
     appUrl: 'line://ti/p/rOmbX0',
-    webUrl: 'https://lin.ee/rOmbX0',
+    webUrl: 'https://lin.ee/rOmbX0X',
   },
 };
 

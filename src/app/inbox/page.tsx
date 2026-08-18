@@ -30,7 +30,12 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import { useLocale } from '@/i18n/LocaleProvider';
 
 type ChatPreview = {
@@ -354,6 +359,15 @@ function InboxPage() {
     setSelectedUsers(selectedUsers.filter((id) => id !== userId));
   };
 
+  const handleViewProfile =
+    (userId?: string) => (e: ReactMouseEvent<HTMLElement>) => {
+      e.stopPropagation();
+
+      if (!userId) return;
+
+      router.push(`/profile/${userId}`);
+    };
+
   if (status === 'loading' || loading) {
     return (
       <Box>
@@ -486,7 +500,6 @@ function InboxPage() {
                     gap="md"
                     w="100%"
                   >
-                    {/* Avatar - show first participant's avatar or default */}
                     <Avatar
                       radius="xl"
                       color="gray"
@@ -495,6 +508,9 @@ function InboxPage() {
                         chat.participants[0]?.profileImageUrl ||
                         undefined
                       }
+                      // onClick={handleViewProfile(
+                      //   chat.participants[0]?.id,
+                      // )}
                     >
                       {chat.participants[0]?.fullName?.charAt(0) ||
                         '?'}
@@ -507,6 +523,9 @@ function InboxPage() {
                         align="flex-start"
                       >
                         <Text
+                          onClick={handleViewProfile(
+                            chat.participants[0]?.id,
+                          )}
                           fw={700}
                           style={{
                             flex: 1,

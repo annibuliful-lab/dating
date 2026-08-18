@@ -80,97 +80,102 @@ function InboxPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [groupChatName, setGroupChatName] = useState('');
 
-  const fetchUserChats = useCallback(async (options?: { force?: boolean }) => {
-    if (!session?.user?.id) return;
+  const fetchUserChats = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!session?.user?.id) return;
 
-    try {
-      setLoading(true);
-      setError(null);
+      try {
+        setLoading(true);
+        setError(null);
 
-      const userChats = await messageService.getUserChats(
-        session.user.id,
-        { force: options?.force },
-      );
+        const userChats = await messageService.getUserChats(
+          session.user.id,
+          { force: options?.force },
+        );
 
-      // Transform the data to match our ChatPreview type
-      const transformedChats: ChatPreview[] = userChats.map(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (participant: any) => {
-          const chat = participant.Chat;
-          const latestMessage = chat.latestMessage;
+        // Transform the data to match our ChatPreview type
+        const transformedChats: ChatPreview[] = userChats.map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (participant: any) => {
+            const chat = participant.Chat;
+            const latestMessage = chat.latestMessage;
 
-          // Get other participants (excluding current user)
-          const otherParticipants =
-            chat.ChatParticipant?.filter(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (p: any) => p.userId !== session.user.id
-            ) || [];
+            // Get other participants (excluding current user)
+            const otherParticipants =
+              chat.ChatParticipant?.filter(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (p: any) => p.userId !== session.user.id,
+              ) || [];
 
-          // Generate chat name based on participants
-          let chatName = t('unknown');
-          if (chat.isGroup && chat.name) {
-            chatName = chat.name;
-          } else if (otherParticipants.length > 0) {
-            chatName = otherParticipants
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .map((p: any) => p.User?.fullName || t('unknown'))
-              .join(', ');
-          } else {
-            chatName = `Chat ${chat.id.slice(0, 8)}`;
-          }
+            // Generate chat name based on participants
+            let chatName = t('unknown');
+            if (chat.isGroup && chat.name) {
+              chatName = chat.name;
+            } else if (otherParticipants.length > 0) {
+              chatName = otherParticipants
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .map((p: any) => p.User?.username || t('unknown'))
+                .join(', ');
+            } else {
+              chatName = `Chat ${chat.id.slice(0, 8)}`;
+            }
 
-          // Generate preview text
-          let preview = t('noMessagesYet');
-          if (latestMessage) {
-            preview = latestMessage.text || t('mediaMessage');
-          }
+            // Generate preview text
+            let preview = t('noMessagesYet');
+            if (latestMessage) {
+              preview = latestMessage.text || t('mediaMessage');
+            }
 
-          // Format date
-          const dateLabel = latestMessage
-            ? formatRelativeDate(new Date(latestMessage.createdAt))
-            : t('new');
+            // Format date
+            const dateLabel = latestMessage
+              ? formatRelativeDate(new Date(latestMessage.createdAt))
+              : t('new');
 
-          // Determine if unread based on lastReadAt vs latest message
-          const unread = chat.hasUnread || false;
+            // Determine if unread based on lastReadAt vs latest message
+            const unread = chat.hasUnread || false;
 
-          return {
-            id: chat.id,
-            name: chatName,
-            preview,
-            dateLabel,
-            unread,
-            participants: otherParticipants
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .map((p: any) => {
-                const profileImageUrl = getProfileImageUrl(
-                  p.User?.profileImageKey,
-                );
-                return {
-                  id: p.userId,
-                  fullName: p.User?.fullName || t('unknown'),
-                  profileImageKey: p.User?.profileImageKey || null,
-                  profileImageUrl,
-                };
-              }),
-            latestMessage: latestMessage
-              ? {
-                  text: latestMessage.text,
-                  createdAt: latestMessage.createdAt,
-                  senderId: latestMessage.senderId,
-                }
-              : undefined,
-          };
-        }
-      );
+            return {
+              id: chat.id,
+              name: chatName,
+              preview,
+              dateLabel,
+              unread,
+              participants: otherParticipants
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .map((p: any) => {
+                  const profileImageUrl = getProfileImageUrl(
+                    p.User?.profileImageKey,
+                  );
+                  return {
+                    id: p.userId,
+                    fullName: p.User?.username || t('unknown'),
+                    profileImageKey: p.User?.profileImageKey || null,
+                    profileImageUrl,
+                  };
+                }),
+              latestMessage: latestMessage
+                ? {
+                    text: latestMessage.text,
+                    createdAt: latestMessage.createdAt,
+                    senderId: latestMessage.senderId,
+                  }
+                : undefined,
+            };
+          },
+        );
 
-      setChats(transformedChats);
-    } catch (err) {
-      console.error('Error fetching chats:', err);
-      setError(err instanceof Error ? err.message : t('failedToLoadPosts'));
-    } finally {
-      setLoading(false);
-    }
-  }, [session?.user?.id, t]);
+        setChats(transformedChats);
+      } catch (err) {
+        console.error('Error fetching chats:', err);
+        setError(
+          err instanceof Error ? err.message : t('failedToLoadPosts'),
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [session?.user?.id, t],
+  );
 
   // Auto-refresh chat list every 2 minutes (Facebook-style)
   useEffect(() => {
@@ -219,7 +224,7 @@ function InboxPage() {
       try {
         await messageService.markMessagesAsRead(
           chatId,
-          session.user.id
+          session.user.id,
         );
       } catch (err) {
         console.error('Error marking messages as read:', err);
@@ -285,7 +290,7 @@ function InboxPage() {
       // Get or create direct chat
       const chat = await messageService.getOrCreateDirectChat(
         session.user.id,
-        userId
+        userId,
       );
       // Close modal and navigate to chat
       close();
@@ -314,7 +319,7 @@ function InboxPage() {
       const chat = await messageService.createGroupChat(
         session.user.id,
         groupChatName.trim(),
-        selectedUsers
+        selectedUsers,
       );
       // Close modal and navigate to chat
       close();
@@ -579,7 +584,9 @@ function InboxPage() {
               size="xs"
               onClick={handleToggleGroupChatMode}
             >
-              {isGroupChatMode ? t('switchToDirect') : t('createGroup')}
+              {isGroupChatMode
+                ? t('switchToDirect')
+                : t('createGroup')}
             </Button>
           </Group>
 
@@ -607,7 +614,7 @@ function InboxPage() {
               <Stack gap="xs">
                 {selectedUsers.map((userId) => {
                   const user = searchResults.find(
-                    (u) => u.id === userId
+                    (u) => u.id === userId,
                   );
                   if (!user) return null;
                   return (
@@ -743,7 +750,8 @@ function InboxPage() {
               }
               fullWidth
             >
-              {t('createGroupChat')} ({selectedUsers.length} {t('members')})
+              {t('createGroupChat')} ({selectedUsers.length}{' '}
+              {t('members')})
             </Button>
           )}
 

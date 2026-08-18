@@ -82,6 +82,7 @@ export default function AdminChatsPage() {
       createdAt: string;
       User?: {
         fullName: string;
+        username: string;
       };
     }>
   >([]);
@@ -528,7 +529,7 @@ export default function AdminChatsPage() {
                       >
                         <Group gap="xs" mb={4}>
                           <Text size="xs" fw={600} c="white">
-                            {message.User?.fullName || t('unknown')}
+                            {message.User?.username || t('unknown')}
                           </Text>
                           <Text size="xs" c="dimmed">
                             {formatDate(message.createdAt)}

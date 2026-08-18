@@ -38,7 +38,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const [hasOlderMessages, setHasOlderMessages] = useState(true);
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(
-    null
+    null,
   );
   const typingSubscriptionRef = useRef<{
     unsubscribe: () => void;
@@ -93,17 +93,17 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       oscillator.frequency.setValueAtTime(
         800,
-        audioContext.currentTime
+        audioContext.currentTime,
       );
       oscillator.frequency.setValueAtTime(
         600,
-        audioContext.currentTime + 0.1
+        audioContext.currentTime + 0.1,
       );
 
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(
         0.01,
-        audioContext.currentTime + 0.2
+        audioContext.currentTime + 0.2,
       );
 
       oscillator.start(audioContext.currentTime);
@@ -120,9 +120,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setLoading(true);
       setError(null);
 
-      const chatMessages = await messageService.getChatMessages(
-        chatId
-      );
+      const chatMessages =
+        await messageService.getChatMessages(chatId);
 
       const transformedMessages: ChatMessage[] = chatMessages
         .reverse() // Reverse to show oldest first in chat (Facebook-style)
@@ -140,12 +139,12 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             author:
               msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
-            senderName: msg.User?.fullName || t('unknown'),
+            senderName: msg.User?.username || t('unknown'),
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
             senderRole: msg.User?.role || 'USER',
             createdAtLabel: formatMessageTime(
-              new Date(msg.createdAt)
+              new Date(msg.createdAt),
             ),
             createdAt: msg.createdAt,
           };
@@ -162,7 +161,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     } catch (err) {
       console.error('Error fetching messages:', err);
       setError(
-        err instanceof Error ? err.message : t('failedToLoadPosts')
+        err instanceof Error ? err.message : t('failedToLoadPosts'),
       );
     } finally {
       setLoading(false);
@@ -186,7 +185,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         await messageService.getOlderMessages(
           chatId,
           oldestMessage.id,
-          20
+          20,
         );
 
       if (olderMessages.length === 0) {
@@ -209,12 +208,12 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             author:
               msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
-            senderName: msg.User?.fullName || t('unknown'),
+            senderName: msg.User?.username || t('unknown'),
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
             senderRole: msg.User?.role || 'USER',
             createdAtLabel: formatMessageTime(
-              new Date(msg.createdAt)
+              new Date(msg.createdAt),
             ),
             createdAt: msg.createdAt,
           };
@@ -288,14 +287,14 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             (newMessage.User?.role as 'USER' | 'ADMIN' | undefined) ||
             'USER',
           createdAtLabel: formatMessageTime(
-            new Date(newMessage.createdAt)
+            new Date(newMessage.createdAt),
           ),
           createdAt: newMessage.createdAt,
         };
 
         setMessages((prev) => {
           const existingIndex = prev.findIndex(
-            (msg) => msg.id === transformedMessage.id
+            (msg) => msg.id === transformedMessage.id,
           );
 
           if (existingIndex !== -1) {
@@ -318,17 +317,17 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
           return newMessages;
         });
-      }
+      },
     );
 
     const typingSubscription = messageService.subscribeToTyping(
       chatId,
       (typingUsers) => {
         const otherTypingUsers = typingUsers.filter(
-          (user) => user.userId !== session?.user?.id
+          (user) => user.userId !== session?.user?.id,
         );
         setTypingUsers(otherTypingUsers);
-      }
+      },
     );
 
     subscriptionRef.current = subscription;
@@ -374,7 +373,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           currentChatIdRef.current,
           session.user.id,
           session.user.name || 'User',
-          false
+          false,
         );
       }
 
@@ -414,7 +413,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     } catch (err) {
       console.error('Error sending message:', err);
       setMessages((prev) =>
-        prev.filter((msg) => msg.id !== messageId)
+        prev.filter((msg) => msg.id !== messageId),
       );
       setMessage(messageText);
     } finally {
@@ -447,7 +446,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           currentChatIdRef.current,
           session.user.id,
           session.user.name || 'User',
-          true
+          true,
         );
       } else if (!shouldBeTyping && wasTyping) {
         setIsTyping(false);
@@ -455,7 +454,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           currentChatIdRef.current,
           session.user.id,
           session.user.name || 'User',
-          false
+          false,
         );
       }
 
@@ -471,13 +470,13 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
               currentChatIdRef.current,
               session.user.id,
               session.user.name || 'User',
-              false
+              false,
             );
           }
         }, 3000);
       }
     },
-    [session?.user?.id, session?.user?.name, isTyping]
+    [session?.user?.id, session?.user?.name, isTyping],
   );
 
   const handleEditMessage = useCallback((message: ChatMessage) => {
@@ -492,15 +491,15 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     try {
       await messageService.editMessage(
         editingMessage.id,
-        editText.trim()
+        editText.trim(),
       );
 
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === editingMessage.id
             ? { ...msg, text: editText.trim() }
-            : msg
-        )
+            : msg,
+        ),
       );
 
       setShowEditModal(false);
@@ -513,19 +512,18 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   const handleDeleteMessage = useCallback(
     async (messageId: string) => {
-      if (!confirm(t('deleteMessageConfirm')))
-        return;
+      if (!confirm(t('deleteMessageConfirm'))) return;
 
       try {
         await messageService.deleteMessage(messageId);
         setMessages((prev) =>
-          prev.filter((msg) => msg.id !== messageId)
+          prev.filter((msg) => msg.id !== messageId),
         );
       } catch (err) {
         console.error('Error deleting message:', err);
       }
     },
-    [t]
+    [t],
   );
 
   const closeEditModal = useCallback(() => {
@@ -574,9 +572,8 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       setUploadingMedia(true);
 
       // Upload all media files first
-      const uploadResults = await mediaService.uploadMultipleMedia(
-        selectedMedia
-      );
+      const uploadResults =
+        await mediaService.uploadMultipleMedia(selectedMedia);
 
       // Create messages for each uploaded file
       const messagePromises = selectedMedia.map(
@@ -613,7 +610,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
           });
 
           return optimisticMessage;
-        }
+        },
       );
 
       // Wait for all messages to be sent
@@ -632,7 +629,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       console.error('Error sending media messages:', err);
       // Remove failed messages
       setMessages((prev) =>
-        prev.filter((msg) => !messageIds.includes(msg.id))
+        prev.filter((msg) => !messageIds.includes(msg.id)),
       );
       alert(t('failedToSendMedia'));
     } finally {
@@ -653,15 +650,15 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
       if (selectedMedia && selectedMedia[index]) {
         // Revoke the preview URL for the specific file
         mediaService.revokePreviewUrl(
-          URL.createObjectURL(selectedMedia[index])
+          URL.createObjectURL(selectedMedia[index]),
         );
         // Remove the file from the array
         setSelectedMedia((prev) =>
-          prev.filter((_, i) => i !== index)
+          prev.filter((_, i) => i !== index),
         );
       }
     },
-    [selectedMedia]
+    [selectedMedia],
   );
 
   const handleScroll = useCallback(
@@ -678,7 +675,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         loadOlderMessages();
       }
     },
-    [hasOlderMessages, loadingOlderMessages, loadOlderMessages]
+    [hasOlderMessages, loadingOlderMessages, loadOlderMessages],
   );
 
   useEffect(() => {

@@ -254,7 +254,6 @@ export const messageService = {
               createdAt,
               User!Message_senderId_fkey (
                 id,
-                fullName,
                 username,
                 profileImageKey,
                 isVerified,
@@ -263,8 +262,8 @@ export const messageService = {
             ),
             User!Chat_createdById_fkey (
               id,
-              fullName,
-              profileImageKey
+              profileImageKey,
+              username
             ),
             ChatParticipant!ChatParticipant_chatId_fkey (
               id,
@@ -273,7 +272,7 @@ export const messageService = {
               isAdmin,
               User!ChatParticipant_userId_fkey (
                 id,
-                fullName,
+                username,
                 profileImageKey,
                 role
               )
@@ -313,11 +312,11 @@ export const messageService = {
       // Chats without messages go to the bottom
       const sortedChats = chatsWithMessages.sort((a, b) => {
         const aMessageTime =
-          (a.Chat as { lastMessageAt?: string | null }).lastMessageAt ||
-          a.Chat.latestMessage?.createdAt;
+          (a.Chat as { lastMessageAt?: string | null })
+            .lastMessageAt || a.Chat.latestMessage?.createdAt;
         const bMessageTime =
-          (b.Chat as { lastMessageAt?: string | null }).lastMessageAt ||
-          b.Chat.latestMessage?.createdAt;
+          (b.Chat as { lastMessageAt?: string | null })
+            .lastMessageAt || b.Chat.latestMessage?.createdAt;
 
         // If both have messages, sort by createdAt descending (newest first)
         if (aMessageTime && bMessageTime) {
@@ -960,11 +959,12 @@ export const messageService = {
 
   // Delete a message
   async deleteMessage(messageId: string): Promise<boolean> {
-    const { data: existingMessage, error: lookupError } = await supabase
-      .from('Message')
-      .select('chatId')
-      .eq('id', messageId)
-      .single();
+    const { data: existingMessage, error: lookupError } =
+      await supabase
+        .from('Message')
+        .select('chatId')
+        .eq('id', messageId)
+        .single();
 
     if (lookupError) throw new Error(lookupError.message);
 

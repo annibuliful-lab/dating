@@ -20,6 +20,7 @@ import {
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useOpenLink } from '@/hooks/useOpenLink';
 
 const LINE_PROFILES = {
   singleMen: {
@@ -78,6 +79,7 @@ function Step({
 
 export function VerifyPrompt() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { openLineLink } = useOpenLink();
   const { t } = useLocale();
   const { data: session } = useSession();
   const { userProfile } = useUserProfile();
@@ -98,37 +100,6 @@ export function VerifyPrompt() {
       account_status: userProfile?.userStatus ?? undefined,
     });
   }, [session?.user?.id, userProfile]);
-
-  const openLineLink = (appUrl: string, webUrl: string) => {
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(
-      window.navigator.userAgent,
-    );
-
-    if (!isMobile) {
-      window.open(webUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    const fallbackTimer = window.setTimeout(() => {
-      window.location.href = webUrl;
-    }, 1200);
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        window.clearTimeout(fallbackTimer);
-        document.removeEventListener(
-          'visibilitychange',
-          handleVisibilityChange,
-        );
-      }
-    };
-
-    document.addEventListener(
-      'visibilitychange',
-      handleVisibilityChange,
-    );
-    window.location.href = appUrl;
-  };
 
   const lineButton = (
     profile: keyof typeof LINE_PROFILES,

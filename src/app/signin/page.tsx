@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useLocale } from '@/i18n/LocaleProvider';
+import { useOpenLink } from '@/hooks/useOpenLink';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { status, data } = useSession();
+  const { openLineLink } = useOpenLink();
+
   const handleClickSignIn = async () => {
     try {
       const result = await signIn('credentials', {
@@ -135,13 +138,22 @@ export default function LoginPage() {
           {t('login')}
         </Button>
 
-        <Text size="sm" ta="center" mt="xs" fw={500}>
-          <a
-            href="#"
-            style={{ color: 'white', textDecoration: 'none' }}
-          >
-            {t('forgotPassword')}
-          </a>
+        <Text
+          size="sm"
+          ta="center"
+          mt="xs"
+          fw={500}
+          style={{
+            cursor: 'pointer',
+          }}
+          onClick={() => {
+            openLineLink(
+              'line://ti/p/cFT31iUIWt',
+              'https://line.me/ti/p/cFT31iUIWt',
+            );
+          }}
+        >
+          {t('forgotPassword')}
         </Text>
 
         <Text size="sm" ta="center" c="dimmed">

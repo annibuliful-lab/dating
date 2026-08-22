@@ -118,6 +118,7 @@ export const messages = {
     addMembers: 'เพิ่มสมาชิก',
     verifiedByAdmin: 'ยืนยันโดยแอดมิน',
     verifiedByUser: 'ยืนยันโดยผู้ใช้',
+    verifiedAccounts: 'บัญชีที่ยืนยันแล้ว',
     messageAttachment: 'ไฟล์แนบข้อความ',
     deleteMessageConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการลบข้อความนี้?',
     failedToSendMedia: 'ไม่สามารถส่งสื่อได้ กรุณาลองอีกครั้ง',
@@ -285,6 +286,7 @@ export const messages = {
     addMembers: 'Add Members',
     verifiedByAdmin: 'Verified by Admin',
     verifiedByUser: 'Verified by User',
+    verifiedAccounts: 'Verified accounts',
     messageAttachment: 'Message attachment',
     deleteMessageConfirm:
       'Are you sure you want to delete this message?',

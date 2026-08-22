@@ -24,7 +24,10 @@ export function useAdminUsers(searchQuery?: string) {
   );
 
   // Fetch total user count for the current search/filter
-  const countQuery = useApiQuery<{ total: number }>(
+  const countQuery = useApiQuery<{
+    total: number;
+    verifiedTotal: number;
+  }>(
     '/api/admin/users/count',
     {
       retries: 1,
@@ -54,6 +57,8 @@ export function useAdminUsers(searchQuery?: string) {
     updateUserStatus,
     updateUserVerification,
     total: countQuery.data?.total ?? 0,
+    verifiedTotal: countQuery.data?.verifiedTotal ?? 0,
     countLoading: countQuery.loading,
+    refetchCount: countQuery.refetch,
   };
 }

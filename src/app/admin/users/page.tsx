@@ -9,6 +9,7 @@ import {
 import { useAdminUsers } from '@/hooks/useAdmin';
 import { useLocale } from '@/i18n/LocaleProvider';
 import {
+  Badge,
   Box,
   Button,
   Container,
@@ -76,6 +77,8 @@ export default function AdminUsersPage() {
     updateUserStatus,
     updateUserVerification,
     total,
+    verifiedTotal,
+    refetchCount,
   } = useAdminUsers(searchQuery);
   const users = (usersData as unknown as User[]) || [];
   const loading = usersLoading || initialLoading;
@@ -136,7 +139,7 @@ export default function AdminUsersPage() {
         color: 'green',
       });
 
-      fetchUsers();
+      await Promise.all([fetchUsers(), refetchCount()]);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
@@ -315,6 +318,9 @@ export default function AdminUsersPage() {
                 <Text size="sm" c="dimmed" fw={500}>
                   (ทั้งหมด {total} accounts)
                 </Text>
+                <Badge color="yellow" variant="light" size="sm">
+                  {t('verifiedAccounts')}: {verifiedTotal}
+                </Badge>
               </Group>
               <SearchInput
                 placeholder="ค้นหาจาก ชื่อผู้ใช้ ชื่อ นามสกุล เบอร์ อีเมล"

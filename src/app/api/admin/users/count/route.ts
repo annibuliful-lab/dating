@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * GET /api/admin/users/count
- * Returns total count of users matching optional filters
+ * Returns total count of users matching optional filters and the total
+ * number of accounts verified by an admin.
  * Query params: search, status, isVerified
  */
 export async function GET(req: NextRequest) {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from('User')
-      .select('id', { count: 'exact' });
+      .select('id', { count: 'exact', head: true });
 
     // Apply search filter
     if (search) {
@@ -49,9 +50,19 @@ export async function GET(req: NextRequest) {
       query = query.eq('isVerified', isVerified === 'true');
     }
 
-    const { count, error } = await query;
+    const [
+      { count, error },
+      { count: verifiedTotal, error: verifiedTotalError },
+    ] = await Promise.all([
+      query,
+      supabase
+        .from('User')
+        .select('id', { count: 'exact', head: true })
+        .not('verifiedAt', 'is', null)
+        .not('verifiedBy', 'is', null),
+    ]);
 
-    if (error) {
+    if (error || verifiedTotalError) {
       console.error('Error counting users:', error);
       return NextResponse.json(
         { error: 'Failed to count users' },
@@ -59,7 +70,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ total: count || 0 });
+    return NextResponse.json({
+      total: count || 0,
+      verifiedTotal: verifiedTotal || 0,
+    });
   } catch (error) {
     console.error('Error in GET /api/admin/users/count:', error);
     return NextResponse.json(

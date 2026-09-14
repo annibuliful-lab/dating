@@ -525,7 +525,7 @@ export const messageService = {
           `
           userId,
           User!ChatParticipant_userId_fkey (
-            fullName
+            username
           ),
           Chat!ChatParticipant_chatId_fkey (
             id,
@@ -558,9 +558,9 @@ export const messageService = {
           otherParticipants
             .map((participant) => {
               const user = participant.User as
-                | { fullName?: string }
+                | { username?: string }
                 | undefined;
-              return user?.fullName || 'Unknown';
+              return user?.username ?? 'Unknown';
             })
             .join(', ') || `Chat ${chatId.slice(0, 8)}`;
       }

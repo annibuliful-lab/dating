@@ -103,9 +103,11 @@ export default function ChatPage() {
   // Mark messages as read when chat is opened
   useEffect(() => {
     if (params.chatId && session?.user?.id && !loading) {
-      messageService.markMessagesAsRead(params.chatId, session.user.id).catch((err) => {
-        console.error("Error marking messages as read:", err);
-      });
+      messageService
+        .markMessagesAsRead(params.chatId, session.user.id)
+        .catch((err) => {
+          console.error('Error marking messages as read:', err);
+        });
     }
   }, [params.chatId, session?.user?.id, loading]);
 
@@ -113,7 +115,7 @@ export default function ChatPage() {
     (userId: string) => {
       router.push(`/profile/${userId}`);
     },
-    [router]
+    [router],
   );
 
   if (status === 'loading' || loading) {
@@ -215,7 +217,7 @@ export default function ChatPage() {
         <ScrollArea
           ref={messagesContainerRef}
           h={`calc(100vh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(
-            90
+            90,
           )})`}
           onScrollPositionChange={(position) => {
             if (

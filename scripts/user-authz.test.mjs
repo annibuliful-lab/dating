@@ -35,7 +35,7 @@ function harness({ sessionId = id, verified = true, suspended = false, member = 
     const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
     new Function('require', 'exports', output)(name => {
       if (name === 'server-only') return {};
-      if (name === '@/auth') return { auth: async () => ({ user: { id: sessionId } }) };
+      if (name === '@/auth') return { auth: async () => ({ user: { ...actor, id: sessionId } }) };
       if (name === './supabase' || name === '@/server/supabase') return { supabase };
       if (['@/server/access', '@/server/validation'].includes(name)) return load(name.slice(2));
       if (name === './access') return load('server/access');
@@ -57,6 +57,14 @@ test('missing session cannot obtain a database actor', async () => {
   const h = harness({ sessionId: '' });
   await assert.rejects(h.access.requireUser(), { status: 401 });
   assert.equal(h.queries.length, 0);
+});
+
+test('the actor reuses freshly resolved session fields without another User lookup', async () => {
+  const h = harness();
+  assert.deepEqual(await h.access.requireUser(), h.actor);
+  assert.equal(h.queries.length, 0);
+  h.actor.status = 'SUSPENDED'; h.actor.isVerified = false;
+  assert.deepEqual(await h.access.requireUser(), h.actor);
 });
 
 test('cross-origin mutations and ambiguous storage paths are rejected', () => {

@@ -142,11 +142,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.id = '';
       if (userId) {
         const { data: user, error } = await supabase.from('User')
-          .select('id, status, role').eq('id', userId).single();
+          .select('id, status, role, isVerified').eq('id', userId).single();
         if (!error && user) {
           session.user.id = user.id;
           session.user.status = user.status;
           session.user.role = user.role;
+          session.user.isVerified = user.isVerified;
         }
       }
 

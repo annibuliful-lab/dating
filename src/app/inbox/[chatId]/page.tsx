@@ -100,16 +100,22 @@ export default function ChatPage() {
     }
   }, [session?.user?.id, fetchChatInfo]);
 
-  // Mark messages as read when chat is opened
+  const readReceiptRef = useRef('');
+  const latestMessageId = messages.at(-1)?.id || '';
+  // The chat page owns read receipts, including newly received messages.
   useEffect(() => {
     if (params.chatId && session?.user?.id && !loading) {
+      const receipt = `${params.chatId}:${session.user.id}:${latestMessageId}`;
+      if (readReceiptRef.current === receipt) return;
+      readReceiptRef.current = receipt;
       messageService
         .markMessagesAsRead(params.chatId, session.user.id)
         .catch((err) => {
+          if (readReceiptRef.current === receipt) readReceiptRef.current = '';
           console.error('Error marking messages as read:', err);
         });
     }
-  }, [params.chatId, session?.user?.id, loading]);
+  }, [params.chatId, session?.user?.id, loading, latestMessageId]);
 
   const handleViewProfile = useCallback(
     (userId: string) => {

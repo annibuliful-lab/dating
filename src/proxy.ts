@@ -137,11 +137,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except:
+     * - API routes (each handler owns authentication and authorization)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (public folder)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
+    "/((?!api(?:/|$)|_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
   ],
 };

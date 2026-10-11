@@ -10,6 +10,9 @@ import { Box, Button, Container, Stack, Text } from '@mantine/core';
 
 import { usePathname } from 'next/navigation';
 import { useLocale } from '@/i18n/LocaleProvider';
+import { useSession } from 'next-auth/react';
+import { useLayoutEffect } from 'react';
+import { setUserApiSession } from '@/services/user-api';
 
 const ROUTES_WITHOUT_NAVBAR = [
   '/signin',
@@ -34,8 +37,11 @@ export function ClientLayout({
 }) {
   const pathname = usePathname();
   const { t } = useLocale();
+  const { data: session } = useSession();
   const { status, userProfile, loading, error, refetch } =
     useUserProfile();
+  const scope = JSON.stringify([status, session?.user?.id, session?.user?.role, session?.user?.status, session?.user?.isVerified]);
+  useLayoutEffect(() => { setUserApiSession(scope); }, [scope]);
 
   console.debug('pathname', pathname);
   // Check if current route should not show navbar
@@ -47,7 +53,7 @@ export function ClientLayout({
     return <>{children}</>;
   }
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading' || (loading && !userProfile)) {
     return null;
   }
 

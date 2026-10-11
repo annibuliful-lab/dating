@@ -8,6 +8,7 @@ Guidance for AI coding agents working in this repository. `AGENTS.md` contains t
 pnpm dev
 pnpm build
 pnpm lint
+node --test scripts/api-request-dedup.test.mjs scripts/auth-session.test.mjs scripts/user-authz.test.mjs
 pnpm prisma:validate
 pnpm prisma:generate
 pnpm prisma:migrate
@@ -35,6 +36,8 @@ When changing schema, update `prisma/schema.prisma`, run the appropriate Prisma 
 
 - Canonical user id: `session.user.id`.
 - JWT sessions are configured in `src/auth.ts`.
+- The async root layout seeds `SessionProvider` from `auth()` to avoid duplicate initial browser session fetches; pages render dynamically. Focus and cross-tab session synchronization remain enabled.
+- NextAuth reloads `status`, `role`, and `isVerified` from `User` on each server session resolution. `requireUser()` reuses these fresh fields. API paths bypass proxy matching and retain their own guards; never use cached JWT claims for authorization.
 - `/signin` and `/signup` show credentials UI. LINE remains available at `/line-auth-test`.
 - New OAuth users get a UUID-like username, empty legacy `fullName`, `ACTIVE` status, and `isVerified = false`.
 - Passwords currently use plain values in `passwordHash`; do not treat this as secure or expand it casually.
@@ -51,6 +54,8 @@ The edit form requires username, birthday, weight, height, gender, relationship 
 
 Profile images use Supabase Storage bucket `dating`, are compressed client-side, and must trigger `notifyUserProfileUpdated()` after save before navigation.
 
+Shell and edit form share the service's 60-second profile cache. Initialize the form once per user and keep the shell mounted during background profile loading to preserve unsaved edits.
+
 ## Localization
 
 - `src/i18n/messages.ts` stores Thai (`th`) and English (`en`) messages.
@@ -66,6 +71,10 @@ LINE verification button clicks are tracked by `VerifyPrompt` through generic `t
 Prefer domain services and hooks over new raw Supabase calls in pages. Important services include `src/services/supabase/{users,posts,messages,media,storage,ads}.ts`, `src/services/profile/*`, and `src/services/{admin,user,post}.ts`.
 
 Use batch user lookup patterns to avoid N+1 queries. Feed pending-request deduplication must clear entries in `finally`, including failures/timeouts. Supabase builders are `PromiseLike<T>`; timeout helpers must support that type.
+
+`src/services/read-cache.ts` shares concurrent browser reads and overlapping forced refreshes. `user-api.ts` explicitly allows read operations; writes and `getOrCreateDirectChat` remain independent. Keys include session/authorization scope, action, arguments, and write generation. Session changes clear caches and reject old reads; completed writes invalidate affected reads, and stale reads reload current data. Generic GET hooks share the session boundary; browser caches never replace server authorization.
+
+Unread reads share a 15-second cache. Inbox effects depend on user ID; chat initialization keeps locale/sound changes out of data dependencies. The chat page owns receipts on open and newly received messages; inbox navigation does not issue another receipt. Message/typing polling remains separate, and private Realtime work is deferred.
 
 Feed search in the shared `src/components/feed/FeedContent.tsx`, mounted by `src/app/feed/page.tsx`, uses `src/services/supabase/posts.ts` to match post text case-insensitively before pagination, within the existing 30-day public-post scope. Include search terms in cache/pending-request keys. Clearing restores the normal feed; stale responses must not replace or append to a newer search. The shared `SearchInput` cancels queued searches when cleared.
 

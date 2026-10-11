@@ -5,7 +5,7 @@ import {
   SendMessageData,
   TypingSubscriptionCallback,
 } from '@/@types/message';
-import { userApi } from '@/services/user-api';
+import { userApi, userApiRead } from '@/services/user-api';
 
 type MessageCursor = { createdAt: string; id: string };
 const messageCursors = new Map<string, MessageCursor>();
@@ -91,8 +91,8 @@ export const messageService = {
     window.dispatchEvent(new Event('unread-count-invalidated'));
     return result;
   },
-  async getUnreadCount(userId: string) {
-    return userApi<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.getUnreadCount>>>('messages', 'getUnreadCount', [userId]);
+  async getUnreadCount(userId: string, force = false) {
+    return userApiRead<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.getUnreadCount>>>('messages', 'getUnreadCount', [userId], 15000, force);
   },
   async createGroupChat(createdById: string, name: string, userIds: string[]) {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.createGroupChat>>>('messages', 'createGroupChat', [createdById, name, userIds]);

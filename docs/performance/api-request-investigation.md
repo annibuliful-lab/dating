@@ -1,6 +1,37 @@
 # Duplicate API request investigation
 
-Investigated 2026-10-11 against commit `84daeb2`. Application code and database permissions were not changed. Realtime work remains deferred.
+Investigated 2026-10-11 against commit `84daeb2`. The original investigation changed no application code or database permissions. The subsequent implementation and verification are recorded below. Realtime work remains deferred.
+
+## Implemented fixes and verification
+
+User API reads now share pending browser requests through an explicit read-action allowlist. Writes remain independent, including `getOrCreateDirectChat`. Profile and unread caches live at the service boundary, with 60-second and 15-second lifetimes. Forced refreshes join current pending reads; completing writes invalidate affected reads, and an older in-flight read reloads the current generation instead of returning stale data. Pending entries clear on success, rejection, and timeout. Session/authorization changes clear browser caches and reject old-session reads. Generic GET hooks use the same session boundary.
+
+Profile edit uses the shared profile hook and initializes its fields once per user. Background profile refresh keeps the shell mounted and preserves unsaved input. Inbox initialization depends on the user ID, unread callbacks are stable, and chat initialization does not restart for locale/sound changes. The chat page owns read receipts, including newly received messages; inbox navigation no longer sends a receipt.
+
+The root layout seeds `SessionProvider` from the server. Normal focus and cross-tab session synchronization remain enabled; no library patch or BroadcastChannel suppression is used. This makes pages dynamically rendered and adds server session resolution to page rendering. API paths bypass the proxy, and each route retains its own guards. NextAuth reloads `id`, `status`, `role`, and `isVerified` from `User` on each server session resolution; `requireUser()` reuses those fresh fields rather than querying the same actor again. Chat membership remains freshly checked by the route guards.
+
+Repeated the browser scenarios against the production build and an isolated development copy with Strict Mode enabled, using the same fixture-only setup and 100 ms API latency:
+
+| Scenario | Before: production / development | After: production / development |
+| --- | --- | --- |
+| Feed posts and ads | Each action: 1 / 2 | Each action: 1 / 1 |
+| Profile edit current-user read | 2 / 3 | 1 / 1 |
+| Initial chat messages and summary | Each action: 1 / 2 | Each action: 1 / 1 |
+| Initial browser session fetch | 2 / 2 | 0 / 0; session supplied by server |
+| One profile-update event on `/profile` | 2 / not measured | 1 / not separately measured |
+| Two overlapping focus events | 2 unread reads / not measured | 1 unread read / not separately measured |
+| Inbox navigation into chat | 2 receipts / not measured | 1 receipt / not separately measured |
+
+Additional browser assertions confirmed that unsaved username input survives profile refresh, a cross-tab session event fetches one session without reloading the unchanged user's inbox, and a newly polled message appears and sends one receipt. No page exceptions occurred. Direct chat opening now performs two expected unread reads: the initial count and the updated count after its receipt. Message updates and typing remain separate polling actions every three seconds.
+
+Actual local API requests, with server-side Supabase fixture interception, returned `200` and performed:
+
+- `/api/auth/session`: one `User` query, down from two.
+- `/api/data/ads`: one `User` query plus one `Ad` query, down from three `User` queries plus one `Ad` query.
+
+Validation: `pnpm lint`, `pnpm exec tsc --noEmit --incremental false`, `pnpm build`, and 55 Node regression tests passed. The 12 new request tests cover deduplication, forced refreshes, expiry, independent mutations, rejected/aborted requests, write invalidation, session changes, server cache isolation, targeted typing/receipt invalidation, and Next.js proxy matching. Existing authorization, session, feed/hashtag, and media migration checks also passed. The separate SQL integration test could not run because its disposable PostgreSQL server on port `55432` was unavailable. No SQL, schema, key, policy, password-format, or production-data changes are required or applied.
+
+Rollout is application-only. Deploy these changes together so the session callback and actor guard remain aligned; monitor API errors, profile initialization, read receipts, and session synchronization. Roll back by redeploying the previous application release; there is no database rollback for this change. Production accounts, OAuth sign-in, and production traffic were not exercised by the fixture browser checks.
 
 ## Evidence and scope
 

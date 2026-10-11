@@ -4,9 +4,8 @@ import { ProfileImage } from '@/@types/user';
 import { TOP_NAVBAR_HEIGHT_PX } from '@/components/element/TopNavbar';
 import { CalendarIcon } from '@/components/icons/CalendarIcon';
 import { CameraIcon } from '@/components/icons/CameraIcon';
-import { notifyUserProfileUpdated } from '@/hooks/useUserProfile';
+import { notifyUserProfileUpdated, useUserProfile } from '@/hooks/useUserProfile';
 import { compressImage } from '@/lib/image-compression';
-import { getUserProfile } from '@/services/profile/get';
 import { saveProfileImages } from '@/services/profile/images';
 import { updateUserProfile } from '@/services/profile/update';
 import {
@@ -45,6 +44,8 @@ const UUID_LIKE_PATTERN =
 
 function EditProfilePage() {
   const { data } = useSession();
+  const { userProfile } = useUserProfile();
+  const initializedUserRef = useRef<string | null>(null);
   const router = useRouter();
   const { t } = useLocale();
 
@@ -143,51 +144,39 @@ function EditProfilePage() {
   };
 
   useEffect(() => {
-    if (!userId) {
+    if (!userId || !userProfile || initializedUserRef.current === userId) {
       return;
     }
-
-    (async () => {
-      try {
-        const profile = await getUserProfile(userId);
-        setUsername(profile.username ?? '');
-        setEmail(profile.email ?? '');
-        setLineId(profile.lineId ?? '');
-        setPhone(profile.phone ?? '');
-        setGender(profile.gender ?? null);
-        setRelationshipStatus(profile.relationShipStatus ?? null);
-        setBirthday(
+    initializedUserRef.current = userId;
+    const profile = userProfile;
+    setUsername(profile.username ?? '');
+    setEmail(profile.email ?? '');
+    setLineId(profile.lineId ?? '');
+    setPhone(profile.phone ?? '');
+    setGender(profile.gender ?? null);
+    setRelationshipStatus(profile.relationShipStatus ?? null);
+    setBirthday(
+      profile.birthday ? new Date(profile.birthday) : null,
+    );
+    setAge(
+      profile.age ??
+        calculateAge(
           profile.birthday ? new Date(profile.birthday) : null,
-        );
-        setAge(
-          profile.age ??
-            calculateAge(
-              profile.birthday ? new Date(profile.birthday) : null,
-            ),
-        );
-        setHeight(
-          profile.height != null ? String(profile.height) : '',
-        );
-        setWeight(
-          profile.weight != null ? String(profile.weight) : '',
-        );
-        setBio(profile.bio ?? '');
-        setAvatarUrl(profile.avatarUrl ?? null);
-        setProfileImages(profile.profileImages || []);
-        setUserStatus(profile.userStatus ?? 'ACTIVE');
-        setIsVerified(profile.isVerified ?? false);
-        setUpdatedAt(profile.updatedAt ?? null);
-      } catch (err) {
-        console.error(err);
-        notifications.show({
-          color: 'red',
-          title: t('loadFailed'),
-          message:
-            (err as Error).message ?? t('failedToLoadProfile'),
-        });
-      }
-    })();
-  }, [userId, t]);
+        ),
+    );
+    setHeight(
+      profile.height != null ? String(profile.height) : '',
+    );
+    setWeight(
+      profile.weight != null ? String(profile.weight) : '',
+    );
+    setBio(profile.bio ?? '');
+    setAvatarUrl(profile.avatarUrl ?? null);
+    setProfileImages(profile.profileImages || []);
+    setUserStatus(profile.userStatus ?? 'ACTIVE');
+    setIsVerified(profile.isVerified ?? false);
+    setUpdatedAt(profile.updatedAt ?? null);
+  }, [userId, userProfile]);
 
   // Update age when birthday changes
   useEffect(() => {

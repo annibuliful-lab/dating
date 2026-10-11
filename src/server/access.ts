@@ -12,10 +12,10 @@ export type Actor = { id: string; status: string; role: string; isVerified: bool
 export async function requireUser(): Promise<Actor> {
   const session = await auth();
   if (!session?.user?.id) throw new AccessError(401, 'Unauthorized');
-  const { data, error } = await supabase.from('User')
-    .select('id, status, role, isVerified').eq('id', session.user.id).single();
-  if (error || !data) throw new AccessError(401, 'Unauthorized');
-  return data;
+  // auth() reloads these fields from User on every server session resolution.
+  const { id, status, role, isVerified } = session.user;
+  if (!status || !role || typeof isVerified !== 'boolean') throw new AccessError(401, 'Unauthorized');
+  return { id, status, role, isVerified };
 }
 
 export function requireCommunity(actor: Actor, feedRead = false) {

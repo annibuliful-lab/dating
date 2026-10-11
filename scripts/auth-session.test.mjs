@@ -4,12 +4,12 @@ import { test } from 'node:test';
 import ts from 'typescript';
 
 const id = '11111111-1111-4111-8111-111111111111';
-function config({ missing = false, suspended = false } = {}) {
+function config({ missing = false, suspended = false, verified = true } = {}) {
   let options; const queries = [];
   const supabase = { from(table) {
     const query = { table, filters: [] }; queries.push(query);
     const builder = new Proxy({}, { get(_target, method) {
-      if (method === 'then') return resolve => resolve({ data: missing ? null : table === 'OAuthAccount' ? { userId: id } : { id, status: suspended ? 'SUSPENDED' : 'ACTIVE', role: 'USER', fullName: '', email: 'user@example.test', passwordHash: 'existing-value' }, error: missing ? { code: 'PGRST116' } : null });
+      if (method === 'then') return resolve => resolve({ data: missing ? null : table === 'OAuthAccount' ? { userId: id } : { id, status: suspended ? 'SUSPENDED' : 'ACTIVE', role: 'USER', isVerified: verified, fullName: '', email: 'user@example.test', passwordHash: 'existing-value' }, error: missing ? { code: 'PGRST116' } : null });
       return (...args) => { query.filters.push([method, ...args]); return builder; };
     } }); return builder;
   } };
@@ -54,6 +54,16 @@ test('missing database users invalidate the canonical session identity', async (
   const h = config({ missing: true });
   const session = await h.options.callbacks.session({ token: { userId: id }, session: { user: { id: 'stale' } } });
   assert.equal(session.user.id, '');
+});
+
+test('every session resolves current authorization fields from the database', async () => {
+  const h = config({ suspended: true, verified: false });
+  const session = await h.options.callbacks.session({ token: { userId: id, role: 'ADMIN', status: 'ACTIVE', isVerified: true }, session: { user: {} } });
+  assert.equal(session.user.status, 'SUSPENDED');
+  assert.equal(session.user.role, 'USER');
+  assert.equal(session.user.isVerified, false);
+  assert.equal(h.queries.length, 1);
+  assert.deepEqual(h.queries[0].filters[0], ['select', 'id, status, role, isVerified']);
 });
 
 test('suspension is checked only after successful password comparison', async () => {

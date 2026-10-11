@@ -1,6 +1,6 @@
 import type { UserProfile } from '@/@types/user';
-import { userApi } from '@/services/user-api';
+import { userApiRead } from '@/services/user-api';
 
-export function getUserProfile(userId: string): Promise<UserProfile> {
-  return userApi('profile', 'getUserProfile', [userId]);
+export function getUserProfile(userId: string, force = false): Promise<UserProfile> {
+  return userApiRead('profile', 'getUserProfile', [userId], 60000, force);
 }

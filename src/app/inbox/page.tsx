@@ -202,7 +202,7 @@ function InboxPage() {
     if (status === 'authenticated' && session?.user?.id) {
       fetchUserChats();
     }
-  }, [status, session, router, fetchUserChats]);
+  }, [status, session?.user?.id, router, fetchUserChats]);
 
   const formatRelativeDate = (date: Date): string => {
     const now = new Date();
@@ -223,18 +223,7 @@ function InboxPage() {
     }
   };
 
-  const handleChatClick = async (chatId: string) => {
-    // Mark messages as read when opening chat
-    if (session?.user?.id) {
-      try {
-        await messageService.markMessagesAsRead(
-          chatId,
-          session.user.id,
-        );
-      } catch (err) {
-        console.error('Error marking messages as read:', err);
-      }
-    }
+  const handleChatClick = (chatId: string) => {
     router.push(`/inbox/${chatId}`);
   };
 

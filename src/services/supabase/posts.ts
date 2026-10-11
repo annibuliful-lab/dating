@@ -1,4 +1,5 @@
 import { supabase } from '@/client/supabase';
+import { getPostTextTokens, normalizeHashtag } from '@/shared/hashtags';
 
 type PostInsert = {
   id?: string;
@@ -67,10 +68,12 @@ export const postService = {
   async getPublicPosts(
     limit = 20,
     offset = 0,
-    options?: { force?: boolean; search?: string },
+    options?: { force?: boolean; search?: string; hashtag?: string },
   ) {
     const search = options?.search?.trim() || '';
-    const cacheKey = JSON.stringify([limit, offset, search]);
+    const hashtag = options?.hashtag === undefined ? null : normalizeHashtag(options.hashtag);
+    if (options?.hashtag !== undefined && !hashtag) throw new Error('Invalid hashtag');
+    const cacheKey = JSON.stringify([limit, offset, search, hashtag]);
     if (!options?.force) {
       const cached = publicPostsCache.get(cacheKey);
       if (
@@ -89,6 +92,39 @@ export const postService = {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const request = (async () => {
+      let hashtagPostIds: string[] | undefined;
+      if (hashtag) {
+        const matchedIds: string[] = [];
+        const candidates = supabase.from('Post')
+          .select('id, content')
+          .eq('visibility', 'PUBLIC')
+          .gte('createdAt', thirtyDaysAgo.toISOString())
+          .filter('content->>text', 'imatch', `#${hashtag}`)
+          .order('createdAt', { ascending: false })
+          .order('id', { ascending: false });
+
+        // shortcut: scan legacy text in batches; store indexed tags when hashtag traffic grows.
+        const batchSize = 100;
+        for (let candidateOffset = 0; matchedIds.length < offset + limit; candidateOffset += batchSize) {
+          const { data, error } = await withTimeout(
+            candidates.range(candidateOffset, candidateOffset + batchSize - 1),
+            PUBLIC_POSTS_FETCH_TIMEOUT_MS,
+            'Hashtag posts request timed out',
+          );
+          if (error) throw new Error(error.message);
+          const rows = data as unknown as Array<{ id: string; content: { text?: unknown } | null }> | null;
+          for (const row of rows || []) {
+            if (typeof row.content?.text === 'string' && getPostTextTokens(row.content.text)
+              .some((token) => token.type === 'hashtag' && normalizeHashtag(token.text.slice(1)) === hashtag)) {
+              matchedIds.push(row.id);
+            }
+          }
+          if (!rows || rows.length < batchSize) break;
+        }
+        hashtagPostIds = matchedIds.slice(offset, offset + limit);
+        if (hashtagPostIds.length === 0) return [];
+      }
+
       let query = supabase
         .from('Post')
         .select(
@@ -112,14 +148,16 @@ export const postService = {
         .order('createdAt', { ascending: false })
         .order('id', { ascending: false });
 
-      if (search) {
+      if (hashtagPostIds) {
+        query = query.in('id', hashtagPostIds);
+      } else if (search) {
         // Escape regex syntax so punctuation is searched literally, including *.
         const pattern = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         query = query.filter('content->>text', 'imatch', pattern);
       }
 
       const { data, error } = await withTimeout(
-        query.range(offset, offset + limit - 1),
+        hashtagPostIds ? query : query.range(offset, offset + limit - 1),
         PUBLIC_POSTS_FETCH_TIMEOUT_MS,
         'Feed posts request timed out',
       );

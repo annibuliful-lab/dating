@@ -60,7 +60,7 @@ Public/auth routes:
 
 - Public: `/`, `/auth/error`, `/line-auth-test`.
 - Auth: `/signin`, `/signup`.
-- Protected user routes: `/feed`, `/profile`, `/inbox`, `/create`.
+- Protected user routes: `/feed`, `/feed/hashtag/[tag]`, `/profile`, `/inbox`, `/create`.
 - Admin routes: `/admin/*`.
 
 ## Localization
@@ -96,11 +96,14 @@ Rules:
 ### Feed
 
 - Page: `src/app/feed/page.tsx`
+- Hashtag page: `src/app/feed/hashtag/[tag]/page.tsx`; shared feed UI: `src/components/feed/FeedContent.tsx`.
 - Service: `src/services/supabase/posts.ts`
 - Hooks: `src/hooks/usePosts.ts`, `src/hooks/useInfiniteQuery.tsx`
 - Loads public posts ordered by creation time, resolves profile image URLs, and supports admin post deletion.
 - Feed search matches post text case-insensitively in Supabase before pagination and keeps the existing 30-day public-post scope. Search terms are included in cache/pending-request keys; clearing restores the normal feed, and stale responses must not replace or append to a newer search.
 - Feed results highlight all literal, case-insensitive matches through `PostContentText`, preserving clickable URLs and original text. The optional `highlight` prop leaves other callers unchanged.
+- Hashtags are typed in post text, support letters (including Thai combining marks), numbers, and underscores, and open a dedicated page. `src/shared/hashtags.ts` shares token parsing between rendering and filtering, skips HTTP/HTTPS/www URL fragments, and rejects embedded/doubled hashes. Hashtag results match whole tags case-insensitively, highlight only the active tag, and retain the 30-day public-post scope. Existing posts work without rewriting data or migrating the schema.
+- Hashtag lookups scan narrow Supabase text candidates in batches, apply exact parsing before pagination, then fetch full details for matching IDs. For larger hashtag traffic, replace scanning with stored/indexed tags. Suspension rules remain unchanged; suspended accounts do not get hashtag links.
 - Feed service uses cache and pending-request deduplication. Always clear pending entries in `finally`, including timeout/rejection paths, or navigation can reuse a stuck promise and show an endless loader.
 
 ### Profile

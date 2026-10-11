@@ -1,15 +1,18 @@
 'use client';
 
 import { Anchor, Mark, Text, type TextProps } from '@mantine/core';
+import Link from 'next/link';
+import { getPostTextTokens, normalizeHashtag } from '@/shared/hashtags';
 import type { HTMLAttributes } from 'react';
 
 type PostContentTextProps = {
   text: string;
   highlight?: string;
+  hashtagLinks?: boolean;
+  highlightHashtag?: string;
   textProps?: TextProps & HTMLAttributes<HTMLElement>;
 };
 
-const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 const TRAILING_PUNCTUATION_PATTERN = /[),.!?]+$/;
 
 function normalizeHref(url: string) {
@@ -30,10 +33,14 @@ function splitTrailingPunctuation(url: string) {
   };
 }
 
-function renderTextWithLinks(text: string, highlight = '') {
+function renderTextWithLinks(text: string, highlight = '', hashtagLinks = false, highlightHashtag?: string) {
   const search = highlight.trim();
+  const tokens = getPostTextTokens(text);
   // Match the full text so a search phrase can span a link boundary.
-  const highlights = search
+  const highlights = highlightHashtag
+    ? tokens.filter((token) => token.type === 'hashtag' &&
+        normalizeHashtag(token.text.slice(1)) === normalizeHashtag(highlightHashtag))
+    : search
     ? Array.from(
         text.matchAll(new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')),
         (match) => ({ start: match.index, end: match.index + match[0].length }),
@@ -59,30 +66,45 @@ function renderTextWithLinks(text: string, highlight = '') {
     return nodes;
   };
 
-  const matches = Array.from(text.matchAll(URL_PATTERN));
-
-  if (matches.length === 0) {
+  if (tokens.length === 0) {
     return renderSegment(0, text.length);
   }
 
   const nodes: React.ReactNode[] = [];
   let lastIndex = 0;
 
-  matches.forEach((match, index) => {
-    const rawUrl = match[0];
-    const matchIndex = match.index ?? 0;
+  tokens.forEach((token) => {
+    const matchIndex = token.start;
 
     if (matchIndex > lastIndex) {
       nodes.push(renderSegment(lastIndex, matchIndex));
     }
 
+    if (token.type === 'hashtag') {
+      nodes.push(hashtagLinks ? (
+        <Anchor
+          key={matchIndex}
+          component={Link}
+          href={`/feed/hashtag/${encodeURIComponent(token.text.slice(1).toLowerCase())}`}
+          prefetch={false}
+          c="yellow"
+          underline="hover"
+        >
+          {renderSegment(matchIndex, token.end)}
+        </Anchor>
+      ) : renderSegment(matchIndex, token.end));
+      lastIndex = token.end;
+      return;
+    }
+
+    const rawUrl = token.text;
     const { cleanUrl, trailingText } =
       splitTrailingPunctuation(rawUrl);
     const href = normalizeHref(cleanUrl);
 
     nodes.push(
       <Anchor
-        key={`${cleanUrl}-${matchIndex}-${index}`}
+        key={matchIndex}
         href={href}
         target="_blank"
         rel="noopener noreferrer"
@@ -110,6 +132,8 @@ function renderTextWithLinks(text: string, highlight = '') {
 export function PostContentText({
   text,
   highlight,
+  hashtagLinks,
+  highlightHashtag,
   textProps,
 }: PostContentTextProps) {
   return (
@@ -121,7 +145,7 @@ export function PostContentText({
         ...textProps?.style,
       }}
     >
-      {renderTextWithLinks(text, highlight)}
+      {renderTextWithLinks(text, highlight, hashtagLinks, highlightHashtag)}
     </Text>
   );
 }

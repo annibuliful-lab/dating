@@ -65,11 +65,13 @@ Prefer domain services and hooks over new raw Supabase calls in pages. Important
 
 Use batch user lookup patterns to avoid N+1 queries. Feed pending-request deduplication must clear entries in `finally`, including failures/timeouts. Supabase builders are `PromiseLike<T>`; timeout helpers must support that type.
 
-Feed search in `src/app/feed/page.tsx` uses `src/services/supabase/posts.ts` to match post text case-insensitively before pagination, within the existing 30-day public-post scope. Include search terms in cache/pending-request keys. Clearing restores the normal feed; stale responses must not replace or append to a newer search. The shared `SearchInput` cancels queued searches when cleared.
+Feed search in the shared `src/components/feed/FeedContent.tsx`, mounted by `src/app/feed/page.tsx`, uses `src/services/supabase/posts.ts` to match post text case-insensitively before pagination, within the existing 30-day public-post scope. Include search terms in cache/pending-request keys. Clearing restores the normal feed; stale responses must not replace or append to a newer search. The shared `SearchInput` cancels queued searches when cleared.
 
 Run feed search regression checks with `node --test scripts/feed-search.test.mjs`.
 
 Feed results pass the active search to the optional `highlight` prop in `PostContentText`, which highlights all literal, case-insensitive matches while preserving original text and clickable URLs. Other callers keep their existing rendering.
+
+Hashtags are typed inside post text and open the protected `/feed/hashtag/[tag]` page, reusing `FeedContent`. `src/shared/hashtags.ts` parses letters (including Thai combining marks), numbers, and underscores, skips HTTP/HTTPS/www URL fragments, and rejects embedded/doubled hashes. Results match whole tags case-insensitively, highlight only the active tag, and show public posts from the last 30 days. Supabase scans narrow text candidates in batches before paginating exact matches, then fetches full details for matching IDs; upgrade to stored/indexed tags when traffic grows. Existing posts need no rewrite or schema migration. Existing suspension restrictions remain; suspended accounts do not get hashtag links.
 
 ## UI conventions
 

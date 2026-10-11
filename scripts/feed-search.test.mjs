@@ -7,6 +7,12 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import ts from 'typescript';
 
+const hashtagExports = {};
+new Function('exports', ts.transpileModule(
+  readFileSync(new URL('../src/shared/hashtags.ts', import.meta.url), 'utf8'),
+  { compilerOptions: { module: ts.ModuleKind.CommonJS } },
+).outputText)(hashtagExports);
+
 const { outputText } = ts.transpileModule(
   readFileSync(new URL('../src/services/supabase/posts.ts', import.meta.url), 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS } },
@@ -31,6 +37,7 @@ function harness(timers = {}) {
   const exports = {};
   const run = new Function('require', 'exports', 'setTimeout', 'clearTimeout', outputText);
   run((name) => {
+    if (name === '@/shared/hashtags') return hashtagExports;
     assert.equal(name, '@/client/supabase');
     return { supabase };
   }, exports, timers.setTimeout || setTimeout, timers.clearTimeout || clearTimeout);
@@ -149,12 +156,37 @@ const componentSource = ts.transpileModule(
 ).outputText;
 const componentExports = {};
 const componentRequire = createRequire(import.meta.url);
-const { MantineProvider } = componentRequire('@mantine/core');
-new Function('require', 'exports', componentSource)(componentRequire, componentExports);
+const routeExports = {};
+new Function('require', 'exports', ts.transpileModule(
+  readFileSync(new URL('../src/app/feed/hashtag/[tag]/page.tsx', import.meta.url), 'utf8'),
+  { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } },
+).outputText)((name) => {
+  if (name === '@/shared/hashtags') return hashtagExports;
+  if (name === '@/components/feed/FeedContent') return { default: () => null };
+  if (name === 'next/navigation') return { notFound: () => { throw new Error('404'); } };
+  return componentRequire(name);
+}, routeExports);
 
-function renderPost(text, highlight) {
+test('hashtag routes decode Thai URL parameters before validation', async () => {
+  for (const tag of ['ชายเดี่ยว', 'หาเพื่อน', 'FUN']) {
+    for (const param of [tag, encodeURIComponent(tag)]) {
+      const page = await routeExports.default({ params: Promise.resolve({ tag: param }) });
+      assert.equal(page.props.hashtag, tag.toLowerCase());
+    }
+  }
+  for (const tag of ['%E0%B8', '%ZZ', 'fun%2Fother', 'fun%252Fother', 'fun%20other']) {
+    await assert.rejects(routeExports.default({ params: Promise.resolve({ tag }) }), /404/);
+  }
+});
+
+const { MantineProvider } = componentRequire('@mantine/core');
+new Function('require', 'exports', componentSource)(
+  (name) => name === '@/shared/hashtags' ? hashtagExports : componentRequire(name), componentExports,
+);
+
+function renderPost(text, highlight, props = {}) {
   return renderToStaticMarkup(createElement(MantineProvider, { forceColorScheme: 'dark' },
-    createElement(componentExports.PostContentText, { text, highlight })));
+    createElement(componentExports.PostContentText, { text, highlight, ...props })));
 }
 
 const markedText = (html) => Array.from(html.matchAll(/<mark\b[^>]*>(.*?)<\/mark>/gs), (match) => match[1]);
@@ -199,4 +231,81 @@ test('post text and search terms cannot introduce HTML elements', () => {
   assert.deepEqual(markedText(html), ['&lt;img']);
   assert.doesNotMatch(html, /<img\b/);
   assert.match(html, /&gt;/);
+});
+
+test('recognizes Thai, English, numbers and underscores while ignoring URL fragments and embedded hashes', () => {
+  const text = '#หาเพื่อน (#Bangkok), #party_2026 #123 #FUN! x#hidden ##hidden https://example.com/#fragment www.site.com/#fragment';
+  const tokens = hashtagExports.getPostTextTokens(text);
+  assert.deepEqual(tokens.filter((token) => token.type === 'hashtag').map((token) => token.text),
+    ['#หาเพื่อน', '#Bangkok', '#party_2026', '#123', '#FUN']);
+  assert.equal(tokens.filter((token) => token.type === 'url').length, 2);
+  assert.ok(tokens.every((token) => text.slice(token.start, token.end) === token.text));
+  assert.equal(hashtagExports.normalizeHashtag('Bangkok'), 'bangkok');
+  for (const tag of ['', 'two words', '#fun', 'fun!', 'fun/other']) {
+    assert.equal(hashtagExports.normalizeHashtag(tag), null);
+  }
+});
+
+test('feed hashtags link to dedicated pages and only exact tags are highlighted', () => {
+  const html = renderPost('#Fun #funny #FUN #หาเพื่อน https://site.com/#fun', undefined,
+    { hashtagLinks: true, highlightHashtag: 'fun' });
+  assert.deepEqual(markedText(html), ['#Fun', '#FUN']);
+  assert.equal((html.match(/href="\/feed\/hashtag\/fun"/g) || []).length, 2);
+  assert.match(html, /href="\/feed\/hashtag\/funny"/);
+  assert.ok(html.includes(`href="/feed/hashtag/${encodeURIComponent('หาเพื่อน')}"`));
+  assert.match(html, /href="https:\/\/site\.com\/#fun"[^>]*>https:\/\/site\.com\/#fun<\/a>/);
+  assert.doesNotMatch(renderPost('#fun'), /href="\/feed\/hashtag\//);
+});
+
+test('hashtag pagination counts exact matches, excluding prefixes and URL fragments', async () => {
+  const { service, requests } = harness();
+  const pending = service.getPublicPosts(2, 1, { hashtag: 'FUN' });
+  await tick();
+  const params = requests[0].url.searchParams;
+  assert.equal(params.get('select'), 'id,content');
+  assert.equal(params.get('content->>text'), 'imatch.#fun');
+  assert.equal(params.get('visibility'), 'eq.PUBLIC');
+  assert.ok(params.get('createdAt').startsWith('gte.'));
+  requests[0].respond([
+    { id: 'first', content: { text: '#FUN' } },
+    { id: 'prefix', content: { text: '#funny' } },
+    { id: 'url', content: { text: 'https://site.com/#fun' } },
+    { id: 'second', content: { text: '#fun' } },
+    { id: 'longer', content: { text: '#fun_2' } },
+    { id: 'third', content: { text: '(#Fun).' } },
+  ]);
+  await tick();
+  assert.equal(requests[1].url.searchParams.get('id'), 'in.(second,third)');
+  assert.equal(requests[1].url.searchParams.has('offset'), false);
+  requests[1].respond([post('second'), post('third')]);
+  assert.deepEqual((await pending).map((row) => row.id), ['second', 'third']);
+  await service.getPublicPosts(2, 1, { hashtag: 'fun' });
+  assert.equal(requests.length, 2);
+});
+
+test('continues past full batches containing no exact hashtag matches', async () => {
+  const { service, requests } = harness();
+  const pending = service.getPublicPosts(2, 0, { hashtag: 'fun' });
+  await tick();
+  requests[0].respond(Array.from({ length: 100 }, (_, index) => ({
+    id: `prefix-${index}`, content: { text: '#funny' },
+  })));
+  await tick();
+  assert.equal(requests[1].url.searchParams.get('offset'), '100');
+  requests[1].respond([{ id: 'exact', content: { text: '#fun' } }]);
+  await tick();
+  assert.equal(requests[2].url.searchParams.get('id'), 'in.(exact)');
+  requests[2].respond([post('exact')]);
+  assert.equal((await pending)[0].id, 'exact');
+});
+
+test('invalid and empty hashtag results do not fetch unrelated posts', async () => {
+  const { service, requests } = harness();
+  await assert.rejects(service.getPublicPosts(20, 0, { hashtag: 'fun|other' }), /Invalid hashtag/);
+  assert.equal(requests.length, 0);
+  const pending = service.getPublicPosts(20, 0, { hashtag: 'fun' });
+  await tick();
+  requests[0].respond([{ id: 'url', content: { text: 'www.site.com/#fun' } }]);
+  assert.deepEqual(await pending, []);
+  assert.equal(requests.length, 1);
 });

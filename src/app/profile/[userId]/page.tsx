@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import { UserProfile } from "@/@types/user";
+import { UserProfile } from '@/@types/user';
 import {
   TOP_NAVBAR_HEIGHT_PX,
   TopNavbar,
-} from "@/components/element/TopNavbar";
-import { BOTTOM_NAVBAR_HEIGHT_PX } from "@/components/element/BottomNavbar";
-import { AgeIcon } from "@/components/icons/AgeIcon";
-import { GenderIcon } from "@/components/icons/GenderIcon";
-import { RulerIcon } from "@/components/icons/RulerIcon";
-import { SingleIcon } from "@/components/icons/SingleIcon";
-import { useAdminCheck } from "@/hooks/useAdmin";
-import { useApiMutation } from "@/hooks/useApiMutation";
-import { getUserProfile } from "@/services/profile/get";
-import { messageService } from "@/services/supabase/messages";
-import { Carousel } from "@mantine/carousel";
+} from '@/components/element/TopNavbar';
+import { BOTTOM_NAVBAR_HEIGHT_PX } from '@/components/element/BottomNavbar';
+import { AgeIcon } from '@/components/icons/AgeIcon';
+import { GenderIcon } from '@/components/icons/GenderIcon';
+import { RulerIcon } from '@/components/icons/RulerIcon';
+import { SingleIcon } from '@/components/icons/SingleIcon';
+import { useAdminCheck } from '@/hooks/useAdmin';
+import { useApiMutation } from '@/hooks/useApiMutation';
+import { getUserProfile } from '@/services/profile/get';
+import { messageService } from '@/services/supabase/messages';
+import { Carousel } from '@mantine/carousel';
 import {
   Box,
   Button,
@@ -26,11 +26,11 @@ import {
   rem,
   Stack,
   Text,
-} from "@mantine/core";
-import { useSession } from "next-auth/react";
-import { useLocale } from "@/i18n/LocaleProvider";
-import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+} from '@mantine/core';
+import { useSession } from 'next-auth/react';
+import { useLocale } from '@/i18n/LocaleProvider';
+import { useParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 function ProfileViewPage() {
   const { t } = useLocale();
@@ -46,10 +46,10 @@ function ProfileViewPage() {
   const { data: adminData } = useAdminCheck();
 
   const verifyMutation = useApiMutation<{ success: boolean }>(
-    `/api/users/${params.userId}/verify`
+    `/api/users/${params.userId}/verify`,
   );
   const unverifyMutation = useApiMutation<{ success: boolean }>(
-    `/api/users/${params.userId}/unverify`
+    `/api/users/${params.userId}/unverify`,
   );
 
   const fetchProfile = useCallback(async () => {
@@ -64,7 +64,7 @@ function ProfileViewPage() {
       const userProfile = await getUserProfile(params.userId);
       setProfile(userProfile);
     } catch (err) {
-      console.error("Error fetching profile:", err);
+      console.error('Error fetching profile:', err);
       setError(t('failedToLoadProfileShort'));
     } finally {
       setLoading(false);
@@ -84,7 +84,7 @@ function ProfileViewPage() {
       await fetchProfile();
     } catch (error) {
       if (error instanceof Error) {
-        console.error("Error verifying user:", error);
+        console.error('Error verifying user:', error);
         alert(error?.message || t('failedToVerify'));
       }
     } finally {
@@ -101,7 +101,7 @@ function ProfileViewPage() {
       await fetchProfile();
     } catch (error) {
       if (error instanceof Error) {
-        console.error("Error unverifying user:", error);
+        console.error('Error unverifying user:', error);
         alert(error?.message || t('failedToUnverify'));
       }
     } finally {
@@ -109,23 +109,24 @@ function ProfileViewPage() {
     }
   };
 
-  const isAdmin = adminData?.isAdmin || adminData?.role === "ADMIN";
+  const isAdmin = adminData?.isAdmin || adminData?.role === 'ADMIN';
   const isOwnProfile = session?.user?.id === params.userId;
 
   const handleStartChat = async () => {
-    if (!session?.user?.id || !params.userId || isStartingChat) return;
+    if (!session?.user?.id || !params.userId || isStartingChat)
+      return;
 
     try {
       setIsStartingChat(true);
       // Get or create direct chat
       const chat = await messageService.getOrCreateDirectChat(
         session.user.id,
-        params.userId
+        params.userId,
       );
       // Navigate to the chat page
       router.push(`/inbox/${chat.id}`);
     } catch (err) {
-      console.error("Error creating/finding chat:", err);
+      console.error('Error creating/finding chat:', err);
       alert(t('failedToStartChat'));
     } finally {
       setIsStartingChat(false);
@@ -167,7 +168,7 @@ function ProfileViewPage() {
         <Container size="xs" px="md" mt={rem(TOP_NAVBAR_HEIGHT_PX)}>
           <Center py="xl">
             <Text c="red" ta="center">
-              {error || "Profile not found"}
+              {error || 'Profile not found'}
             </Text>
           </Center>
         </Container>
@@ -184,7 +185,7 @@ function ProfileViewPage() {
   if (profile.avatarUrl) {
     carouselImages.push({
       url: profile.avatarUrl,
-      id: "avatar",
+      id: 'avatar',
     });
   }
 
@@ -192,7 +193,7 @@ function ProfileViewPage() {
   if (profile.profileImages && profile.profileImages.length > 0) {
     // Sort by order to ensure correct sequence
     const sortedImages = [...profile.profileImages].sort(
-      (a, b) => a.order - b.order
+      (a, b) => a.order - b.order,
     );
     sortedImages.forEach((img) => {
       // Only add if imageUrl exists and is not duplicate of avatar
@@ -208,8 +209,8 @@ function ProfileViewPage() {
   // Fallback to default image if no images available
   if (carouselImages.length === 0) {
     carouselImages.push({
-      url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1974&auto=format&fit=crop",
-      id: "default",
+      url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1974&auto=format&fit=crop',
+      id: 'default',
     });
   }
 
@@ -219,21 +220,21 @@ function ProfileViewPage() {
       <Box
         style={{
           height: `calc(100dvh - ${rem(TOP_NAVBAR_HEIGHT_PX)} - ${rem(
-            BOTTOM_NAVBAR_HEIGHT_PX
+            BOTTOM_NAVBAR_HEIGHT_PX,
           )} - env(safe-area-inset-bottom) - env(safe-area-inset-top))`,
           marginTop: `calc(${rem(
-            TOP_NAVBAR_HEIGHT_PX
+            TOP_NAVBAR_HEIGHT_PX,
           )} + env(safe-area-inset-top))`,
-          position: "relative",
-          overflow: "hidden",
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
         <Box
           style={{
-            position: "relative",
-            width: "100%",
-            height: "100%",
-            overflow: "hidden",
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
           }}
         >
           <Carousel
@@ -250,30 +251,30 @@ function ProfileViewPage() {
             }}
             styles={{
               root: {
-                height: "100%",
-                width: "100%",
-                position: "relative",
+                height: '100%',
+                width: '100%',
+                position: 'relative',
               },
               viewport: {
-                height: "100%",
-                cursor: "grab",
-                overflow: "hidden",
+                height: '100%',
+                cursor: 'grab',
+                overflow: 'hidden',
               },
               slide: {
-                height: "100%",
-                width: "100%",
+                height: '100%',
+                width: '100%',
                 flexShrink: 0,
                 minWidth: 0,
               },
               container: {
-                height: "100%",
-                display: "flex",
+                height: '100%',
+                display: 'flex',
               },
               indicator: {
                 width: rem(8),
                 height: rem(8),
-                backgroundColor: "rgba(255, 255, 255, 0.5)",
-                transition: "all 0.2s",
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                transition: 'all 0.2s',
               },
               indicators: {
                 bottom: `calc(${rem(100)} + env(safe-area-inset-bottom))`,
@@ -311,29 +312,29 @@ function ProfileViewPage() {
 
           <Box
             style={{
-              position: "absolute",
+              position: 'absolute',
               inset: 0,
               background:
-                "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 80%, rgba(0,0,0,0.95) 100%)",
+                'linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 80%, rgba(0,0,0,0.95) 100%)',
               zIndex: 1,
-              pointerEvents: "none",
+              pointerEvents: 'none',
             }}
           />
 
           <Stack
             gap={4}
             style={{
-              position: "absolute",
+              position: 'absolute',
               left: rem(16),
               bottom: `calc(${rem(80)} + env(safe-area-inset-bottom))`,
               right: rem(16),
               zIndex: 2,
-              pointerEvents: "none",
+              pointerEvents: 'none',
             }}
           >
             <Group gap={6} align="center">
               <Text fw={700} fz={24}>
-                {profile.username || "User"}
+                {profile.username || 'User'}
               </Text>
               {profile.isVerified && (
                 <Text fz="sm" c="blue" fw={600}>
@@ -341,15 +342,18 @@ function ProfileViewPage() {
                 </Text>
               )}
             </Group>
-            <Text fz="sm" style={{ maxWidth: rem(320), lineHeight: 1.5 }}>
-              {profile.bio || "No bio available"}
+            <Text
+              fz="sm"
+              style={{ maxWidth: rem(320), lineHeight: 1.5 }}
+            >
+              {profile.bio || 'No bio available'}
             </Text>
           </Stack>
 
           <Stack
             gap="xs"
             style={{
-              position: "absolute",
+              position: 'absolute',
               bottom:
                 isAdmin && !isOwnProfile
                   ? `calc(${rem(140)} + env(safe-area-inset-bottom))`
@@ -357,7 +361,7 @@ function ProfileViewPage() {
               left: rem(16),
               right: rem(16),
               zIndex: 2,
-              pointerEvents: "auto",
+              pointerEvents: 'auto',
             }}
           >
             {!isOwnProfile && (
@@ -405,37 +409,39 @@ function ProfileViewPage() {
             justify="center"
             gap={36}
             style={{
-              position: "absolute",
+              position: 'absolute',
               bottom:
                 isAdmin && !isOwnProfile
                   ? `calc(${rem(280)} + env(safe-area-inset-bottom))`
                   : isOwnProfile
-                  ? `calc(${rem(16)} + env(safe-area-inset-bottom))`
-                  : `calc(${rem(80)} + env(safe-area-inset-bottom))`,
+                    ? `calc(${rem(16)} + env(safe-area-inset-bottom))`
+                    : `calc(${rem(80)} + env(safe-area-inset-bottom))`,
               left: rem(16),
               right: rem(16),
               zIndex: 2,
-              pointerEvents: "none",
+              pointerEvents: 'none',
             }}
           >
             <Stack gap={2} align="center">
               <SingleIcon />
-              <Text fz="sm">{profile.relationShipStatus || "N/A"}</Text>
+              <Text fz="sm">
+                {profile.relationShipStatus || 'N/A'}
+              </Text>
             </Stack>
             <Stack gap={2} align="center">
               <GenderIcon />
-              <Text fz="sm">{profile.gender || "N/A"}</Text>
+              <Text fz="sm">{profile.gender || 'N/A'}</Text>
             </Stack>
             <Stack gap={2} align="center">
               <AgeIcon />
-              <Text fz="sm">{age || "N/A"}</Text>
+              <Text fz="sm">{age || 'N/A'}</Text>
             </Stack>
             <Stack gap={2} align="center">
               <RulerIcon />
               <Text fz="sm">
                 {profile.height && profile.weight
                   ? `${profile.height}/${profile.weight}`
-                  : "N/A"}
+                  : 'N/A'}
               </Text>
             </Stack>
           </Group>

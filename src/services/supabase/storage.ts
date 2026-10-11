@@ -1,52 +1,25 @@
-import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { requestError } from '@/services/user-api';
+export const BUCKET_NAME = 'dating';
 
-export function getPublicStorageUrl(
-  key: string | null | undefined,
-  bucket = BUCKET_NAME,
-): string | null {
+export function getPublicStorageUrl(key: string | null | undefined, bucket = BUCKET_NAME): string | null {
   if (!key) return null;
-
-  const { data } = supabase.storage.from(bucket).getPublicUrl(key);
-  return data.publicUrl;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(bucket)}/${key.split('/').map(encodeURIComponent).join('/')}`;
 }
+export function getProfileImageUrl(key: string | null | undefined): string | null { return getPublicStorageUrl(key); }
 
-export function getProfileImageUrl(
-  profileImageKey: string | null | undefined,
-): string | null {
-  return getPublicStorageUrl(profileImageKey);
+export async function uploadPublicStorageFile(key: string, file: File, options?: { bucket?: string; upsert?: boolean; cacheControl?: string }): Promise<string> {
+  if (options?.bucket && options.bucket !== BUCKET_NAME) throw new Error('Invalid bucket');
+  const form = new FormData();
+  form.set('file', file); form.set('key', key); form.set('kind', 'profile');
+  const response = await fetch('/api/storage', { method: 'POST', body: form });
+  const result = await response.json();
+  if (!response.ok) throw requestError(response.status);
+  return result.publicUrl;
 }
-
-export async function uploadPublicStorageFile(
-  key: string,
-  file: File,
-  options?: {
-    bucket?: string;
-    upsert?: boolean;
-    cacheControl?: string;
-  },
-): Promise<string> {
-  const { error } = await supabase.storage
-    .from(options?.bucket || BUCKET_NAME)
-    .upload(key, file, {
-      upsert: options?.upsert ?? false,
-      contentType: file.type,
-      cacheControl: options?.cacheControl || '3600',
-    });
-
-  if (error) throw error;
-
-  const publicUrl = getPublicStorageUrl(key, options?.bucket);
-  if (!publicUrl) throw new Error('Failed to create public storage URL');
-
-  return publicUrl;
-}
-
-export async function deletePublicStorageFiles(
-  keys: string[],
-  bucket = BUCKET_NAME,
-): Promise<void> {
-  if (keys.length === 0) return;
-
-  const { error } = await supabase.storage.from(bucket).remove(keys);
-  if (error) throw error;
+export async function deletePublicStorageFiles(keys: string[], bucket = BUCKET_NAME): Promise<void> {
+  if (!keys.length) return;
+  const response = await fetch('/api/storage', {
+    method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keys, bucket }),
+  });
+  if (!response.ok) throw requestError(response.status);
 }

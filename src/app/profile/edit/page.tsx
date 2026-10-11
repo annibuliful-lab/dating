@@ -490,7 +490,7 @@ function EditProfilePage() {
       } as never);
 
       // Save profile images
-      if (profileImages.length > 0) {
+      {
         await saveProfileImages(
           data.user.id,
           profileImages.map((img, index) => ({

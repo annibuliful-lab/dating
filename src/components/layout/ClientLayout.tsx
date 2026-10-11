@@ -69,8 +69,7 @@ export function ClientLayout({
   const isProfileEditRoute = pathname?.startsWith('/profile/edit');
   const isIncompleteProfile =
     userProfile &&
-    (isBlankOrGeneratedProfileValue(userProfile.fullName) ||
-      isBlankOrGeneratedProfileValue(userProfile.username));
+    isBlankOrGeneratedProfileValue(userProfile.username);
 
   if (
     status === 'authenticated' &&

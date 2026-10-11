@@ -280,7 +280,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
               ? 'me'
               : 'other',
           senderId: newMessage.senderId,
-          senderName: newMessage.User?.fullName || t('unknown'),
+          senderName: newMessage.User?.username || t('unknown'),
           senderAvatar: senderAvatarUrl,
           senderIsVerified: newMessage.User?.isVerified || false,
           senderRole:
@@ -303,7 +303,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             return updatedMessages;
           }
 
-          const newMessages = [...prev, transformedMessage];
+          const newMessages = [...prev, transformedMessage].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
 
           if (transformedMessage.author === 'other') {
             playNotificationSound();
@@ -573,7 +573,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       // Upload all media files first
       const uploadResults =
-        await mediaService.uploadMultipleMedia(selectedMedia);
+        await mediaService.uploadMultipleMedia(selectedMedia, 'chat-media', `chats/${currentChatIdRef.current}`);
 
       // Create messages for each uploaded file
       const messagePromises = selectedMedia.map(
@@ -684,9 +684,12 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   useEffect(() => {
     if (chatId && session?.user?.id) {
-      fetchMessages();
-      const cleanup = setupRealtimeSubscription();
-      return cleanup;
+      let active = true;
+      let cleanup: (() => void) | undefined;
+      void fetchMessages().then(() => {
+        if (active) cleanup = setupRealtimeSubscription();
+      });
+      return () => { active = false; cleanup?.(); };
     }
   }, [
     chatId,

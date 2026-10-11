@@ -1,12 +1,16 @@
-import { supabase } from '@/client/supabase';
+import { apiError, requireSameOrigin, requireUser, requireWritable } from '@/server/access';
+import { supabase } from '@/server/supabase';
 import { normalizeUsername } from '@/lib/normalize-user-fields';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { username, excludeUserId } = await request.json();
+    requireSameOrigin(request);
+    const actor = await requireUser(); requireWritable(actor);
+    const { username } = await request.json();
+    const excludeUserId = actor.id;
 
-    if (!username || typeof username !== 'string') {
+    if (!username || typeof username !== 'string' || username.length > 100) {
       return NextResponse.json(
         { available: false, message: 'Username is required' },
         { status: 400 }
@@ -49,10 +53,5 @@ export async function POST(request: Request) {
         ? 'Username is available'
         : 'Username is already taken',
     });
-  } catch {
-    return NextResponse.json(
-      { available: false, message: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+  } catch (error) { return apiError(error); }
 }

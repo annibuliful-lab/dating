@@ -31,5 +31,6 @@ export type UserProfile = {
   verifiedByUsername?: string | null;
   profileImages?: ProfileImage[];
   updatedAt?: string;
+  createdAt?: string;
   age?: number | null;
 };

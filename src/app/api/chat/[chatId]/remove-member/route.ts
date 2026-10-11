@@ -1,6 +1,6 @@
-import { auth } from "@/auth";
-import { messageService } from "@/services/supabase/messages";
-import { requireNotSuspended } from "@/lib/admin";
+import { apiError, requireCommunity, requireSameOrigin, requireUser } from "@/server/access";
+import { uuid } from "@/server/validation";
+import { messageService } from "@/server/data/messages";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
@@ -8,18 +8,21 @@ export async function DELETE(
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const session = await auth();
+    requireSameOrigin(req);
+    const actor = await requireUser();
+    requireCommunity(actor);
+    const session = { user: actor };
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if user is suspended
-    const suspendedCheck = await requireNotSuspended();
-    if (suspendedCheck) return suspendedCheck;
 
-    const { chatId } = await params;
+
+    const { chatId: rawChatId } = await params;
+    const chatId = uuid(rawChatId);
     const body = await req.json();
-    const { userId } = body;
+    const userId = uuid(body.userId);
 
     if (!userId) {
       return NextResponse.json(
@@ -70,14 +73,5 @@ export async function DELETE(
     await messageService.removeChatParticipant(chatId, userId);
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error removing member:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to remove member",
-      },
-      { status: 500 }
-    );
-  }
+  } catch (error) { return apiError(error); }
 }

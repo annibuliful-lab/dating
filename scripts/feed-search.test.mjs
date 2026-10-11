@@ -14,7 +14,7 @@ new Function('exports', ts.transpileModule(
 ).outputText)(hashtagExports);
 
 const { outputText } = ts.transpileModule(
-  readFileSync(new URL('../src/services/supabase/posts.ts', import.meta.url), 'utf8'),
+  readFileSync(new URL('../src/server/data/posts.ts', import.meta.url), 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS } },
 );
 
@@ -37,8 +37,9 @@ function harness(timers = {}) {
   const exports = {};
   const run = new Function('require', 'exports', 'setTimeout', 'clearTimeout', outputText);
   run((name) => {
+    if (name === 'server-only') return {};
     if (name === '@/shared/hashtags') return hashtagExports;
-    assert.equal(name, '@/client/supabase');
+    assert.equal(name, '@/server/supabase');
     return { supabase };
   }, exports, timers.setTimeout || setTimeout, timers.clearTimeout || clearTimeout);
   return { service: exports.postService, requests };

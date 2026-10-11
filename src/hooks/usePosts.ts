@@ -19,7 +19,7 @@ export function usePublicPosts(limit = 20) {
           setLoadingMore(true);
         }
 
-        const data = await postService.getPublicPosts(limit, offset);
+        const data = await postService.getPublicPosts(limit, offset) as Record<string, unknown>[];
 
         if (data.length < limit) {
           setHasMore(false);

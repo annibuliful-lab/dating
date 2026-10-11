@@ -5,7 +5,7 @@ import {
   TOP_NAVBAR_HEIGHT_PX,
 } from '@/components/element/TopNavbar';
 import { PostContentText } from '@/components/post/PostContentText';
-import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { getPublicStorageUrl } from '@/services/supabase/storage';
 import { useAdminPosts } from '@/hooks/useAdminPosts';
 import {
   Avatar,
@@ -142,10 +142,7 @@ export default function AdminPostsPage() {
 
   const getProfileImageUrl = (profileImageKey: string | null) => {
     if (!profileImageKey) return null;
-    const { data } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(profileImageKey);
-    return data.publicUrl;
+    return getPublicStorageUrl(profileImageKey);
   };
 
   const getPostImageUrl = (imageUrl: string | string[] | null) => {

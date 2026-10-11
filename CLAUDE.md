@@ -24,7 +24,9 @@ There is no test script. Production builds may need network access because `next
 - Next.js 16 App Router, React 19, TypeScript.
 - Mantine 8, dark/mobile-first UI.
 - NextAuth v5 beta with Credentials, Google, and LINE.
-- Prisma 6 owns schema/migrations; Supabase client owns runtime queries, mutations, and storage.
+- Prisma 6 owns schema/migrations. New user services call authenticated Next.js APIs backed by `src/server/supabase.ts`; `src/server/access.ts` and the explicit operation dispatcher enforce authorization.
+- Keep `src/client/supabase.ts` and the anonymous key/policies available during the production transition. New APIs never fall back to anonymous requests. The optional lockdown SQL lives outside automatic Prisma migrations; follow `docs/security/supabase-user-api-rollout.md`.
+- Chat message/typing updates poll authorized APIs every three seconds. New attachments are private and served through membership checks/short signed URLs. Legacy public URLs remain supported pending a separate media migration.
 - Use pnpm, not npm.
 
 When changing schema, update `prisma/schema.prisma`, run the appropriate Prisma command, regenerate Supabase types when needed, and update queries/casts/service payloads.
@@ -67,7 +69,7 @@ Use batch user lookup patterns to avoid N+1 queries. Feed pending-request dedupl
 
 Feed search in the shared `src/components/feed/FeedContent.tsx`, mounted by `src/app/feed/page.tsx`, uses `src/services/supabase/posts.ts` to match post text case-insensitively before pagination, within the existing 30-day public-post scope. Include search terms in cache/pending-request keys. Clearing restores the normal feed; stale responses must not replace or append to a newer search. The shared `SearchInput` cancels queued searches when cleared.
 
-Run feed search regression checks with `node --test scripts/feed-search.test.mjs`.
+Run feed search regression checks with `node --test scripts/feed-search.test.mjs scripts/user-authz.test.mjs scripts/chat-media-migration.test.mjs scripts/auth-session.test.mjs`.
 
 Feed results pass the active search to the optional `highlight` prop in `PostContentText`, which highlights all literal, case-insensitive matches while preserving original text and clickable URLs. Other callers keep their existing rendering.
 

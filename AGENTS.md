@@ -16,8 +16,9 @@ Project map and working rules for AI coding agents in this repository. Keep this
 ## Architecture and data access
 
 1. Prisma owns the database model and migration history.
-2. Runtime reads and writes mostly use `@supabase/supabase-js` from `src/client/supabase.ts`.
-3. Pages and client components commonly call domain services; do not assume Prisma is used for runtime mutations.
+2. New user-facing services call authenticated Next.js APIs (`/api/data/[domain]`, `/api/storage`, and scoped chat/media routes). Runtime queries use the server-only Supabase client in `src/server/supabase.ts`; `src/server/access.ts` and `src/server/data/dispatch.ts` enforce identity, ownership, verification, suspension, and chat membership.
+3. `src/client/supabase.ts` retains the anonymous client for production compatibility. Existing anonymous permissions remain during the dual-client transition; never use an anonymous fallback when an authenticated API denies a request. See `docs/security/supabase-user-api-rollout.md` before applying migrations; final lockdown SQL is deliberately outside automatic Prisma migrations.
+4. Pages and client components commonly call domain services; do not assume Prisma is used for runtime mutations.
 
 For schema changes:
 
@@ -97,7 +98,7 @@ Rules:
 
 - Page: `src/app/feed/page.tsx`
 - Hashtag page: `src/app/feed/hashtag/[tag]/page.tsx`; shared feed UI: `src/components/feed/FeedContent.tsx`.
-- Service: `src/services/supabase/posts.ts`
+- Client service: `src/services/supabase/posts.ts`; server queries: `src/server/data/posts.ts`
 - Hooks: `src/hooks/usePosts.ts`, `src/hooks/useInfiniteQuery.tsx`
 - Loads public posts ordered by creation time, resolves profile image URLs, and supports admin post deletion.
 - Feed search matches post text case-insensitively in Supabase before pagination and keeps the existing 30-day public-post scope. Search terms are included in cache/pending-request keys; clearing restores the normal feed, and stale responses must not replace or append to a newer search.
@@ -120,7 +121,7 @@ Profile edit behavior:
 - First/last name controls and display have been removed. The legacy `fullName` database column is preserved for compatibility but is not written by the current form.
 - `Bio` is localized as `แนะนำตัว` in Thai.
 - Password is optional; a blank password keeps the current value.
-- Profile images are compressed client-side and stored in the `dating` bucket under user-specific paths.
+- Profile images are compressed client-side and stored in the `dating` bucket under user-specific paths through `/api/storage`.
 - Call `notifyUserProfileUpdated()` after successful profile or profile-image changes before navigating, so `ClientLayout`, `/profile`, and `/feed` do not retain stale profile data.
 - Age is derived from birthday in `updateUserProfile()`.
 
@@ -130,7 +131,7 @@ Profile edit behavior:
 - Chat detail: `src/app/inbox/[chatId]/page.tsx`
 - Service: `src/services/supabase/messages.ts`
 - Components: `src/components/chat/*`
-- Uses `Chat`, `ChatParticipant`, and `Message`; supports realtime broadcasts, unread state, media, group invites/removals, and group renaming.
+- Uses `Chat`, `ChatParticipant`, and `Message`; supports membership-checked message/typing polling every three seconds, unread state, media, group invites/removals, and group renaming. New chat media uses the private `chat-media` bucket and a membership-checked API that issues 60-second signed URLs. Existing public attachments remain supported until the separate legacy media migration is run.
 
 ### Admin
 
@@ -177,7 +178,7 @@ Storage:
 pnpm dev
 pnpm build
 pnpm lint
-node --test scripts/feed-search.test.mjs
+node --test scripts/feed-search.test.mjs scripts/user-authz.test.mjs scripts/chat-media-migration.test.mjs scripts/auth-session.test.mjs
 pnpm prisma:validate
 pnpm prisma:generate
 pnpm prisma:migrate

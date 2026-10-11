@@ -3,6 +3,8 @@
 import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { BOTTOM_NAVBAR_HEIGHT_PX } from '@/components/element/BottomNavbar';
 import { SearchInput } from '@/components/element/SearchInput';
+import { MoreOptionsIcon } from '@/components/icons/MoreOptionsIcon';
+import { TrashIcon } from '@/components/icons/TrashIcon';
 import { PostContentText } from '@/components/post/PostContentText';
 import {
   TOP_NAVBAR_HEIGHT_PX,
@@ -17,6 +19,7 @@ import { postService } from '@/services/supabase/posts';
 import { getProfileImageUrl } from '@/services/supabase/storage';
 import { Carousel } from '@mantine/carousel';
 import {
+  ActionIcon,
   Avatar,
   Box,
   Button,
@@ -26,6 +29,7 @@ import {
   Group,
   Image,
   Loader,
+  Menu,
   Modal,
   rem,
   ScrollArea,
@@ -325,29 +329,29 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
   };
 
   const handleDeletePost = async () => {
-    if (!postToDelete) return;
+    if (!postToDelete || deleting) return;
 
     try {
       setDeleting(true);
       await adminService.deletePost(postToDelete.id);
 
       notifications.show({
-        title: 'สำเร็จ',
-        message: 'ลบโพสต์แล้ว',
+        title: t('success'),
+        message: t('postDeleted'),
         color: 'green',
       });
 
       // Remove post from local state
-      setPosts(posts.filter((p) => p.id !== postToDelete.id));
+      setPosts((currentPosts) => currentPosts.filter((p) => p.id !== postToDelete.id));
       setDeleteModalOpened(false);
       setPostToDelete(null);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'ไม่สามารถลบโพสต์ได้';
+          : t('failedToDeletePost');
       notifications.show({
-        title: 'เกิดข้อผิดพลาด',
+        title: t('error'),
         message: errorMessage,
         color: 'red',
       });
@@ -537,6 +541,7 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
                         gap="sm"
                         align="center"
                         justify="space-between"
+                        wrap="nowrap"
                       >
                         <Group gap="sm" align="center">
                           <Avatar
@@ -573,20 +578,33 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
                           </Text>
                         </Group>
                         {isAdmin && (
-                          <Button
-                            size="xs"
-                            color="red"
-                            variant="light"
-                            onClick={() => {
-                              setPostToDelete(post);
-                              setDeleteModalOpened(true);
-                            }}
-                            style={{
-                              border: '1px solid red',
-                            }}
-                          >
-                            X ลบโพส
-                          </Button>
+                          <Menu position="bottom-end" shadow="md" width={190} withinPortal>
+                            <Menu.Target>
+                              <ActionIcon
+                                size={44}
+                                radius="xl"
+                                color="gray"
+                                variant="subtle"
+                                aria-label={t('postOptions')}
+                                style={{ flexShrink: 0 }}
+                              >
+                                <span aria-hidden="true"><MoreOptionsIcon /></span>
+                              </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Item
+                                color="red"
+                                leftSection={<TrashIcon />}
+                                mih={44}
+                                onClick={() => {
+                                  setPostToDelete(post);
+                                  setDeleteModalOpened(true);
+                                }}
+                              >
+                                {t('deletePost')}
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
                         )}
                       </Group>
 
@@ -702,10 +720,15 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
       <Modal
         opened={deleteModalOpened}
         onClose={() => {
+          if (deleting) return;
           setDeleteModalOpened(false);
           setPostToDelete(null);
         }}
-        title="ยืนยันการลบโพสต์"
+        title={t('deletePostConfirm')}
+        closeOnClickOutside={!deleting}
+        closeOnEscape={!deleting}
+        withCloseButton={!deleting}
+        size="sm"
         centered
         styles={{
           content: { backgroundColor: '#0F0F0F' },
@@ -715,27 +738,43 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
         }}
       >
         <Stack gap="md">
-          <Text c="white">
-            คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้?
-            การกระทำนี้ไม่สามารถยกเลิกได้
-          </Text>
+          {postToDelete && (
+            <Box bg="dark.8" p="md" style={{ borderRadius: rem(8), border: '1px solid var(--mantine-color-dark-4)' }}>
+              <Text fw={600} size="sm" mb="xs" style={{ overflowWrap: 'anywhere' }}>
+                {postToDelete.User.username}
+              </Text>
+              <Text size="sm" lineClamp={3} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                {postToDelete.content?.text || t('postWithoutText')}
+              </Text>
+              {postToDelete.imageUrl?.[0] && (
+                <Image src={postToDelete.imageUrl[0]} alt={t('postImagePreview')} w={72} h={72} radius="sm" mt="sm" />
+              )}
+            </Box>
+          )}
+          <Text size="sm" c="dimmed">{t('deletePostWarning')}</Text>
           <Group justify="flex-end">
             <Button
               variant="subtle"
+              color="gray"
+              style={{ border: 'none' }}
+              data-autofocus
               onClick={() => {
                 setDeleteModalOpened(false);
                 setPostToDelete(null);
               }}
               disabled={deleting}
             >
-              ยกเลิก
+              {t('cancel')}
             </Button>
             <Button
-              color="red"
+              variant="filled"
+              color="red.8"
+              autoContrast={false}
+              style={{ borderColor: 'var(--mantine-color-red-8)' }}
               onClick={handleDeletePost}
               loading={deleting}
             >
-              ลบ
+              {t('deletePost')}
             </Button>
           </Group>
         </Stack>

@@ -65,6 +65,10 @@ Prefer domain services and hooks over new raw Supabase calls in pages. Important
 
 Use batch user lookup patterns to avoid N+1 queries. Feed pending-request deduplication must clear entries in `finally`, including failures/timeouts. Supabase builders are `PromiseLike<T>`; timeout helpers must support that type.
 
+Feed search in `src/app/feed/page.tsx` uses `src/services/supabase/posts.ts` to match post text case-insensitively before pagination, within the existing 30-day public-post scope. Include search terms in cache/pending-request keys. Clearing restores the normal feed; stale responses must not replace or append to a newer search. The shared `SearchInput` cancels queued searches when cleared.
+
+Run feed search regression checks with `node --test scripts/feed-search.test.mjs`.
+
 ## UI conventions
 
 - Reuse `TOP_NAVBAR_HEIGHT_PX` and `BOTTOM_NAVBAR_HEIGHT_PX`.

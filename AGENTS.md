@@ -100,6 +100,7 @@ Rules:
 - Hooks: `src/hooks/usePosts.ts`, `src/hooks/useInfiniteQuery.tsx`
 - Loads public posts ordered by creation time, resolves profile image URLs, and supports admin post deletion.
 - Feed search matches post text case-insensitively in Supabase before pagination and keeps the existing 30-day public-post scope. Search terms are included in cache/pending-request keys; clearing restores the normal feed, and stale responses must not replace or append to a newer search.
+- Feed results highlight all literal, case-insensitive matches through `PostContentText`, preserving clickable URLs and original text. The optional `highlight` prop leaves other callers unchanged.
 - Feed service uses cache and pending-request deduplication. Always clear pending entries in `finally`, including timeout/rejection paths, or navigation can reuse a stuck promise and show an endless loader.
 
 ### Profile

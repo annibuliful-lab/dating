@@ -69,6 +69,8 @@ Feed search in `src/app/feed/page.tsx` uses `src/services/supabase/posts.ts` to 
 
 Run feed search regression checks with `node --test scripts/feed-search.test.mjs`.
 
+Feed results pass the active search to the optional `highlight` prop in `PostContentText`, which highlights all literal, case-insensitive matches while preserving original text and clickable URLs. Other callers keep their existing rendering.
+
 ## UI conventions
 
 - Reuse `TOP_NAVBAR_HEIGHT_PX` and `BOTTOM_NAVBAR_HEIGHT_PX`.

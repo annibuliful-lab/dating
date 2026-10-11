@@ -48,9 +48,10 @@ export const SearchInput = memo(
     );
 
     const handleClear = useCallback(() => {
+      debouncedSearch.cancel();
       setInternalValue('');
       onSearch?.('');
-    }, [onSearch]);
+    }, [debouncedSearch, onSearch]);
 
     return (
       <TextInput

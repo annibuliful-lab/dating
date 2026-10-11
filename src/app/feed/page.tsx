@@ -2,6 +2,7 @@
 
 import { SuspendedUserRedirect } from '@/components/auth/SuspendedUserRedirect';
 import { BOTTOM_NAVBAR_HEIGHT_PX } from '@/components/element/BottomNavbar';
+import { SearchInput } from '@/components/element/SearchInput';
 import { PostContentText } from '@/components/post/PostContentText';
 import {
   TOP_NAVBAR_HEIGHT_PX,
@@ -38,7 +39,7 @@ import type { EmblaCarouselType } from 'embla-carousel';
 import { useSession } from 'next-auth/react';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Post = {
   id: string;
@@ -65,6 +66,10 @@ function FeedPage() {
   const router = useRouter();
   const { status, data: session } = useSession();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchQueryRef = useRef('');
+  const postsRequestRef = useRef(0);
+  const fetchingPostsRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -97,7 +102,6 @@ function FeedPage() {
     if (status === 'authenticated') {
       (async function () {
         fetchBannerAds();
-        fetchPosts(0);
         // Show infographic modal when entering feed page
         setInfographicModalOpened(true);
       })();
@@ -116,7 +120,11 @@ function FeedPage() {
     }
   }, [adminData, userStatusData]);
 
-  const fetchPosts = async (offset = 0, isRefresh = false) => {
+  const fetchPosts = useCallback(async (offset = 0, isRefresh = false) => {
+    if (offset > 0 && fetchingPostsRef.current) return;
+    const requestId = ++postsRequestRef.current;
+    fetchingPostsRef.current = true;
+    setError(null);
     try {
       if (isRefresh) {
         setIsRefreshing(true);
@@ -129,7 +137,10 @@ function FeedPage() {
       const limit = 20;
       const data = await postService.getPublicPosts(limit, offset, {
         force: isRefresh,
+        search: searchQueryRef.current,
       });
+
+      if (requestId !== postsRequestRef.current) return;
 
       // Check if we have more posts
       if (data.length < limit) {
@@ -186,17 +197,46 @@ function FeedPage() {
         ]);
       }
     } catch (err) {
+      if (requestId !== postsRequestRef.current) return;
       setError(
         err instanceof Error
           ? err
           : new Error('Failed to fetch posts'),
       );
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-      setLoadingMore(false);
+      if (requestId === postsRequestRef.current) {
+        fetchingPostsRef.current = false;
+        setLoading(false);
+        setIsRefreshing(false);
+        setLoadingMore(false);
+      }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchPosts(0);
+    }
+    return () => {
+      postsRequestRef.current += 1;
+      fetchingPostsRef.current = false;
+    };
+  }, [status, searchQuery, fetchPosts]);
+
+  const handleSearch = useCallback((value: string) => {
+    const search = value.trim();
+    if (search === searchQueryRef.current) return;
+    searchQueryRef.current = search;
+    postsRequestRef.current += 1;
+    setSearchQuery(search);
+    setPosts([]);
+    setHasMore(true);
+    setError(null);
+    setLoading(true);
+    setLoadingMore(false);
+    setIsRefreshing(false);
+    viewportRef.current?.scrollTo({ top: 0 });
+  }, []);
 
   const fetchBannerAds = async (options?: { force?: boolean }) => {
     try {
@@ -314,47 +354,6 @@ function FeedPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <Box>
-        <TopNavbar title={t('feed')} />
-        <Container
-          size="xs"
-          pt="md"
-          px="md"
-          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-          style={{ marginLeft: 'auto', marginRight: 'auto' }}
-        >
-          <Center>
-            <Loader
-              color="#D4AF37"
-              style={{
-                margin: 'auto',
-              }}
-            />
-          </Center>
-        </Container>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box>
-        <TopNavbar title={t('feed')} />
-        <Container
-          size="xs"
-          pt="md"
-          px="md"
-          mt={rem(TOP_NAVBAR_HEIGHT_PX)}
-          style={{ marginLeft: 'auto', marginRight: 'auto' }}
-        >
-          <Text c="red">{t('failedToLoadPosts')}: {error.message}</Text>
-        </Container>
-      </Box>
-    );
-  }
-
   return (
     <Box>
       <SuspendedUserRedirect />
@@ -420,14 +419,20 @@ function FeedPage() {
                 >
                   <Text size="sm">
                     {isRefreshing
-                      ? 'Refreshing...'
-                      : 'Pull to refresh'}
+                      ? t('refreshingFeed')
+                      : t('pullToRefresh')}
                   </Text>
                 </Box>
               )}
             </Transition>
 
             <Stack gap="lg">
+              <SearchInput
+                placeholder={t('searchPosts')}
+                aria-label={t('searchPosts')}
+                description={t('searchPostsScope')}
+                onSearch={handleSearch}
+              />
               {/* Banner Carousel */}
               {bannerImages.length > 0 && (
                 <Box
@@ -502,7 +507,20 @@ function FeedPage() {
                 </Box>
               )}
 
-              {posts && posts.length > 0 ? (
+              {loading || (isRefreshing && posts.length === 0) ? (
+                <Center py="md" role="status" aria-label={t('loadingPosts')}>
+                  <Loader color="#D4AF37" />
+                </Center>
+              ) : error ? (
+                <Stack align="center" gap="sm">
+                  <Text c="red" role="alert">
+                    {t('failedToLoadPosts')}
+                  </Text>
+                  <Button variant="light" color="yellow" onClick={() => fetchPosts(0, true)}>
+                    {t('retry')}
+                  </Button>
+                </Stack>
+              ) : posts.length > 0 ? (
                 posts.map((post: Post, index: number) => (
                   <Box key={post.id}>
                     <Stack gap={10}>
@@ -566,6 +584,7 @@ function FeedPage() {
                       {post.content?.text && (
                         <PostContentText
                           text={post.content.text}
+                          highlight={searchQuery}
                           textProps={{
                             fz: 'lg',
                             style: { lineHeight: 1.6 },
@@ -619,12 +638,12 @@ function FeedPage() {
                   </Box>
                 ))
               ) : (
-                <Text c="dimmed" ta="center" mt="xl">
-                  No posts yet. Be the first to create one!
+                <Text c="dimmed" ta="center" mt="xl" role="status">
+                  {t(searchQuery ? 'noMatchingPosts' : 'noFeedPosts')}
                 </Text>
               )}
               {loadingMore && (
-                <Center py="md">
+                <Center py="md" role="status" aria-label={t('loadingPosts')}>
                   <Loader color="#D4AF37" size="sm" />
                 </Center>
               )}

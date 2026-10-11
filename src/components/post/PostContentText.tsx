@@ -1,10 +1,11 @@
 'use client';
 
-import { Anchor, Text, type TextProps } from '@mantine/core';
+import { Anchor, Mark, Text, type TextProps } from '@mantine/core';
 import type { HTMLAttributes } from 'react';
 
 type PostContentTextProps = {
   text: string;
+  highlight?: string;
   textProps?: TextProps & HTMLAttributes<HTMLElement>;
 };
 
@@ -29,11 +30,39 @@ function splitTrailingPunctuation(url: string) {
   };
 }
 
-function renderTextWithLinks(text: string) {
+function renderTextWithLinks(text: string, highlight = '') {
+  const search = highlight.trim();
+  // Match the full text so a search phrase can span a link boundary.
+  const highlights = search
+    ? Array.from(
+        text.matchAll(new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')),
+        (match) => ({ start: match.index, end: match.index + match[0].length }),
+      )
+    : [];
+
+  const renderSegment = (start: number, end: number) => {
+    if (highlights.length === 0) return text.slice(start, end);
+
+    const nodes: React.ReactNode[] = [];
+    let cursor = start;
+    for (const highlight of highlights) {
+      const matchStart = Math.max(start, highlight.start);
+      const matchEnd = Math.min(end, highlight.end);
+      if (matchStart >= matchEnd) continue;
+      if (cursor < matchStart) nodes.push(text.slice(cursor, matchStart));
+      nodes.push(
+        <Mark key={matchStart}>{text.slice(matchStart, matchEnd)}</Mark>,
+      );
+      cursor = matchEnd;
+    }
+    if (cursor < end) nodes.push(text.slice(cursor, end));
+    return nodes;
+  };
+
   const matches = Array.from(text.matchAll(URL_PATTERN));
 
   if (matches.length === 0) {
-    return text;
+    return renderSegment(0, text.length);
   }
 
   const nodes: React.ReactNode[] = [];
@@ -44,7 +73,7 @@ function renderTextWithLinks(text: string) {
     const matchIndex = match.index ?? 0;
 
     if (matchIndex > lastIndex) {
-      nodes.push(text.slice(lastIndex, matchIndex));
+      nodes.push(renderSegment(lastIndex, matchIndex));
     }
 
     const { cleanUrl, trailingText } =
@@ -60,19 +89,19 @@ function renderTextWithLinks(text: string) {
         c="blue.4"
         underline="always"
       >
-        {cleanUrl}
+        {renderSegment(matchIndex, matchIndex + cleanUrl.length)}
       </Anchor>,
     );
 
     if (trailingText) {
-      nodes.push(trailingText);
+      nodes.push(renderSegment(matchIndex + cleanUrl.length, matchIndex + rawUrl.length));
     }
 
     lastIndex = matchIndex + rawUrl.length;
   });
 
   if (lastIndex < text.length) {
-    nodes.push(text.slice(lastIndex));
+    nodes.push(renderSegment(lastIndex, text.length));
   }
 
   return nodes;
@@ -80,6 +109,7 @@ function renderTextWithLinks(text: string) {
 
 export function PostContentText({
   text,
+  highlight,
   textProps,
 }: PostContentTextProps) {
   return (
@@ -91,7 +121,7 @@ export function PostContentText({
         ...textProps?.style,
       }}
     >
-      {renderTextWithLinks(text)}
+      {renderTextWithLinks(text, highlight)}
     </Text>
   );
 }

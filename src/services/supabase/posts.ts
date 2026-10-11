@@ -64,8 +64,13 @@ async function withTimeout<T>(
 
 export const postService = {
   // Fetch all public posts with author information
-  async getPublicPosts(limit = 20, offset = 0, options?: { force?: boolean }) {
-    const cacheKey = `${limit}:${offset}`;
+  async getPublicPosts(
+    limit = 20,
+    offset = 0,
+    options?: { force?: boolean; search?: string },
+  ) {
+    const search = options?.search?.trim() || '';
+    const cacheKey = JSON.stringify([limit, offset, search]);
     if (!options?.force) {
       const cached = publicPostsCache.get(cacheKey);
       if (
@@ -84,11 +89,10 @@ export const postService = {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const request = (async () => {
-      const { data, error } = await withTimeout(
-        supabase
-          .from('Post')
-          .select(
-            `
+      let query = supabase
+        .from('Post')
+        .select(
+          `
         *,
         User!Post_authorId_fkey (
           id,
@@ -102,11 +106,20 @@ export const postService = {
         PostLike!PostLike_postId_fkey (count),
         PostSave!PostSave_postId_fkey (count)
       `,
-          )
-          .eq('visibility', 'PUBLIC')
-          .gte('createdAt', thirtyDaysAgo.toISOString())
-          .order('createdAt', { ascending: false })
-          .range(offset, offset + limit - 1),
+        )
+        .eq('visibility', 'PUBLIC')
+        .gte('createdAt', thirtyDaysAgo.toISOString())
+        .order('createdAt', { ascending: false })
+        .order('id', { ascending: false });
+
+      if (search) {
+        // Escape regex syntax so punctuation is searched literally, including *.
+        const pattern = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        query = query.filter('content->>text', 'imatch', pattern);
+      }
+
+      const { data, error } = await withTimeout(
+        query.range(offset, offset + limit - 1),
         PUBLIC_POSTS_FETCH_TIMEOUT_MS,
         'Feed posts request timed out',
       );
@@ -168,13 +181,20 @@ export const postService = {
 
       return (transformedData || data || []) as unknown[];
     })().then((result) => {
-      publicPostsCache.set(cacheKey, {
-        data: result,
-        timestamp: Date.now(),
-      });
+      if (pendingPublicPostRequests.get(cacheKey) === request) {
+        const now = Date.now();
+        for (const [key, cached] of publicPostsCache) {
+          if (now - cached.timestamp >= PUBLIC_POSTS_CACHE_TTL_MS) {
+            publicPostsCache.delete(key);
+          }
+        }
+        publicPostsCache.set(cacheKey, { data: result, timestamp: now });
+      }
       return result;
     }).finally(() => {
-      pendingPublicPostRequests.delete(cacheKey);
+      if (pendingPublicPostRequests.get(cacheKey) === request) {
+        pendingPublicPostRequests.delete(cacheKey);
+      }
     });
 
     pendingPublicPostRequests.set(cacheKey, request);

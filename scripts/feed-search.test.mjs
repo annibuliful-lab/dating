@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import { createClient } from '@supabase/supabase-js';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import ts from 'typescript';
 
 const { outputText } = ts.transpileModule(
@@ -138,4 +141,62 @@ test('rejected and timed-out requests can be retried', async () => {
   assert.equal(requests.length, 3);
   requests[2].respond([]);
   assert.deepEqual(await retried, []);
+});
+
+const componentSource = ts.transpileModule(
+  readFileSync(new URL('../src/components/post/PostContentText.tsx', import.meta.url), 'utf8'),
+  { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } },
+).outputText;
+const componentExports = {};
+const componentRequire = createRequire(import.meta.url);
+const { MantineProvider } = componentRequire('@mantine/core');
+new Function('require', 'exports', componentSource)(componentRequire, componentExports);
+
+function renderPost(text, highlight) {
+  return renderToStaticMarkup(createElement(MantineProvider, { forceColorScheme: 'dark' },
+    createElement(componentExports.PostContentText, { text, highlight })));
+}
+
+const markedText = (html) => Array.from(html.matchAll(/<mark\b[^>]*>(.*?)<\/mark>/gs), (match) => match[1]);
+
+test('highlights every case-insensitive match, preserving original case and Thai text', () => {
+  assert.deepEqual(markedText(renderPost('Hello HELLO hello', ' hello ')), ['Hello', 'HELLO', 'hello']);
+  assert.deepEqual(markedText(renderPost('หาเพื่อนใหม่ มาเป็นเพื่อนกัน', 'เพื่อน')), ['เพื่อน', 'เพื่อน']);
+});
+
+test('highlight search treats regex punctuation literally', () => {
+  const term = '.*+?^${}()|[]\\%_';
+  assert.deepEqual(markedText(renderPost(`Before ${term} after ${term}`, term)), [term, term]);
+});
+
+test('highlights inside links without changing link targets or trailing punctuation', () => {
+  const html = renderPost('Example https://example.com/path, and www.EXAMPLE.com.', 'example');
+  assert.deepEqual(markedText(html), ['Example', 'example', 'EXAMPLE']);
+  assert.match(html, /href="https:\/\/example\.com\/path"/);
+  assert.match(html, /href="https:\/\/www\.EXAMPLE\.com"/);
+  assert.match(html, /<\/a>, and /);
+  assert.match(html, /<\/a>\./);
+});
+
+test('a search phrase can highlight across a link boundary', () => {
+  const html = renderPost('See https://example.com.', 'See https://example.com.');
+  assert.deepEqual(markedText(html), ['See ', 'https://example.com', '.']);
+  assert.match(html, /href="https:\/\/example\.com"/);
+});
+
+test('cleared, missing, and unmatched searches keep normal text and links', () => {
+  for (const query of [undefined, '', '   ', 'missing']) {
+    const html = renderPost('Hello www.example.com!', query);
+    assert.deepEqual(markedText(html), []);
+    assert.match(html, /Hello <a /);
+    assert.match(html, /href="https:\/\/www\.example\.com"/);
+    assert.match(html, />www\.example\.com<\/a>!/);
+  }
+});
+
+test('post text and search terms cannot introduce HTML elements', () => {
+  const html = renderPost('<img src=x onerror=alert(1)>', '<img');
+  assert.deepEqual(markedText(html), ['&lt;img']);
+  assert.doesNotMatch(html, /<img\b/);
+  assert.match(html, /&gt;/);
 });

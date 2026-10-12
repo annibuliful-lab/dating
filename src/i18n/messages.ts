@@ -3,6 +3,10 @@ export type Locale = 'th' | 'en';
 export const messages = {
   th: {
     language: 'ภาษา',
+    requestDenied: 'คุณไม่มีสิทธิ์ทำรายการนี้',
+    requestSignIn: 'กรุณาเข้าสู่ระบบอีกครั้ง',
+    requestInvalid: 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง',
+    requestFailed: 'ทำรายการไม่สำเร็จ กรุณาลองอีกครั้ง',
     thai: 'ไทย',
     english: 'English',
     home: 'หน้าหลัก',
@@ -183,6 +187,10 @@ export const messages = {
   },
   en: {
     language: 'Language',
+    requestDenied: 'You do not have access to this action.',
+    requestSignIn: 'Please sign in again.',
+    requestInvalid: 'Please check the submitted information.',
+    requestFailed: 'Request failed. Please try again.',
     thai: 'ไทย',
     english: 'English',
     home: 'Home',

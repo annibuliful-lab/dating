@@ -116,6 +116,7 @@ model ChatParticipant {
   userId   String      @db.Uuid
   isAdmin  Boolean     @default(false)
   lastReadAt DateTime? @db.Timestamptz(6)
+  typingUntil DateTime? @db.Timestamptz(6)
 
   @@unique([chatId, userId])
   @@index([userId])
@@ -129,6 +130,7 @@ model Message {
   senderId  String   @db.Uuid
   text      String?  @db.Text
   imageUrl  String?  @db.Text
+  videoUrl  String?  @db.Text
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   LatestForChats Chat[] @relation("ChatLastMessage")
 

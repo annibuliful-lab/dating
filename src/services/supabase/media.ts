@@ -1,4 +1,5 @@
-import { supabase } from "@/client/supabase";
+import { requestError } from '@/services/user-api';
+
 
 export interface MediaUploadResult {
   url: string;
@@ -13,40 +14,15 @@ export const mediaService = {
     bucket: string = "chat-media",
     folder: string = "messages"
   ): Promise<MediaUploadResult> {
-    try {
-      // Generate unique filename
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2)}.${fileExt}`;
-      const filePath = `${folder}/${fileName}`;
-
-      // Upload file to Supabase Storage
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (error) {
-        throw new Error(`Upload failed: ${error.message}`);
-      }
-
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucket).getPublicUrl(filePath);
-
-      return {
-        url: publicUrl,
-        path: filePath,
-        publicUrl: publicUrl,
-      };
-    } catch (error) {
-      console.error("Media upload error:", error);
-      throw new Error(error instanceof Error ? error.message : "Upload failed");
-    }
+    if (!['dating', 'chat-media'].includes(bucket)) throw new Error('Invalid bucket');
+    const form = new FormData();
+    form.set('file', file);
+    form.set('kind', folder === 'posts' ? 'post' : 'chat');
+    if (folder.startsWith('chats/')) form.set('chatId', folder.slice(6));
+    const response = await fetch('/api/storage', { method: 'POST', body: form });
+    const result = await response.json();
+    if (!response.ok) throw requestError(response.status);
+    return result;
   },
 
   // Upload multiple files to Supabase Storage
@@ -73,19 +49,11 @@ export const mediaService = {
     filePath: string,
     bucket: string = "chat-media"
   ): Promise<boolean> {
-    try {
-      const { error } = await supabase.storage.from(bucket).remove([filePath]);
-
-      if (error) {
-        console.error("Delete media error:", error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Delete media error:", error);
-      return false;
-    }
+    const response = await fetch('/api/storage', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys: [filePath], bucket }),
+    });
+    return response.ok;
   },
 
   // Get file info from URL

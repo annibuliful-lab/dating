@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import LineProvider from "next-auth/providers/line";
 import { v7 } from "uuid";
-import { supabase } from "./client/supabase";
+import { supabase } from "./server/supabase";
 import { normalizeEmail } from "./lib/normalize-user-fields";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -17,7 +17,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     CredentialsProvider({
       credentials: {
-        username: {},
+        email: {},
         password: {},
       },
       async authorize(credentials) {
@@ -26,13 +26,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: string;
           password: string;
         };
+        if (typeof email !== 'string' || email.length > 254) return null;
         const normalizedEmail = normalizeEmail(email);
 
-        if (!normalizedEmail) return null;
+        if (!normalizedEmail || typeof password !== "string" || password.length > 1024) return null;
 
         const { data: userInfo, error } = await supabase
           .from("User")
-          .select("*")
+          .select("id, fullName, email, passwordHash, status")
           .eq("email", normalizedEmail)
           .single();
 
@@ -40,20 +41,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        // Check if user is suspended
-        if (userInfo && userInfo.status === "SUSPENDED") {
-          throw new Error("บัญชีของคุณถูกพักการใช้งานชั่วคราว");
-        }
-
-        if (userInfo && userInfo.passwordHash === password) {
-          return {
-            id: userInfo.id,
-            name: userInfo.fullName,
-            email: userInfo.email,
-          };
-        }
-
-        return null;
+        if (!userInfo || userInfo.passwordHash !== password) return null;
+        if (userInfo.status === 'SUSPENDED') throw new Error('บัญชีของคุณถูกพักการใช้งานชั่วคราว');
+        return { id: userInfo.id, name: userInfo.fullName, email: userInfo.email };
       },
     }),
     LineProvider({
@@ -101,6 +91,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return false;
         }
 
+        if (account.provider === 'credentials') {
+          (account as Record<string, unknown>).userId = user.id;
+          return !!user.id;
+        }
         const result = await upsertUserAccount({
           type: "oauth",
           provider: account.provider,
@@ -143,28 +137,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
     },
     async session({ token, session }) {
-      console.debug(
-        "[next-auth] session token.providerAccountId:",
-        token.providerAccountId
-      );
-
-      const userId = await getUserIdByProviderAccountId(
-        token.providerAccountId as string
-      );
-
+      const userId = typeof token.userId === 'string' ? token.userId :
+        await getUserIdByProviderAccountId(token.provider as string, token.providerAccountId as string);
+      session.user.id = '';
       if (userId) {
-        session.user.id = userId;
-
-        // Check if user is suspended during session
-        const { data: userInfo, error } = await supabase
-          .from("User")
-          .select("status")
-          .eq("id", userId)
-          .single();
-
-        if (!error && userInfo && userInfo.status === "SUSPENDED") {
-          // Store suspended status in session
-          (session as unknown as Record<string, unknown>).isSuspended = true;
+        const { data: user, error } = await supabase.from('User')
+          .select('id, status, role, isVerified').eq('id', userId).single();
+        if (!error && user) {
+          session.user.id = user.id;
+          session.user.status = user.status;
+          session.user.role = user.role;
+          session.user.isVerified = user.isVerified;
         }
       }
 
@@ -177,19 +160,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return session;
     },
-    async jwt({ token, trigger, session, account }) {
-      // console.debug('[next-auth] jwt', {
-      //   token,
-      //   session,
-      //   user,
-      // });
-
+    async jwt({ token, trigger, session, account, user }) {
       if (trigger === "update" && session?.name) {
         token.name = session.name;
       }
 
       // Handle all OAuth providers during sign in
       if (trigger === "signIn" && account) {
+        token.userId = account.provider === 'credentials' ? user.id : (account as Record<string, unknown>).userId;
         token.provider = account.provider;
         token.providerAccountId = account.providerAccountId;
 
@@ -199,18 +177,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.isNewUser = true;
           token.newUserId = accountWithExtras.userId as string;
         }
-
-        // Provider-specific handling
-        if (account.provider === "google") {
-          token.accessToken = account.id_token;
-          token.providerID = "google.com";
-        } else if (account.provider === "line") {
-          token.accessToken = account.access_token;
-          token.providerID = "line";
-        }
-        // Add other providers as needed
       }
-
+      delete token.accessToken;
       return token;
     },
   },
@@ -284,6 +252,7 @@ async function upsertUserAccount(
       });
 
     if (insertedOAuthAccountError) {
+      await supabase.from('User').delete().eq('id', user.id);
       console.error(
         "[upsertUserAccount] Failed to create OAuth account:",
         insertedOAuthAccountError
@@ -299,9 +268,10 @@ async function upsertUserAccount(
 }
 
 async function getUserIdByProviderAccountId(
+  provider: string | undefined,
   providerAccountId: string | undefined
 ) {
-  if (!providerAccountId) {
+  if (!provider || !providerAccountId) {
     console.error(
       "[getUserIdByProviderAccountId] providerAccountId is undefined"
     );
@@ -311,6 +281,7 @@ async function getUserIdByProviderAccountId(
   const { data: oAuthAccount, error: oAuthAccountError } = await supabase
     .from("OAuthAccount")
     .select("userId")
+    .eq("provider", provider)
     .eq("providerAccountId", providerAccountId)
     .single();
 

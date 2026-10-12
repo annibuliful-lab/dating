@@ -8,6 +8,7 @@ declare module "next-auth" {
       refreshToken: string;
       role?: "USER" | "ADMIN";
       status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+      isVerified?: boolean;
     } & DefaultSession["user"];
   }
 

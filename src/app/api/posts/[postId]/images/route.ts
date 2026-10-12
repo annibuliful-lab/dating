@@ -1,5 +1,5 @@
-import { auth } from '@/auth';
-import { supabase } from '@/client/supabase';
+import { apiError, requireUser, requireCommunity, requireSameOrigin } from '@/server/access';
+import { supabase } from '@/server/supabase';
 import { isAdmin } from '@/lib/admin';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -30,7 +30,9 @@ export async function PATCH(
   { params }: { params: Promise<{ postId: string }> },
 ) {
   try {
-    const session = await auth();
+    requireSameOrigin(request);
+    const session = { user: await requireUser() };
+    requireCommunity(session.user);
     const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -95,11 +97,5 @@ export async function PATCH(
     }
 
     return NextResponse.json({ post: updatedPost });
-  } catch (error) {
-    console.error('Error in PATCH /api/posts/[postId]/images:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
-    );
-  }
+  } catch (error) { return apiError(error); }
 }

@@ -1,3 +1,6 @@
+import { useSession } from 'next-auth/react';
+import { cachedRead } from '@/services/read-cache';
+import { userApiReadKey } from '@/services/user-api';
 import {
   buildQueryString,
   fetchWithRetry,
@@ -5,6 +8,7 @@ import {
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -25,14 +29,6 @@ type QueryOptions<TBody, TResponse> = {
   onError?: (error: Error) => void;
 };
 
-type CachedQuery = {
-  data: unknown;
-  timestamp: number;
-};
-
-const queryCache = new Map<string, CachedQuery>();
-const pendingQueries = new Map<string, Promise<unknown>>();
-
 export function useApiQuery<TResponse, TBody = unknown>(
   url: string,
   options?: QueryOptions<TBody, TResponse>,
@@ -52,115 +48,60 @@ export function useApiQuery<TResponse, TBody = unknown>(
     onError,
   } = options || {};
 
+  const { data: session, status } = useSession();
+  const sessionKey = JSON.stringify([status, session?.user?.id, session?.user?.role, session?.user?.status, session?.user?.isVerified]);
+  const requestRef = useRef(0);
+  const scopeRef = useRef(sessionKey);
+  useLayoutEffect(() => { scopeRef.current = sessionKey; }, [sessionKey]);
   const [data, setData] = useState<TResponse | null>(null);
   const [loading, setLoading] = useState(!lazy && enabled);
   const [error, setError] = useState<Error | null>(null);
   const prevCallKeyRef = useRef<string>('');
 
   const fetchData = useCallback(async (force = false) => {
+    const requestId = ++requestRef.current;
+    const isCurrent = () => requestRef.current === requestId && scopeRef.current === sessionKey;
     setLoading(true);
     setError(null);
-
     const fullUrl = url + buildQueryString(queryParams);
-    const requestCacheKey =
-      cacheKey ||
-      JSON.stringify({
-        url: fullUrl,
-        method,
-        body,
-      });
-
+    const load = () => fetchWithRetry<TResponse>(fullUrl, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: body && method !== 'GET' ? JSON.stringify(body) : undefined,
+    }, { retries, timeoutMs });
     try {
-      if (method === 'GET' && cacheTimeMs > 0 && !force) {
-        const cached = queryCache.get(requestCacheKey);
-        if (
-          cached &&
-          Date.now() - cached.timestamp < cacheTimeMs
-        ) {
-          const cachedData = cached.data as TResponse;
-          setData(cachedData);
-          onCompleted?.(cachedData);
-          return cachedData;
-        }
-
-        const pending = pendingQueries.get(requestCacheKey);
-        if (pending) {
-          const pendingData = (await pending) as TResponse;
-          setData(pendingData);
-          onCompleted?.(pendingData);
-          return pendingData;
-        }
+      const res = method === 'GET'
+        ? await cachedRead(userApiReadKey('http', fullUrl, [cacheKey, headers, sessionKey]), load, cacheTimeMs, force)
+        : await load();
+      if (isCurrent()) {
+        setData(res);
+        onCompleted?.(res);
       }
-
-      const request = fetchWithRetry<TResponse>(
-          fullUrl,
-          {
-            method,
-            headers: {
-              'Content-Type': 'application/json',
-              ...headers,
-            },
-            body:
-              body && method !== 'GET'
-                ? JSON.stringify(body)
-                : undefined,
-          },
-          { retries, timeoutMs },
-        ).finally(() => {
-          pendingQueries.delete(requestCacheKey);
-        });
-
-      if (method === 'GET' && cacheTimeMs > 0) {
-        pendingQueries.set(requestCacheKey, request);
-      }
-
-      const res = await request;
-
-      if (method === 'GET' && cacheTimeMs > 0) {
-        queryCache.set(requestCacheKey, {
-          data: res,
-          timestamp: Date.now(),
-        });
-      }
-
-      setData(res);
-      onCompleted?.(res);
       return res;
     } catch (err) {
-      const e =
-        err instanceof Error ? err : new Error('Unknown error');
-      setError(e);
-      onError?.(e);
-      throw e;
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      if (isCurrent()) {
+        setError(error);
+        onError?.(error);
+      }
+      throw error;
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [
-    url,
-    method,
-    body,
-    headers,
-    queryParams,
-    retries,
-    timeoutMs,
-    cacheTimeMs,
-    cacheKey,
-    onCompleted,
-    onError,
-  ]);
+  }, [url, method, body, headers, queryParams, retries, timeoutMs, cacheTimeMs, cacheKey, onCompleted, onError, sessionKey]);
 
   const refetch = useCallback(() => fetchData(true), [fetchData]);
 
   // Generate a stable call key to detect actual changes
   const callKey = useMemo(() => {
-    return JSON.stringify({ url, lazy, enabled, options });
-  }, [url, lazy, enabled, options]);
+    return JSON.stringify({ url, lazy, enabled, options, sessionKey });
+  }, [url, lazy, enabled, options, sessionKey]);
 
   useEffect(() => {
     // Only call fetchData if the call key has changed AND lazy is false and enabled is true
     if (!lazy && enabled && callKey !== prevCallKeyRef.current) {
       prevCallKeyRef.current = callKey;
-      fetchData();
+      void fetchData().catch(() => {});
     }
   }, [callKey, lazy, enabled, fetchData]);
 

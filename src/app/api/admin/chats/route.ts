@@ -1,4 +1,4 @@
-import { supabase } from '@/client/supabase';
+import { supabase } from '@/server/supabase';
 import { requireAdmin } from '@/lib/admin';
 import { NextRequest, NextResponse } from 'next/server';
 

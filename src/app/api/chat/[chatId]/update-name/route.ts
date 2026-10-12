@@ -1,6 +1,6 @@
-import { auth } from "@/auth";
-import { messageService } from "@/services/supabase/messages";
-import { requireNotSuspended } from "@/lib/admin";
+import { apiError, requireCommunity, requireSameOrigin, requireUser } from "@/server/access";
+import { uuid } from "@/server/validation";
+import { messageService } from "@/server/data/messages";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
@@ -8,20 +8,23 @@ export async function PATCH(
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const session = await auth();
+    requireSameOrigin(req);
+    const actor = await requireUser();
+    requireCommunity(actor);
+    const session = { user: actor };
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if user is suspended
-    const suspendedCheck = await requireNotSuspended();
-    if (suspendedCheck) return suspendedCheck;
 
-    const { chatId } = await params;
+
+    const { chatId: rawChatId } = await params;
+    const chatId = uuid(rawChatId);
     const body = await req.json();
     const { name } = body;
 
-    if (!name || typeof name !== "string" || !name.trim()) {
+    if (!name || typeof name !== "string" || !name.trim() || name.length > 100) {
       return NextResponse.json(
         { error: "Valid chat name is required" },
         { status: 400 }
@@ -51,14 +54,5 @@ export async function PATCH(
     await messageService.updateChatName(chatId, name.trim());
 
     return NextResponse.json({ success: true, name: name.trim() });
-  } catch (error) {
-    console.error("Error updating chat name:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to update chat name",
-      },
-      { status: 500 }
-    );
-  }
+  } catch (error) { return apiError(error); }
 }

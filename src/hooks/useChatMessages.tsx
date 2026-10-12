@@ -48,6 +48,10 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
   const currentChatIdRef = useRef<string>(chatId);
+  const messagesRequestRef = useRef(0);
+  const cancelMessageFetch = useCallback(() => { messagesRequestRef.current++; }, []);
+  const presentationRef = useRef({ t, soundEnabled });
+  useEffect(() => { presentationRef.current = { t, soundEnabled }; }, [t, soundEnabled]);
 
   const formatMessageTime = useCallback((date: Date): string => {
     const now = new Date();
@@ -74,7 +78,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
   }, []);
 
   const playNotificationSound = useCallback(() => {
-    if (!soundEnabled) return;
+    if (!presentationRef.current.soundEnabled) return;
 
     try {
       const AudioContextClass =
@@ -111,10 +115,11 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     } catch {
       // Could not play notification sound
     }
-  }, [soundEnabled]);
+  }, []);
 
   const fetchMessages = useCallback(async () => {
     if (!chatId) return;
+    const requestId = ++messagesRequestRef.current;
 
     try {
       setLoading(true);
@@ -122,8 +127,9 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       const chatMessages =
         await messageService.getChatMessages(chatId);
+      if (requestId !== messagesRequestRef.current) return;
 
-      const transformedMessages: ChatMessage[] = chatMessages
+      const transformedMessages: ChatMessage[] = [...chatMessages]
         .reverse() // Reverse to show oldest first in chat (Facebook-style)
         .map((msg: MessageWithUser) => {
           const senderAvatarUrl = getProfileImageUrl(
@@ -139,7 +145,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             author:
               msg.senderId === session?.user?.id ? 'me' : 'other',
             senderId: msg.senderId,
-            senderName: msg.User?.username || t('unknown'),
+            senderName: msg.User?.username || presentationRef.current.t('unknown'),
             senderAvatar: senderAvatarUrl,
             senderIsVerified: msg.User?.isVerified || false,
             senderRole: msg.User?.role || 'USER',
@@ -159,14 +165,15 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
         });
       }, 100);
     } catch (err) {
+      if (requestId !== messagesRequestRef.current) return;
       console.error('Error fetching messages:', err);
       setError(
-        err instanceof Error ? err.message : t('failedToLoadPosts'),
+        err instanceof Error ? err.message : presentationRef.current.t('failedToLoadPosts'),
       );
     } finally {
-      setLoading(false);
+      if (requestId === messagesRequestRef.current) setLoading(false);
     }
-  }, [chatId, session?.user?.id, formatMessageTime, t]);
+  }, [chatId, session?.user?.id, formatMessageTime]);
 
   const loadOlderMessages = useCallback(async () => {
     if (
@@ -280,7 +287,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
               ? 'me'
               : 'other',
           senderId: newMessage.senderId,
-          senderName: newMessage.User?.fullName || t('unknown'),
+          senderName: newMessage.User?.username || presentationRef.current.t('unknown'),
           senderAvatar: senderAvatarUrl,
           senderIsVerified: newMessage.User?.isVerified || false,
           senderRole:
@@ -303,7 +310,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
             return updatedMessages;
           }
 
-          const newMessages = [...prev, transformedMessage];
+          const newMessages = [...prev, transformedMessage].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
 
           if (transformedMessage.author === 'other') {
             playNotificationSound();
@@ -348,7 +355,6 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
     session?.user?.id,
     playNotificationSound,
     formatMessageTime,
-    t,
   ]);
 
   const handleSend = useCallback(async () => {
@@ -573,7 +579,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       // Upload all media files first
       const uploadResults =
-        await mediaService.uploadMultipleMedia(selectedMedia);
+        await mediaService.uploadMultipleMedia(selectedMedia, 'chat-media', `chats/${currentChatIdRef.current}`);
 
       // Create messages for each uploaded file
       const messagePromises = selectedMedia.map(
@@ -684,15 +690,19 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
   useEffect(() => {
     if (chatId && session?.user?.id) {
-      fetchMessages();
-      const cleanup = setupRealtimeSubscription();
-      return cleanup;
+      let active = true;
+      let cleanup: (() => void) | undefined;
+      void fetchMessages().then(() => {
+        if (active) cleanup = setupRealtimeSubscription();
+      });
+      return () => { active = false; cancelMessageFetch(); cleanup?.(); };
     }
   }, [
     chatId,
     session?.user?.id,
     fetchMessages,
     setupRealtimeSubscription,
+    cancelMessageFetch,
   ]);
 
   useEffect(() => {

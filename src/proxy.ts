@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 // Line 12: export default auth(async (req) => {
 // req is NextAuthRequest which extends NextRequest.
 // If unused, just remove it.
-import { supabase } from "./client/supabase";
+import { supabase } from "./server/supabase";
 
 // Define route types
 const PUBLIC_ROUTES = ["/", "/auth/error", "/line-auth-test"];
@@ -23,7 +23,7 @@ function isBlankOrGeneratedProfileValue(
 
 export default auth(async (req) => {
   const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
+  const isLoggedIn = !!req.auth?.user?.id;
   const pathname = nextUrl.pathname;
 
   // Check if route is public
@@ -137,11 +137,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except:
+     * - API routes (each handler owns authentication and authorization)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (public folder)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
+    "/((?!api(?:/|$)|_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
   ],
 };

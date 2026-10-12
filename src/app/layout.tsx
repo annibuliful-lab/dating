@@ -8,24 +8,26 @@ import { Inter } from 'next/font/google';
 import { ClientLayout } from '@/components/layout/ClientLayout';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { LocaleProvider } from '@/i18n/LocaleProvider';
+import { auth } from '@/auth';
 
 const inter = Inter({
   weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
   return (
     <html lang="th" {...mantineHtmlProps} className={inter.className}>
       <head>
         <ColorSchemeScript />
       </head>
       <body>
-        <SessionProvider>
+        <SessionProvider session={session}>
           <MantineAppProvider>
             <LocaleProvider>
               <ClientLayout>{children}</ClientLayout>

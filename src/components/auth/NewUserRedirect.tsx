@@ -1,6 +1,6 @@
 "use client";
 
-import { supabase } from "@/client/supabase";
+import { getUserProfile } from "@/services/profile/get";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,14 +23,8 @@ export function NewUserRedirect() {
             Date.now() - 2 * 60 * 1000
           ).toISOString();
 
-          const { data: user, error } = await supabase
-            .from("User")
-            .select("id, createdAt")
-            .eq("id", userId)
-            .gte("createdAt", twoMinutesAgo)
-            .maybeSingle();
-
-          if (!error && user) {
+          const user = await getUserProfile(userId);
+          if (user.createdAt && user.createdAt >= twoMinutesAgo) {
             // This is a new user, redirect to verification page
             router.push(`/signup/verify?userId=${session.user.id}`);
           }

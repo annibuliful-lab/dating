@@ -4,7 +4,7 @@ import {
   TopNavbar,
   TOP_NAVBAR_HEIGHT_PX,
 } from '@/components/element/TopNavbar';
-import { BUCKET_NAME, supabase } from '@/client/supabase';
+import { getPublicStorageUrl } from '@/services/supabase/storage';
 import { useAdminChats } from '@/hooks/useAdminChats';
 import {
   Avatar,
@@ -258,10 +258,7 @@ export default function AdminChatsPage() {
 
   const getProfileImageUrl = (profileImageKey: string | null) => {
     if (!profileImageKey) return null;
-    const { data } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(profileImageKey);
-    return data.publicUrl;
+    return getPublicStorageUrl(profileImageKey);
   };
 
   const formatDate = (dateString: string) => {

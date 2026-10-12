@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { supabase } from "@/client/supabase";
+import { supabase } from "@/server/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(

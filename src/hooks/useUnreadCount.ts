@@ -1,94 +1,58 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { messageService } from '@/services/supabase/messages';
+import { invalidateUserApiReads } from '@/services/user-api';
 
-const UNREAD_COUNT_CACHE_TTL_MS = 15 * 1000;
-export const UNREAD_COUNT_INVALIDATED_EVENT =
-  'unread-count-invalidated';
-const unreadCountCache = new Map<
-  string,
-  { count: number; timestamp: number }
->();
-const pendingUnreadCountRequests = new Map<string, Promise<number>>();
+export const UNREAD_COUNT_INVALIDATED_EVENT = 'unread-count-invalidated';
 
 export function useUnreadCount() {
   const { data: session, status } = useSession();
+  const userId = session?.user?.id;
+  const scope = JSON.stringify([status, userId, session?.user.role, session?.user.status, session?.user.isVerified]);
   const [count, setCount] = useState(0);
+  const requestRef = useRef(0);
+  const scopeRef = useRef(scope);
+  useLayoutEffect(() => { scopeRef.current = scope; }, [scope]);
+  const cancelFetch = useCallback(() => { requestRef.current++; }, []);
 
   const fetchCount = useCallback(async (force = false) => {
-    if (status !== 'authenticated' || !session?.user?.id) {
+    const requestId = ++requestRef.current;
+    const isCurrent = () => requestRef.current === requestId && scopeRef.current === scope;
+    if (status !== 'authenticated' || !userId) {
       setCount(0);
       return;
     }
-
-    const userId = session.user.id;
-
-    if (!force) {
-      const cached = unreadCountCache.get(userId);
-      if (
-        cached &&
-        Date.now() - cached.timestamp < UNREAD_COUNT_CACHE_TTL_MS
-      ) {
-        setCount(cached.count);
-        return cached.count;
-      }
-
-      const pending = pendingUnreadCountRequests.get(userId);
-      if (pending) {
-        const pendingCount = await pending;
-        setCount(pendingCount);
-        return pendingCount;
-      }
-    }
-
     try {
-      const request = messageService
-        .getUnreadCount(userId)
-        .finally(() => pendingUnreadCountRequests.delete(userId));
-      pendingUnreadCountRequests.set(userId, request);
-
-      const n = await request;
-      unreadCountCache.set(userId, {
-        count: n,
-        timestamp: Date.now(),
-      });
-      setCount(n);
-      return n;
+      const count = await messageService.getUnreadCount(userId, force);
+      if (isCurrent()) setCount(count);
+      return count;
     } catch {
-      setCount(0);
-      return 0;
+      if (isCurrent()) setCount(0);
     }
-  }, [session?.user?.id, status]);
+  }, [userId, status, scope]);
 
   useEffect(() => {
-    fetchCount();
-  }, [fetchCount]);
+    void fetchCount();
+    return cancelFetch;
+  }, [fetchCount, cancelFetch]);
 
   useEffect(() => {
-    const onFocus = () => fetchCount(true);
-    const onUnreadCountInvalidated = () => {
-      unreadCountCache.clear();
-      fetchCount(true);
+    const onFocus = () => { void fetchCount(true); };
+    const onInvalidated = () => {
+      invalidateUserApiReads('messages', ['getUnreadCount']);
+      void fetchCount(true);
     };
     window.addEventListener('focus', onFocus);
-    window.addEventListener(
-      UNREAD_COUNT_INVALIDATED_EVENT,
-      onUnreadCountInvalidated,
-    );
+    window.addEventListener(UNREAD_COUNT_INVALIDATED_EVENT, onInvalidated);
     return () => {
       window.removeEventListener('focus', onFocus);
-      window.removeEventListener(
-        UNREAD_COUNT_INVALIDATED_EVENT,
-        onUnreadCountInvalidated,
-      );
+      window.removeEventListener(UNREAD_COUNT_INVALIDATED_EVENT, onInvalidated);
     };
   }, [fetchCount]);
 
-  return {
-    unreadCount: count,
-    refetch: () => fetchCount(true),
-    refreshIfStale: () => fetchCount(false),
-  };
+  const refetch = useCallback(() => fetchCount(true), [fetchCount]);
+  const refreshIfStale = useCallback(() => fetchCount(false), [fetchCount]);
+  return { unreadCount: count, refetch, refreshIfStale };
 }

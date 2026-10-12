@@ -1,5 +1,6 @@
-import { auth } from "@/auth";
-import { messageService } from "@/services/supabase/messages";
+import { apiError, requireCommunity, requireSameOrigin, requireUser } from "@/server/access";
+import { uuid } from "@/server/validation";
+import { messageService } from "@/server/data/messages";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -7,12 +8,16 @@ export async function GET(
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const session = await auth();
+    requireSameOrigin(req);
+    const actor = await requireUser();
+    requireCommunity(actor);
+    const session = { user: actor };
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { chatId } = await params;
+    const { chatId: rawChatId } = await params;
+    const chatId = uuid(rawChatId);
 
     const requester = await messageService.getChatParticipant(
       chatId,
@@ -30,16 +35,5 @@ export async function GET(
     const participants = await messageService.getChatParticipants(chatId);
 
     return NextResponse.json(participants);
-  } catch (error) {
-    console.error("Error fetching participants:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch participants",
-      },
-      { status: 500 }
-    );
-  }
+  } catch (error) { return apiError(error); }
 }

@@ -1,3 +1,5 @@
+import { invalidateUserSearch } from '@/server/data/users';
+import { invalidatePublicPosts } from '@/server/data/posts';
 import 'server-only';
 import { supabase } from '@/server/supabase';
 import { AccessError } from '@/server/access';
@@ -54,5 +56,7 @@ export async function updateUserProfile(userId: string, input: ProfileInput) {
   const { data, error } = await supabase.from('User').update(payload as never)
     .eq('id', userId).select('id, username, updatedAt').single();
   if (error) throw error;
+  invalidatePublicPosts();
+  invalidateUserSearch();
   return data;
 }

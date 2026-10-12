@@ -7,52 +7,11 @@ import {
 } from '@/@types/message';
 import { supabase } from '@/server/supabase';
 
-const USER_CHATS_CACHE_TTL_MS = 30 * 1000;
-const userChatsCache = new Map<
-  string,
-  { data: ChatWithLatestMessage[]; timestamp: number }
->();
-const pendingUserChatsRequests = new Map<
-  string,
-  Promise<ChatWithLatestMessage[]>
->();
-const CHAT_SUMMARY_CACHE_TTL_MS = 60 * 1000;
 type ChatSummary = {
   name: string | null;
   isGroup: boolean;
 };
-const chatSummaryCache = new Map<
-  string,
-  { data: ChatSummary; timestamp: number }
->();
-const pendingChatSummaryRequests = new Map<
-  string,
-  Promise<ChatSummary>
->();
 const UNREAD_COUNT_INVALIDATED_EVENT = 'unread-count-invalidated';
-let chatCacheGeneration = 0;
-
-function clearChatCaches(chatId?: string) {
-  chatCacheGeneration += 1;
-  userChatsCache.clear();
-  pendingUserChatsRequests.clear();
-  if (!chatId) {
-    chatSummaryCache.clear();
-    pendingChatSummaryRequests.clear();
-    return;
-  }
-
-  Array.from(chatSummaryCache.keys()).forEach((key) => {
-    if (key.startsWith(`${chatId}:`)) {
-      chatSummaryCache.delete(key);
-    }
-  });
-  Array.from(pendingChatSummaryRequests.keys()).forEach((key) => {
-    if (key.startsWith(`${chatId}:`)) {
-      pendingChatSummaryRequests.delete(key);
-    }
-  });
-}
 
 function notifyUnreadCountInvalidated() {
   if (typeof window !== 'undefined') {
@@ -193,7 +152,6 @@ export const messageService = {
         lastMessageAt: data.createdAt,
       } as never)
       .eq('id', messageData.chatId);
-    clearChatCaches(messageData.chatId);
     notifyUnreadCountInvalidated();
 
     return data as unknown as MessageWithUser;
@@ -201,146 +159,114 @@ export const messageService = {
 
   async getUserChats(
     userId: string,
-    options?: { force?: boolean },
   ): Promise<ChatWithLatestMessage[]> {
-    if (!options?.force) {
-      const cached = userChatsCache.get(userId);
-      if (
-        cached &&
-        Date.now() - cached.timestamp < USER_CHATS_CACHE_TTL_MS
-      ) {
-        return cached.data;
-      }
-
-      const pending = pendingUserChatsRequests.get(userId);
-      if (pending) return pending;
-    }
-
-    const requestGeneration = chatCacheGeneration;
-    const request = (async () => {
-      const { data, error } = await supabase
-        .from('ChatParticipant')
-        .select(
-          `
+    const { data, error } = await supabase
+      .from('ChatParticipant')
+      .select(
+        `
+        id,
+        chatId,
+        userId,
+        isAdmin,
+        lastReadAt,
+        Chat!ChatParticipant_chatId_fkey (
           id,
-          chatId,
-          userId,
-          isAdmin,
-          lastReadAt,
-          Chat!ChatParticipant_chatId_fkey (
+          name,
+          isGroup,
+          createdById,
+          lastMessageAt,
+          createdAt,
+          Message!Chat_lastMessageId_fkey (
             id,
-            name,
-            isGroup,
-            createdById,
-            lastMessageAt,
+            chatId,
+            senderId,
+            text,
+            imageUrl,
+            videoUrl,
             createdAt,
-            Message!Chat_lastMessageId_fkey (
+            User!Message_senderId_fkey (
               id,
-              chatId,
-              senderId,
-              text,
-              imageUrl,
-              videoUrl,
-              createdAt,
-              User!Message_senderId_fkey (
-                id,
-                username,
-                profileImageKey,
-                isVerified,
-                role
-              )
-            ),
-            User!Chat_createdById_fkey (
-              id,
+              username,
               profileImageKey,
-              username
-            ),
-            ChatParticipant!ChatParticipant_chatId_fkey (
+              isVerified,
+              role
+            )
+          ),
+          User!Chat_createdById_fkey (
+            id,
+            profileImageKey,
+            username
+          ),
+          ChatParticipant!ChatParticipant_chatId_fkey (
+            id,
+            chatId,
+            userId,
+            isAdmin,
+            User!ChatParticipant_userId_fkey (
               id,
-              chatId,
-              userId,
-              isAdmin,
-              User!ChatParticipant_userId_fkey (
-                id,
-                username,
-                profileImageKey,
-                role
-              )
+              username,
+              profileImageKey,
+              role
             )
           )
-        `,
         )
-        .eq('userId', userId)
-        .order('id', { ascending: false });
+      `,
+      )
+      .eq('userId', userId)
+      .order('id', { ascending: false });
 
-      if (error) throw new Error(error.message);
-      if (!data) return [];
+    if (error) throw new Error(error.message);
+    if (!data) return [];
 
-      const chatsWithMessages = data.map((participant) => ({
-        ...participant,
-        Chat: {
-          ...participant.Chat,
-          latestMessage:
-            (participant.Chat as { Message?: MessageWithUser | null })
-              .Message || undefined,
-          hasUnread:
-            Boolean(
-              (participant.Chat as { lastMessageAt?: string | null })
+    const chatsWithMessages = data.map((participant) => ({
+      ...participant,
+      Chat: {
+        ...participant.Chat,
+        latestMessage:
+          (participant.Chat as { Message?: MessageWithUser | null })
+            .Message || undefined,
+        hasUnread:
+          Boolean(
+            (participant.Chat as { lastMessageAt?: string | null })
+              .lastMessageAt,
+          ) &&
+          (!participant.lastReadAt ||
+            new Date(
+              (participant.Chat as unknown as { lastMessageAt: string })
                 .lastMessageAt,
-            ) &&
-            (!participant.lastReadAt ||
-              new Date(
-                (participant.Chat as unknown as { lastMessageAt: string })
-                  .lastMessageAt,
-              ) > new Date(participant.lastReadAt as string)) &&
-            (participant.Chat as { Message?: { senderId?: string } })
-              .Message?.senderId !== userId,
-        },
-      }));
+            ) > new Date(participant.lastReadAt as string)) &&
+          (participant.Chat as { Message?: { senderId?: string } })
+            .Message?.senderId !== userId,
+      },
+    }));
 
-      // Sort chats by latest message createdAt (newest first)
-      // Chats without messages go to the bottom
-      const sortedChats = chatsWithMessages.sort((a, b) => {
-        const aMessageTime =
-          (a.Chat as { lastMessageAt?: string | null })
-            .lastMessageAt || a.Chat.latestMessage?.createdAt;
-        const bMessageTime =
-          (b.Chat as { lastMessageAt?: string | null })
-            .lastMessageAt || b.Chat.latestMessage?.createdAt;
+    // Sort chats by latest message createdAt (newest first)
+    // Chats without messages go to the bottom
+    const sortedChats = chatsWithMessages.sort((a, b) => {
+      const aMessageTime =
+        (a.Chat as { lastMessageAt?: string | null })
+          .lastMessageAt || a.Chat.latestMessage?.createdAt;
+      const bMessageTime =
+        (b.Chat as { lastMessageAt?: string | null })
+          .lastMessageAt || b.Chat.latestMessage?.createdAt;
 
-        // If both have messages, sort by createdAt descending (newest first)
-        if (aMessageTime && bMessageTime) {
-          return (
-            new Date(bMessageTime).getTime() -
-            new Date(aMessageTime).getTime()
-          );
-        }
+      // If both have messages, sort by createdAt descending (newest first)
+      if (aMessageTime && bMessageTime) {
+        return (
+          new Date(bMessageTime).getTime() -
+          new Date(aMessageTime).getTime()
+        );
+      }
 
-        // If only one has a message, prioritize it
-        if (aMessageTime && !bMessageTime) return -1;
-        if (!aMessageTime && bMessageTime) return 1;
+      // If only one has a message, prioritize it
+      if (aMessageTime && !bMessageTime) return -1;
+      if (!aMessageTime && bMessageTime) return 1;
 
-        // If neither has messages, maintain original order (by chat id)
-        return 0;
-      });
+      // If neither has messages, maintain original order (by chat id)
+      return 0;
+    });
 
-      return sortedChats as never;
-    })()
-      .then((result) => {
-        if (requestGeneration === chatCacheGeneration) {
-          userChatsCache.set(userId, {
-            data: result,
-            timestamp: Date.now(),
-          });
-        }
-        return result;
-      })
-      .finally(() => {
-        pendingUserChatsRequests.delete(userId);
-      });
-
-    pendingUserChatsRequests.set(userId, request);
-    return request;
+    return sortedChats as never;
   },
 
   // Create a new chat
@@ -353,7 +279,6 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to create chat');
-    clearChatCaches(data.id);
     return data;
   },
 
@@ -376,7 +301,6 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to add chat participant');
-    clearChatCaches(chatId);
     return data;
   },
 
@@ -389,7 +313,6 @@ export const messageService = {
       .eq('userId', userId);
 
     if (error) throw new Error(error.message);
-    clearChatCaches(chatId);
     return true;
   },
 
@@ -404,7 +327,6 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to update chat name');
-    clearChatCaches(chatId);
     return data;
   },
 
@@ -473,7 +395,6 @@ export const messageService = {
       .eq('id', chatId);
 
     if (error) throw new Error(error.message);
-    clearChatCaches(chatId);
   },
 
   async getFirstAdminUserId(): Promise<string | null> {
@@ -491,90 +412,57 @@ export const messageService = {
   async getChatSummary(
     chatId: string,
     currentUserId: string,
-    options?: { force?: boolean },
   ): Promise<ChatSummary> {
-    const cacheKey = `${chatId}:${currentUserId}`;
-    if (!options?.force) {
-      const cached = chatSummaryCache.get(cacheKey);
-      if (
-        cached &&
-        Date.now() - cached.timestamp < CHAT_SUMMARY_CACHE_TTL_MS
-      ) {
-        return cached.data;
-      }
+    const { data, error } = await supabase
+      .from('ChatParticipant')
+      .select(
+        `
+        userId,
+        User!ChatParticipant_userId_fkey (
+          username
+        ),
+        Chat!ChatParticipant_chatId_fkey (
+          id,
+          name,
+          isGroup
+        )
+      `,
+      )
+      .eq('chatId', chatId);
 
-      const pending = pendingChatSummaryRequests.get(cacheKey);
-      if (pending) return pending;
+    if (error) throw new Error(error.message);
+
+    const participants = (data || []) as unknown as Array<{ userId: string; User: { username: string } | null; Chat: { name: string | null; isGroup: boolean } | null }>;
+    const first = participants[0];
+    const chat = first?.Chat;
+
+    if (!chat) {
+      return {
+        name: `Chat ${chatId.slice(0, 8)}`,
+        isGroup: false,
+      };
     }
 
-    const requestGeneration = chatCacheGeneration;
-    const request = (async () => {
-      const { data, error } = await supabase
-        .from('ChatParticipant')
-        .select(
-          `
-          userId,
-          User!ChatParticipant_userId_fkey (
-            username
-          ),
-          Chat!ChatParticipant_chatId_fkey (
-            id,
-            name,
-            isGroup
-          )
-        `,
-        )
-        .eq('chatId', chatId);
+    let chatName = chat.name;
+    if (!chatName) {
+      const otherParticipants = participants.filter(
+        (participant) => participant.userId !== currentUserId,
+      );
+      chatName =
+        otherParticipants
+          .map((participant) => {
+            const user = participant.User as
+              | { username?: string }
+              | undefined;
+            return user?.username ?? 'Unknown';
+          })
+          .join(', ') || `Chat ${chatId.slice(0, 8)}`;
+    }
 
-      if (error) throw new Error(error.message);
-
-      const participants = (data || []) as unknown as Array<{ userId: string; User: { username: string } | null; Chat: { name: string | null; isGroup: boolean } | null }>;
-      const first = participants[0];
-      const chat = first?.Chat;
-
-      if (!chat) {
-        return {
-          name: `Chat ${chatId.slice(0, 8)}`,
-          isGroup: false,
-        };
-      }
-
-      let chatName = chat.name;
-      if (!chatName) {
-        const otherParticipants = participants.filter(
-          (participant) => participant.userId !== currentUserId,
-        );
-        chatName =
-          otherParticipants
-            .map((participant) => {
-              const user = participant.User as
-                | { username?: string }
-                | undefined;
-              return user?.username ?? 'Unknown';
-            })
-            .join(', ') || `Chat ${chatId.slice(0, 8)}`;
-      }
-
-      return {
-        name: chatName,
-        isGroup: Boolean(chat.isGroup),
-      };
-    })()
-      .then((result) => {
-        if (requestGeneration === chatCacheGeneration) {
-          chatSummaryCache.set(cacheKey, {
-            data: result,
-            timestamp: Date.now(),
-          });
-        }
-        return result;
-      })
-      .finally(() => {
-        pendingChatSummaryRequests.delete(cacheKey);
-      });
-
-    pendingChatSummaryRequests.set(cacheKey, request);
-    return request;
+    return {
+      name: chatName,
+      isGroup: Boolean(chat.isGroup),
+    };
   },
 
   // Check if user is participant in chat
@@ -661,7 +549,6 @@ export const messageService = {
       this.addChatParticipant(newChat.id, user2Id, false),
     ]);
 
-    clearChatCaches(newChat.id);
     return newChat;
   },
 
@@ -677,7 +564,6 @@ export const messageService = {
       .eq('userId', userId);
 
     if (error) throw new Error(error.message);
-    clearChatCaches(chatId);
     notifyUnreadCountInvalidated();
     return true;
   },
@@ -765,7 +651,6 @@ export const messageService = {
         ),
     );
 
-    clearChatCaches(chat.id);
     return chat;
   },
 
@@ -795,7 +680,6 @@ export const messageService = {
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to edit message');
-    clearChatCaches(data.chatId);
     return data as unknown as MessageWithUser;
   },
 
@@ -818,7 +702,6 @@ export const messageService = {
     if (error) throw new Error(error.message);
     if (existingMessage?.chatId) {
       await refreshChatLatestMessageMetadata(existingMessage.chatId);
-      clearChatCaches(existingMessage.chatId);
       notifyUnreadCountInvalidated();
     }
     return true;

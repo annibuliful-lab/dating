@@ -209,3 +209,14 @@ test('private media URLs cannot be signed for outsiders or another chat', async 
   assert.equal((await member.load('app/api/chat/[chatId]/media/route').GET(wrongPath, options)).status, 403);
   assert.equal(member.services.length, 0);
 });
+
+test('refresh options reach public data caches while authorization still runs first', async () => {
+  const h = harness();
+  await h.dispatch(h.actor, 'ads', 'getActiveAds', [{ force: true }]);
+  await h.dispatch(h.actor, 'users', 'searchUsers', ['hello', { force: true }]);
+  assert.deepEqual(h.services, [['getActiveAds', { force: true }], ['searchUsers', 'hello', { force: true }]]);
+  const denied = harness({ verified: false });
+  await assert.rejects(denied.dispatch(denied.actor, 'ads', 'getActiveAds', [{ force: true }]), { status: 403 });
+  await assert.rejects(denied.dispatch(denied.actor, 'users', 'searchUsers', ['hello', { force: true }]), { status: 403 });
+  assert.equal(denied.services.length, 0);
+});

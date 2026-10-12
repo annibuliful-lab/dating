@@ -1,4 +1,4 @@
-const cached = new Map<string, { data: unknown; timestamp: number }>();
+const cached = new Map<string, { data: unknown; timestamp: number; expires: number }>();
 const pending = new Map<string, Promise<unknown>>();
 
 export function clearReadCache() {
@@ -7,17 +7,22 @@ export function clearReadCache() {
 }
 
 export function cachedRead<T>(key: () => string, load: () => Promise<T>, ttl = 0, force = false): Promise<T> {
+  for (const [entryKey, entry] of cached) {
+    if (entry.expires <= Date.now()) cached.delete(entryKey);
+  }
   const requestKey = key();
   const active = pending.get(requestKey);
   if (active) return active as Promise<T>;
   const existing = cached.get(requestKey);
-  if (!force && existing && Date.now() - existing.timestamp < ttl) return Promise.resolve(existing.data as T);
+  if (!force && ttl > 0 && existing && Date.now() - existing.timestamp < ttl) return Promise.resolve(existing.data as T);
 
   const request = load().then(data => {
     // A write may have completed while this read was in flight.
     if (key() !== requestKey) return cachedRead(key, load, ttl, true);
     if (ttl > 0) {
-      cached.set(requestKey, { data, timestamp: Date.now() });
+      cached.delete(requestKey);
+      const timestamp = Date.now();
+      cached.set(requestKey, { data, timestamp, expires: timestamp + ttl });
       if (cached.size > 100) cached.delete(cached.keys().next().value!);
     }
     return data;

@@ -20,15 +20,20 @@ function harness({ server = false } = {}) {
     new Function('require', 'exports', 'fetch', 'window', 'Date', output)(name => {
       if (name === '@/i18n/messages') return { messages: { th: { requestFailed: 'failed' } } };
       if (name === './read-cache') return load('read-cache');
-      if (name === '@/services/user-api') return load('user-api');
+      if (name === '@/services/user-api' || name === './user-api') return load('user-api');
+      if (name === '@/shared/hashtags') {
+        const exports = {};
+        new Function('exports', ts.transpileModule(readFileSync(new URL('../src/shared/hashtags.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(exports);
+        return exports;
+      }
       throw new Error(name);
     }, exports, (url, options) => new Promise((resolve, reject) => {
-      const { action, args } = JSON.parse(options.body);
+      const { action, args } = options?.body ? JSON.parse(options.body) : {};
       calls.push({ url, action, args, reject, finish: (data, status = 200) => resolve(new Response(JSON.stringify({ data }), { status })) });
     }), browser, { now: () => time });
     return exports;
   }
-  return { calls, advanceTime: value => { time += value; }, ...load('user-api'), profile: load('profile/get').getUserProfile };
+  return { posts: load('supabase/posts').postService, ads: load('supabase/ads').adService, users: load('supabase/users').userService, admin: load('admin').adminService, cache: load('read-cache'), calls, advanceTime: value => { time += value; }, ...load('user-api'), profile: load('profile/get').getUserProfile };
 }
 
 test('identical concurrent reads share a request; search, hashtag and pagination remain distinct', async () => {
@@ -178,4 +183,75 @@ test('the Next proxy skips API authentication while retaining protected page mat
   const config = { matcher: [matcher] };
   for (const url of ['/api', '/api/auth/session', '/api/data/posts', '/_next/static/file.js']) assert.equal(unstable_doesMiddlewareMatch({ config, url }), false, url);
   for (const url of ['/feed', '/profile/edit', '/inbox/chat', '/admin/users', '/apiculture']) assert.equal(unstable_doesMiddlewareMatch({ config, url }), true, url);
+});
+
+test('feed, ads and user-search service reads cache revisits, normalize keys and refresh both tiers', async () => {
+  const h = harness();
+  const feed = h.posts.getPublicPosts(20, 0, { search: ' hello ', force: false });
+  const sameFeed = h.posts.getPublicPosts(20, 0, { search: 'hello' });
+  const ads = h.ads.getActiveAds();
+  const users = h.users.searchUsers(' USER ');
+  assert.equal(h.calls.length, 3);
+  h.calls[0].finish(['post']); h.calls[1].finish(['ad']); h.calls[2].finish(['user']);
+  await Promise.all([feed, sameFeed, ads, users]);
+  assert.deepEqual(await h.posts.getPublicPosts(20, 0, { search: 'hello' }), ['post']);
+  await h.ads.getActiveAds(); await h.users.searchUsers('user');
+  assert.equal(h.calls.length, 3);
+  const refreshed = h.posts.getPublicPosts(20, 0, { search: 'hello', force: true });
+  const overlapping = h.posts.getPublicPosts(20, 0, { search: ' hello ', force: true });
+  assert.equal(h.calls.length, 4);
+  assert.equal(h.calls[3].args[2].force, true);
+  h.calls[3].finish(['fresh']); await Promise.all([refreshed, overlapping]);
+  assert.deepEqual(await h.posts.getPublicPosts(20, 0, { search: 'hello' }), ['fresh']);
+  const refreshedAds = h.ads.getActiveAds({ force: true });
+  const refreshedUsers = h.users.searchUsers('user', { force: true });
+  assert.equal(h.calls[4].args[0].force, true); assert.equal(h.calls[5].args[1].force, true);
+  h.calls[4].finish([]); h.calls[5].finish([]); await Promise.all([refreshedAds, refreshedUsers]);
+  h.advanceTime(15000);
+  const expiredFeed = h.posts.getPublicPosts(20, 0, { search: 'hello' });
+  const expiredUsers = h.users.searchUsers('user'); await h.ads.getActiveAds();
+  assert.equal(h.calls.length, 8); h.calls[6].finish([]); h.calls[7].finish([]); await Promise.all([expiredFeed, expiredUsers]);
+  h.advanceTime(15000);
+  const expiredAds = h.ads.getActiveAds(); assert.equal(h.calls.length, 9); h.calls[8].finish([]); await expiredAds;
+});
+
+test('client hashtag cache keys share exact normalized tags and keep feed pages separate', async () => {
+  const h = harness();
+  const a = h.posts.getPublicPosts(20, 0, { hashtag: 'FUN' });
+  const b = h.posts.getPublicPosts(20, 0, { hashtag: 'fun' });
+  const c = h.posts.getPublicPosts(20, 20, { hashtag: 'fun' });
+  assert.equal(h.calls.length, 2); h.calls[0].finish(['tag']); h.calls[1].finish(['next']);
+  assert.deepEqual(await Promise.all([a, b, c]), [['tag'], ['tag'], ['next']]);
+});
+
+test('client feed cache is invalidated by post writes, profile edits and admin deletion', async () => {
+  for (const mutation of ['post', 'profile', 'admin']) {
+    const h = harness();
+    const initial = h.posts.getPublicPosts(); h.calls[0].finish(['old']); await initial;
+    const write = mutation === 'post' ? h.posts.deletePost('post') : mutation === 'profile'
+      ? h.userApi('profile', 'updateUserProfile', ['user', {}]) : h.admin.deletePost('post');
+    h.calls[1].finish({ success: true }); await write;
+    const fresh = h.posts.getPublicPosts(); assert.equal(h.calls.length, 3);
+    h.calls[2].finish(['fresh']); assert.deepEqual(await fresh, ['fresh']);
+  }
+});
+
+test('client cache evicts oldest entries and honors a shorter caller lifetime', async () => {
+  const h = harness(); let loads = 0;
+  const read = (key, ttl = 60000) => h.cache.cachedRead(() => key, async () => ++loads, ttl);
+  for (let i = 0; i < 101; i++) await read(String(i));
+  assert.equal(loads, 101);
+  await read('1'); assert.equal(loads, 101);
+  await read('0'); assert.equal(loads, 102);
+  h.advanceTime(15000); await read('0', 15000); assert.equal(loads, 103);
+});
+
+test('chat message and typing reads continue fetching every polling cycle', async () => {
+  const h = harness();
+  for (let cycle = 0; cycle < 2; cycle++) {
+    const messages = h.userApi('messages', 'getMessageUpdates', ['chat', null]);
+    const typing = h.userApi('messages', 'getTyping', ['chat']);
+    assert.equal(h.calls.length, (cycle + 1) * 2);
+    h.calls[cycle * 2].finish([]); h.calls[cycle * 2 + 1].finish([]); await Promise.all([messages, typing]);
+  }
 });

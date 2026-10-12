@@ -1,4 +1,5 @@
 import 'server-only';
+import { ServerReadCache } from '@/server/read-cache';
 import { supabase } from '@/server/supabase';
 import { AccessError } from '@/server/access';
 import { getPostTextTokens, normalizeHashtag } from '@/shared/hashtags';
@@ -38,11 +39,9 @@ type PostWithUser = {
 
 const PUBLIC_POSTS_CACHE_TTL_MS = 30 * 1000;
 const PUBLIC_POSTS_FETCH_TIMEOUT_MS = 10000;
-const publicPostsCache = new Map<
-  string,
-  { data: unknown[]; timestamp: number }
->();
-const pendingPublicPostRequests = new Map<string, Promise<unknown[]>>();
+const publicPostsCache = new ServerReadCache<unknown[]>(PUBLIC_POSTS_CACHE_TTL_MS);
+
+export function invalidatePublicPosts() { publicPostsCache.clear(); }
 
 async function withTimeout<T>(
   promise: PromiseLike<T>,
@@ -76,24 +75,11 @@ export const postService = {
     const hashtag = options?.hashtag === undefined ? null : normalizeHashtag(options.hashtag);
     if (options?.hashtag !== undefined && !hashtag) throw new Error('Invalid hashtag');
     const cacheKey = JSON.stringify([limit, offset, search, hashtag]);
-    if (!options?.force) {
-      const cached = publicPostsCache.get(cacheKey);
-      if (
-        cached &&
-        Date.now() - cached.timestamp < PUBLIC_POSTS_CACHE_TTL_MS
-      ) {
-        return cached.data;
-      }
-
-      const pending = pendingPublicPostRequests.get(cacheKey);
-      if (pending) return pending;
-    }
-
     // only return posts from the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const request = (async () => {
+    return publicPostsCache.read(cacheKey, async (signal) => {
       let hashtagPostIds: string[] | undefined;
       if (hashtag) {
         const matchedIds: string[] = [];
@@ -103,7 +89,7 @@ export const postService = {
           .gte('createdAt', thirtyDaysAgo.toISOString())
           .filter('content->>text', 'imatch', `#${hashtag}`)
           .order('createdAt', { ascending: false })
-          .order('id', { ascending: false });
+          .order('id', { ascending: false }).abortSignal(signal);
 
         // shortcut: scan legacy text in batches; store indexed tags when hashtag traffic grows.
         const batchSize = 100;
@@ -148,7 +134,7 @@ export const postService = {
         .eq('visibility', 'PUBLIC')
         .gte('createdAt', thirtyDaysAgo.toISOString())
         .order('createdAt', { ascending: false })
-        .order('id', { ascending: false });
+        .order('id', { ascending: false }).abortSignal(signal);
 
       if (hashtagPostIds) {
         query = query.in('id', hashtagPostIds);
@@ -187,7 +173,7 @@ export const postService = {
             supabase
               .from('User')
               .select('id, username')
-              .in('id', batch),
+              .in('id', batch).abortSignal(signal),
             PUBLIC_POSTS_FETCH_TIMEOUT_MS,
             'Feed verification lookup timed out',
           );
@@ -220,25 +206,7 @@ export const postService = {
       });
 
       return (transformedData || data || []) as unknown[];
-    })().then((result) => {
-      if (pendingPublicPostRequests.get(cacheKey) === request) {
-        const now = Date.now();
-        for (const [key, cached] of publicPostsCache) {
-          if (now - cached.timestamp >= PUBLIC_POSTS_CACHE_TTL_MS) {
-            publicPostsCache.delete(key);
-          }
-        }
-        publicPostsCache.set(cacheKey, { data: result, timestamp: now });
-      }
-      return result;
-    }).finally(() => {
-      if (pendingPublicPostRequests.get(cacheKey) === request) {
-        pendingPublicPostRequests.delete(cacheKey);
-      }
-    });
-
-    pendingPublicPostRequests.set(cacheKey, request);
-    return request;
+    }, options?.force);
   },
 
   // Fetch posts by specific user
@@ -406,6 +374,7 @@ export const postService = {
       .single();
 
     if (error) throw new Error(error.message);
+    invalidatePublicPosts();
     return data;
   },
 
@@ -414,8 +383,7 @@ export const postService = {
       .eq('id', postId).eq('authorId', authorId).select('id').maybeSingle();
     if (error) throw error;
     if (!data) throw new AccessError(404, 'Post not found');
-    publicPostsCache.clear();
-    pendingPublicPostRequests.clear();
+    invalidatePublicPosts();
     return { success: true };
   },
 
@@ -432,6 +400,7 @@ export const postService = {
       .single();
 
     if (error) throw new Error(error.message);
+    invalidatePublicPosts();
     return data;
   },
 
@@ -444,6 +413,7 @@ export const postService = {
       .eq('postId', postId);
 
     if (error) throw new Error(error.message);
+    invalidatePublicPosts();
   },
 
   // Save a post
@@ -459,6 +429,7 @@ export const postService = {
       .single();
 
     if (error) throw new Error(error.message);
+    invalidatePublicPosts();
     return data;
   },
 
@@ -471,5 +442,6 @@ export const postService = {
       .eq('postId', postId);
 
     if (error) throw new Error(error.message);
+    invalidatePublicPosts();
   },
 };

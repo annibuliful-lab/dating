@@ -63,7 +63,7 @@ export const messageService = {
     return result;
   },
   async getUserChats(userId: string, options?: { force?: boolean }) {
-    return userApi<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.getUserChats>>>('messages', 'getUserChats', [userId, options]);
+    return userApiRead<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.getUserChats>>>('messages', 'getUserChats', [userId], 0, options?.force);
   },
   async getChatInfo(chatId: string) {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.getChatInfo>>>('messages', 'getChatInfo', [chatId]);
@@ -78,7 +78,7 @@ export const messageService = {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.getChatParticipantCount>>>('messages', 'getChatParticipantCount', [chatId]);
   },
   async getChatSummary(chatId: string, currentUserId: string, options?: { force?: boolean }) {
-    return userApi<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.getChatSummary>>>('messages', 'getChatSummary', [chatId, currentUserId, options]);
+    return userApiRead<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.getChatSummary>>>('messages', 'getChatSummary', [chatId, currentUserId], 0, options?.force);
   },
   async isUserInChat(userId: string, chatId: string) {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/messages').messageService.isUserInChat>>>('messages', 'isUserInChat', [userId, chatId]);

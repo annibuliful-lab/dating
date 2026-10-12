@@ -1,3 +1,4 @@
+import { invalidatePublicPosts } from '@/server/data/posts';
 import { apiError, requireUser, requireCommunity, requireSameOrigin } from '@/server/access';
 import { supabase } from '@/server/supabase';
 import { isAdmin } from '@/lib/admin';
@@ -96,6 +97,7 @@ export async function PATCH(
       );
     }
 
+    invalidatePublicPosts();
     return NextResponse.json({ post: updatedPost });
   } catch (error) { return apiError(error); }
 }

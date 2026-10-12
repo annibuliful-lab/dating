@@ -33,7 +33,7 @@ Rollback does **not** recover deleted posts, likes, or saves. Recover those rows
 
 These ownership checks protect the authenticated application API. The existing anonymous client and production permissions remain unchanged, as requested for the dual-client transition. If legacy anonymous permissions/policies permit direct deletion, callers can bypass application ownership checks using Supabase's Data API; full database protection still requires the separately planned [production lockdown](supabase-user-api-rollout.md). This cascade migration does not close that existing exposure.
 
-Server feed-cache invalidation applies to the instance processing the delete. Other instances can retain an older feed list for its existing thirty-second TTL; the confirming user's card is removed immediately. The database row and its likes/saves are deleted atomically.
+Server feed-cache invalidation applies to the instance processing the delete. Other instances can retain an older feed list for the server's thirty-second TTL, and another browser can retain that response for a further fifteen seconds. The confirming user's browser cache is invalidated and its card is removed immediately; explicit refresh bypasses both tiers. The database row and its likes/saves are deleted atomically.
 
 ## Verification
 

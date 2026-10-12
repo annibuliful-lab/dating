@@ -1,3 +1,5 @@
+import { invalidateUserSearch } from '@/server/data/users';
+import { invalidatePublicPosts } from '@/server/data/posts';
 import { supabase } from "@/server/supabase";
 import { requireAdmin } from "@/lib/admin";
 import { NextRequest, NextResponse } from "next/server";
@@ -62,6 +64,8 @@ export async function PATCH(
       );
     }
 
+    invalidatePublicPosts();
+    invalidateUserSearch();
     return NextResponse.json({ success: true, user: updatedUser });
   } catch (error) {
     console.error("Error in PATCH /api/admin/users/[userId]/status:", error);

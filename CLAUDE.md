@@ -8,7 +8,7 @@ Guidance for AI coding agents working in this repository. `AGENTS.md` contains t
 pnpm dev
 pnpm build
 pnpm lint
-node --test scripts/api-request-dedup.test.mjs scripts/auth-session.test.mjs scripts/user-authz.test.mjs
+node --test scripts/api-request-dedup.test.mjs scripts/read-cache.test.mjs scripts/auth-session.test.mjs scripts/user-authz.test.mjs
 pnpm prisma:validate
 pnpm prisma:generate
 pnpm prisma:migrate
@@ -73,6 +73,12 @@ Prefer domain services and hooks over new raw Supabase calls in pages. Important
 Use batch user lookup patterns to avoid N+1 queries. Feed pending-request deduplication must clear entries in `finally`, including failures/timeouts. Supabase builders are `PromiseLike<T>`; timeout helpers must support that type.
 
 `src/services/read-cache.ts` shares concurrent browser reads and overlapping forced refreshes. `user-api.ts` explicitly allows read operations; writes and `getOrCreateDirectChat` remain independent. Keys include session/authorization scope, action, arguments, and write generation. Session changes clear caches and reject old reads; completed writes invalidate affected reads, and stale reads reload current data. Generic GET hooks share the session boundary; browser caches never replace server authorization.
+
+Hybrid read caching: browser feed/hashtag and user search results last 15 seconds; ads last 30 seconds. Browser keys normalize filters and exclude `force`; overlapping refreshes share a request, and explicit refresh reaches the server cache too. The browser cache retains at most 100 results and prunes expired entries on access.
+
+`src/server/read-cache.ts` bounds each public feed, ads, and user-search cache to 100 entries and 5 MiB of serialized payload. One unref'ed cleanup timer per cache removes idle expired data; at most 100 active loads per cache are tracked, with a 15-second aborting timeout. Superseded/invalidated loads cannot repopulate results. These are per-process limits, not a total heap limit or distributed invalidation.
+
+Post writes, image reorders, profile edits and relevant moderation routes invalidate affected caches. Server cache TTLs are feed/search 30 seconds and ads 60 seconds; browser + server TTLs can compound across users/instances (feed/search up to 45 seconds, ads up to 90). Explicit refresh bypasses both tiers. Auth, membership, message/typing polling, chat lists and summaries retain fresh server checks/queries; private chat result caches are removed.
 
 Unread reads share a 15-second cache. Inbox effects depend on user ID; chat initialization keeps locale/sound changes out of data dependencies. The chat page owns receipts on open and newly received messages; inbox navigation does not issue another receipt. Message/typing polling remains separate, and private Realtime work is deferred.
 

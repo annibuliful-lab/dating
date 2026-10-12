@@ -1,9 +1,11 @@
 import type { PostInsert } from '@/server/data/posts';
-import { userApi } from '@/services/user-api';
+import { userApi, userApiRead } from '@/services/user-api';
+import { normalizeHashtag } from '@/shared/hashtags';
 
 export const postService = {
   async getPublicPosts(limit = 20, offset = 0, options?: { force?: boolean; search?: string; hashtag?: string }) {
-    return userApi<Awaited<ReturnType<typeof import('@/server/data/posts').postService.getPublicPosts>>>('posts', 'getPublicPosts', [limit, offset, options]);
+    const filters = { search: options?.search?.trim() || '', hashtag: options?.hashtag === undefined ? undefined : normalizeHashtag(options.hashtag) || options.hashtag };
+    return userApiRead<Awaited<ReturnType<typeof import('@/server/data/posts').postService.getPublicPosts>>>('posts', 'getPublicPosts', [limit, offset, filters], 15000, options?.force);
   },
   async getPostsByUser(userId: string, limit = 20) {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/posts').postService.getPostsByUser>>>('posts', 'getPostsByUser', [userId, limit]);

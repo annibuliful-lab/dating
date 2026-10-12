@@ -1,3 +1,4 @@
+import { invalidatePublicPosts } from '@/server/data/posts';
 import { auth } from "@/auth";
 import { supabase } from "@/server/supabase";
 import { NextRequest, NextResponse } from "next/server";
@@ -56,6 +57,7 @@ export async function POST(
       );
     }
 
+    invalidatePublicPosts();
     return NextResponse.json({
       success: true,
       user: updatedUser,

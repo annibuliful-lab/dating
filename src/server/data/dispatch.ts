@@ -121,7 +121,7 @@ export async function dispatch(actor: Actor, domain: string, action: string, arg
   }
   if (domain === 'ads' && action === 'getActiveAds') {
     requireCommunity(actor, true);
-    return adService.getActiveAds();
+    return adService.getActiveAds({ force: a != null && object(a).force === true });
   }
   if (domain === 'users') {
     requireCommunity(actor);
@@ -130,7 +130,7 @@ export async function dispatch(actor: Actor, domain: string, action: string, arg
       case 'getActiveUsers': return userService.getActiveUsers();
       case 'getUserById': return userService.getUserById(uuid(a));
       case 'getUserProfile': return userService.getUserProfile(uuid(a));
-      case 'searchUsers': return userService.searchUsers(text(a, 100, true));
+      case 'searchUsers': return userService.searchUsers(text(a, 100, true), { force: b != null && object(b).force === true });
       case 'getUsersByAgeRange': return userService.getUsersByAgeRange(integer(a, 18, 120), integer(b, 120, 120));
       case 'getUsersWithPostCounts': return userService.getUsersWithPostCounts();
     }
@@ -138,7 +138,7 @@ export async function dispatch(actor: Actor, domain: string, action: string, arg
   if (domain === 'messages') {
     requireCommunity(actor);
     switch (action) {
-      case 'getUserChats': return messageService.getUserChats(own(actor.id, a), { force: true });
+      case 'getUserChats': return messageService.getUserChats(own(actor.id, a));
       case 'getUnreadCount': return messageService.getUnreadCount(own(actor.id, a));
       case 'getOrCreateDirectChat': {
         own(actor.id, a); const target = uuid(b);
@@ -180,7 +180,7 @@ export async function dispatch(actor: Actor, domain: string, action: string, arg
       }
       case 'getChatSummary': {
         const chatId = uuid(a); own(actor.id, b); await requireChat(actor, chatId);
-        return messageService.getChatSummary(chatId, actor.id, { force: true });
+        return messageService.getChatSummary(chatId, actor.id);
       }
       case 'getChatInfo': { const id = uuid(a); await requireChat(actor, id); return messageService.getChatInfo(id); }
       case 'getChatParticipants': { const id = uuid(a); await requireChat(actor, id); return messageService.getChatParticipants(id); }

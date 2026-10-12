@@ -159,6 +159,9 @@ Performance rules:
 
 - `src/services/read-cache.ts` shares pending browser reads, including forced refreshes, and deletes pending entries only for the completing promise. `user-api.ts` explicitly allows read operations; writes and `getOrCreateDirectChat` must never be deduplicated.
 - Read keys include session/authorization scope, action, arguments, and write generation. Session changes clear browser caches and reject old reads; completed writes invalidate affected reads, and stale reads reload current data. Generic GET hooks use the same session boundary. Keep server authorization fresh and independent of browser caches.
+- Hybrid read caching: browser feed/hashtag and user search results last 15 seconds; ads last 30 seconds. Browser keys normalize filters and exclude `force`; overlapping refreshes share a request, and explicit refresh reaches the server cache too. The browser cache retains at most 100 results and prunes expired entries on access.
+- `src/server/read-cache.ts` bounds each public feed, ads, and user-search cache to 100 entries and 5 MiB of serialized payload. One unref'ed cleanup timer per cache removes idle expired data; at most 100 active loads per cache are tracked, with a 15-second aborting timeout. Superseded/invalidated loads cannot repopulate results. These are per-process limits, not a total heap limit or distributed invalidation.
+- Post writes, image reorders, profile edits and relevant moderation routes invalidate affected caches. Server cache TTLs are feed/search 30 seconds and ads 60 seconds; browser + server TTLs can compound across users/instances (feed/search up to 45 seconds, ads up to 90). Explicit refresh bypasses both tiers. Auth, membership, message/typing polling, chat lists and summaries retain fresh server checks/queries; private chat result caches are removed.
 - Unread reads share a 15-second cache; focus refreshes merge overlapping requests. Depend on stable user IDs and callbacks rather than whole session objects or presentation settings when initializing inbox/chat requests. The chat page owns read receipts on open and newly received messages; inbox navigation does not send another receipt.
 - Batch user lookups with existing `getUsersByIds()` patterns; avoid query-in-loop assembly.
 - Keep Supabase selections narrow where practical.
@@ -185,7 +188,7 @@ Storage:
 pnpm dev
 pnpm build
 pnpm lint
-node --test scripts/feed-search.test.mjs scripts/user-authz.test.mjs scripts/chat-media-migration.test.mjs scripts/auth-session.test.mjs scripts/api-request-dedup.test.mjs
+node --test scripts/feed-search.test.mjs scripts/user-authz.test.mjs scripts/chat-media-migration.test.mjs scripts/auth-session.test.mjs scripts/api-request-dedup.test.mjs scripts/read-cache.test.mjs
 pnpm prisma:validate
 pnpm prisma:generate
 pnpm prisma:migrate

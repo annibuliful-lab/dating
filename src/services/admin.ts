@@ -1,3 +1,5 @@
+import { invalidateUserApiReads } from './user-api';
+
 type AdminCheckResponse = {
   isAdmin: boolean;
   role: "USER" | "ADMIN";
@@ -38,6 +40,9 @@ export const adminService = {
       const error = await response.json();
       throw new Error(error.error || "Failed to update user status");
     }
+    invalidateUserApiReads('users');
+    invalidateUserApiReads('posts');
+    invalidateUserApiReads('profile');
     return response.json();
   },
 
@@ -51,6 +56,9 @@ export const adminService = {
       const error = await response.json();
       throw new Error(error.error || "Failed to update user verification");
     }
+    invalidateUserApiReads('users');
+    invalidateUserApiReads('posts');
+    invalidateUserApiReads('profile');
     return response.json();
   },
 
@@ -63,6 +71,7 @@ export const adminService = {
       const error = await response.json();
       throw new Error(error.error || "Failed to delete post");
     }
+    invalidateUserApiReads('posts');
     return response.json();
   },
 };

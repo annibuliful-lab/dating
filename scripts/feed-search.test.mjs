@@ -27,6 +27,7 @@ function harness(timers = {}) {
         requests.push({
           url: new URL(url),
           method: options?.method,
+          signal: options?.signal,
           respond: (data, status = 200) => resolve(new Response(JSON.stringify(data), {
             status,
             headers: { 'Content-Type': 'application/json' },
@@ -39,6 +40,11 @@ function harness(timers = {}) {
   const run = new Function('require', 'exports', 'setTimeout', 'clearTimeout', outputText);
   run((name) => {
     if (name === 'server-only') return {};
+    if (name === '@/server/read-cache') {
+      const cacheExports = {};
+      new Function('require', 'exports', ts.transpileModule(readFileSync(new URL('../src/server/read-cache.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(() => ({}), cacheExports);
+      return cacheExports;
+    }
     if (name === '@/server/access') return { AccessError: class extends Error {
       constructor(status, message) { super(message); this.status = status; }
     } };
@@ -148,6 +154,7 @@ test('rejected and timed-out requests can be retried', async () => {
   await tick();
   expire();
   await timeout;
+  assert.equal(requests[1].signal.aborted, true);
   const retried = service.getPublicPosts(20, 0, { search: 'retry' });
   await tick();
   assert.equal(requests.length, 3);

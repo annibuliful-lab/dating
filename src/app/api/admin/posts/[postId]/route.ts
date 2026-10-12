@@ -1,3 +1,4 @@
+import { invalidatePublicPosts } from '@/server/data/posts';
 import { supabase } from "@/server/supabase";
 import { requireAdmin } from "@/lib/admin";
 import { NextRequest, NextResponse } from "next/server";
@@ -27,6 +28,7 @@ export async function DELETE(
       );
     }
 
+    invalidatePublicPosts();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error in DELETE /api/admin/posts/[postId]:", error);

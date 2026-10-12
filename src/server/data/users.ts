@@ -1,4 +1,5 @@
 import 'server-only';
+import { ServerReadCache } from '@/server/read-cache';
 import { supabase } from '@/server/supabase';
 
 type UserSearchResult = {
@@ -11,14 +12,9 @@ type UserSearchResult = {
 };
 
 const USER_SEARCH_CACHE_TTL_MS = 30 * 1000;
-const userSearchCache = new Map<
-  string,
-  { data: UserSearchResult[]; timestamp: number }
->();
-const pendingUserSearchRequests = new Map<
-  string,
-  Promise<UserSearchResult[]>
->();
+const userSearchCache = new ServerReadCache<UserSearchResult[]>(USER_SEARCH_CACHE_TTL_MS);
+
+export function invalidateUserSearch() { userSearchCache.clear(); }
 
 export const userService = {
   // ✅ OPTIMIZED: Batch fetch multiple users efficiently (prevents N+1)
@@ -73,43 +69,23 @@ export const userService = {
   },
 
   // Search users by username or full name
-  async searchUsers(searchTerm: string) {
+  async searchUsers(searchTerm: string, options?: { force?: boolean }) {
     const normalizedSearchTerm = searchTerm.trim();
     if (normalizedSearchTerm.length < 2) return [];
 
     const safeSearch = normalizedSearchTerm.replace(/[\\%_]/g, '\\$&');
     const cacheKey = normalizedSearchTerm.toLowerCase();
-    const cached = userSearchCache.get(cacheKey);
-    if (
-      cached &&
-      Date.now() - cached.timestamp < USER_SEARCH_CACHE_TTL_MS
-    ) {
-      return cached.data;
-    }
-
-    const pending = pendingUserSearchRequests.get(cacheKey);
-    if (pending) return pending;
-
-    const request = (async () => {
+    return userSearchCache.read(cacheKey, async (signal) => {
       const [names, usernames] = await Promise.all([
         supabase.from('User').select('id, fullName, username, profileImageKey, age, gender')
-          .ilike('fullName', `%${safeSearch}%`).eq('status', 'ACTIVE').limit(20),
+          .ilike('fullName', `%${safeSearch}%`).eq('status', 'ACTIVE').limit(20).abortSignal(signal),
         supabase.from('User').select('id, fullName, username, profileImageKey, age, gender')
-          .ilike('username', `%${safeSearch}%`).eq('status', 'ACTIVE').limit(20),
+          .ilike('username', `%${safeSearch}%`).eq('status', 'ACTIVE').limit(20).abortSignal(signal),
       ]);
       if (names.error || usernames.error) throw new Error('User search failed');
       const result = [...new Map([...(names.data || []), ...(usernames.data || [])].map(user => [user.id, user])).values()].slice(0, 20) as UserSearchResult[];
-      userSearchCache.set(cacheKey, {
-        data: result,
-        timestamp: Date.now(),
-      });
       return result;
-    })().finally(() => {
-      pendingUserSearchRequests.delete(cacheKey);
-    });
-
-    pendingUserSearchRequests.set(cacheKey, request);
-    return request;
+    }, options?.force);
   },
 
   // Get users by age range

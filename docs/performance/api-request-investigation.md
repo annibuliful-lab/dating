@@ -2,6 +2,31 @@
 
 Investigated 2026-10-11 against commit `84daeb2`. The original investigation changed no application code or database permissions. The subsequent implementation and verification are recorded below. Realtime work remains deferred.
 
+## Hybrid cache follow-up (2026-10-12)
+
+Feed/hashtag, ads and user search now use both browser and server caching. The browser skips repeat HTTP requests within its TTL and still deduplicates in-flight reads. Cache keys include session/authorization scope, normalized filters, pagination and write generation; `force` is excluded from keys and forwarded to the server only for refresh requests. Session changes clear browser results and reject reads started under an old identity.
+
+| Read | Browser result TTL | Server result TTL |
+| --- | --- | --- |
+| Public feed / hashtag | 15 seconds | 30 seconds |
+| User search | 15 seconds | 30 seconds |
+| Active ads | 30 seconds | 60 seconds |
+| Profile | Existing 60 seconds | No result cache |
+| Unread count | Existing 15 seconds | No result cache |
+| Chat list / summary, messages, typing | In-flight deduplication only | No result cache |
+
+`src/server/read-cache.ts` replaces the unbounded feed/search maps and the ad singleton with a shared implementation. Each cache retains at most 100 entries and 5 MiB of serialized JSON payload, evicts oldest stored entries, skips retaining oversized responses, and schedules one unref'ed expiry timer. This limits retained cache payload, not all Node heap usage. Each cache permits at most 100 active loads, including superseded/invalidated loads, and aborts timed-out Supabase requests after 15 seconds. Success, failure, timeout and invalidation cannot let an old promise remove or overwrite a newer cache entry. Cache saturation fails the read rather than starting unbounded work.
+
+The old chat caches were always bypassed by the authenticated dispatch layer but still retained results. They have been removed. Chat lists, summaries, membership and message/typing polling remain fresh. Authorization and validation run before server cache access on every API request, and responses retain `Cache-Control: private, no-store`.
+
+Post create/delete/like/save changes invalidate feed results on the handling server. Profile edits invalidate server feed/user-search metadata and browser feed/user reads. Existing post-image reorder and moderation endpoints invalidate related public results; the admin browser service also invalidates its affected user-facing reads. No permissions or admin behavior changed.
+
+**Freshness limit:** server caches are per process. Other browsers, instances, direct legacy anonymous writes, and external database edits can remain stale until expiry. TTLs may compound: feed/search up to 45 seconds and ads up to 90 seconds, excluding network delay. An explicit refresh bypasses both result caches; overlapping refresh calls join their current pending request. Distributed invalidation and persistent browser caching are deferred.
+
+**Validation:** 74 Node regression tests, lint, TypeScript and the production build passed. A fixture browser using real local API handlers confirmed one initial feed/ad request and no extra calls after feed → profile → feed navigation. Supabase query traces confirmed repeated API reads used the server caches and explicit refresh queried again. The fixture blocked external writes; production data was not exercised. Cache retention/expiry limits were tested deterministically; a production heap profile and load test were not run.
+
+**Rollout/rollback:** deploy the application change; it requires no SQL, schema, key or permission changes. Roll back by restoring the previous application revision and redeploying. Restarting a process or reloading a browser clears its in-memory caches. This does not alter the separate owned-post deletion migration prerequisite.
+
 ## Implemented fixes and verification
 
 User API reads now share pending browser requests through an explicit read-action allowlist. Writes remain independent, including `getOrCreateDirectChat`. Profile and unread caches live at the service boundary, with 60-second and 15-second lifetimes. Forced refreshes join current pending reads; completing writes invalidate affected reads, and an older in-flight read reloads the current generation instead of returning stale data. Pending entries clear on success, rejection, and timeout. Session/authorization changes clear browser caches and reject old-session reads. Generic GET hooks use the same session boundary.

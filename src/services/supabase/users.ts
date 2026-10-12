@@ -1,5 +1,5 @@
 
-import { userApi } from '@/services/user-api';
+import { userApi, userApiRead } from '@/services/user-api';
 
 export const userService = {
   async getUsersByIds(ids: string[]) {
@@ -14,8 +14,8 @@ export const userService = {
   async getUserProfile(id: string) {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/users').userService.getUserProfile>>>('users', 'getUserProfile', [id]);
   },
-  async searchUsers(searchTerm: string) {
-    return userApi<Awaited<ReturnType<typeof import('@/server/data/users').userService.searchUsers>>>('users', 'searchUsers', [searchTerm]);
+  async searchUsers(searchTerm: string, options?: { force?: boolean }) {
+    return userApiRead<Awaited<ReturnType<typeof import('@/server/data/users').userService.searchUsers>>>('users', 'searchUsers', [searchTerm.trim().toLowerCase()], 15000, options?.force);
   },
   async getUsersByAgeRange(minAge: number, maxAge: number) {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/users').userService.getUsersByAgeRange>>>('users', 'getUsersByAgeRange', [minAge, maxAge]);

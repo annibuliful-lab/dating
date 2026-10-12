@@ -26,6 +26,9 @@ export const postService = {
   async createPost(postData: PostInsert) {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/posts').postService.createPost>>>('posts', 'createPost', [postData]);
   },
+  async deletePost(postId: string) {
+    return userApi<Awaited<ReturnType<typeof import('@/server/data/posts').postService.deletePost>>>('posts', 'deletePost', [postId]);
+  },
   async likePost(userId: string, postId: string) {
     return userApi<Awaited<ReturnType<typeof import('@/server/data/posts').postService.likePost>>>('posts', 'likePost', [userId, postId]);
   },

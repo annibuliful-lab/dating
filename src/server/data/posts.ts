@@ -1,5 +1,6 @@
 import 'server-only';
 import { supabase } from '@/server/supabase';
+import { AccessError } from '@/server/access';
 import { getPostTextTokens, normalizeHashtag } from '@/shared/hashtags';
 
 export type PostInsert = {
@@ -406,6 +407,16 @@ export const postService = {
 
     if (error) throw new Error(error.message);
     return data;
+  },
+
+  async deletePost(postId: string, authorId: string) {
+    const { data, error } = await supabase.from('Post').delete()
+      .eq('id', postId).eq('authorId', authorId).select('id').maybeSingle();
+    if (error) throw error;
+    if (!data) throw new AccessError(404, 'Post not found');
+    publicPostsCache.clear();
+    pendingPublicPostRequests.clear();
+    return { success: true };
   },
 
   // Like a post

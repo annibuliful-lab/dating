@@ -96,6 +96,14 @@ export async function dispatch(actor: Actor, domain: string, action: string, arg
       case 'getUserPostInteractions': return postService.getUserPostInteractions(own(actor.id, a), list(b, uuid));
       case 'getUserPostLike': return postService.getUserPostLike(own(actor.id, a), await readablePost(actor, b));
       case 'getUserPostSave': return postService.getUserPostSave(own(actor.id, a), await readablePost(actor, b));
+      case 'deletePost': {
+        const postId = uuid(a);
+        const { data, error } = await supabase.from('Post').select('authorId').eq('id', postId).maybeSingle();
+        if (error) throw error;
+        if (!data) throw new AccessError(404, 'Post not found');
+        own(actor.id, data.authorId);
+        return postService.deletePost(postId, actor.id);
+      }
       case 'createPost': {
         const input = object(a); own(actor.id, input.authorId);
         const content = text(object(input.content).text, 10000, true);

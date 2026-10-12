@@ -70,3 +70,32 @@ test('SQL blocks anonymous/authenticated tables, columns, RPCs and storage while
     assert.equal(sql(`SELECT has_function_privilege('anon', 'public.register_community_user(uuid,text,text,text)', 'EXECUTE');`).stdout.trim(), 'f');
   } finally { sql(`DROP DATABASE ${database} WITH (FORCE);`, 'postgres'); }
 });
+
+test('owned post deletion cascades likes/saves atomically and its rollback restores restrictive foreign keys', () => {
+  sql(`CREATE DATABASE ${database};`, 'postgres');
+  try {
+    sql(`CREATE TABLE public."Post" (id uuid PRIMARY KEY, "authorId" uuid NOT NULL);
+      CREATE TABLE public."PostLike" (id int PRIMARY KEY, "postId" uuid NOT NULL,
+        CONSTRAINT "PostLike_postId_fkey" FOREIGN KEY ("postId") REFERENCES public."Post"(id) ON DELETE RESTRICT ON UPDATE CASCADE);
+      CREATE TABLE public."PostSave" (id int PRIMARY KEY, "postId" uuid NOT NULL,
+        CONSTRAINT "PostSave_postId_fkey" FOREIGN KEY ("postId") REFERENCES public."Post"(id) ON DELETE RESTRICT ON UPDATE CASCADE);
+      INSERT INTO public."Post" VALUES
+        ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333333'),
+        ('22222222-2222-4222-8222-222222222222', '44444444-4444-4444-8444-444444444444');
+      INSERT INTO public."PostLike" VALUES (1, '11111111-1111-4111-8111-111111111111'), (2, '22222222-2222-4222-8222-222222222222');
+      INSERT INTO public."PostSave" SELECT * FROM public."PostLike";`);
+    const ownDelete = `DELETE FROM public."Post" WHERE id = '11111111-1111-4111-8111-111111111111' AND "authorId" = '33333333-3333-4333-8333-333333333333';`;
+    assert.notEqual(sql(ownDelete, database, false).status, 0);
+    sql(readFileSync(new URL('../prisma/migrations/20261012000000_enable_owned_post_deletion/migration.sql', import.meta.url), 'utf8'));
+    assert.equal(sql(`SELECT string_agg(confdeltype::text, '' ORDER BY conname) FROM pg_constraint WHERE conname IN ('PostLike_postId_fkey', 'PostSave_postId_fkey');`).stdout.trim(), 'cc');
+    sql(`DELETE FROM public."Post" WHERE id = '11111111-1111-4111-8111-111111111111' AND "authorId" = '44444444-4444-4444-8444-444444444444';`);
+    assert.equal(sql(`SELECT count(*) FROM public."Post";`).stdout.trim(), '2');
+    sql(ownDelete);
+    for (const table of ['Post', 'PostLike', 'PostSave']) assert.equal(sql(`SELECT count(*) FROM public."${table}";`).stdout.trim(), '1');
+    assert.equal(sql(`SELECT id FROM public."Post";`).stdout.trim(), '22222222-2222-4222-8222-222222222222');
+    sql(readFileSync(new URL('../docs/security/sql/rollback-owned-post-deletion.sql', import.meta.url), 'utf8'));
+    assert.equal(sql(`SELECT string_agg(confdeltype::text, '' ORDER BY conname) FROM pg_constraint WHERE conname IN ('PostLike_postId_fkey', 'PostSave_postId_fkey');`).stdout.trim(), 'rr');
+    assert.notEqual(sql(`DELETE FROM public."Post";`, database, false).status, 0);
+    for (const table of ['Post', 'PostLike', 'PostSave']) assert.equal(sql(`SELECT count(*) FROM public."${table}";`).stdout.trim(), '1');
+  } finally { sql(`DROP DATABASE ${database} WITH (FORCE);`, 'postgres'); }
+});

@@ -78,6 +78,8 @@ Unread reads share a 15-second cache. Inbox effects depend on user ID; chat init
 
 Feed search in the shared `src/components/feed/FeedContent.tsx`, mounted by `src/app/feed/page.tsx`, uses `src/services/supabase/posts.ts` to match post text case-insensitively before pagination, within the existing 30-day public-post scope. Include search terms in cache/pending-request keys. Clearing restores the normal feed; stale responses must not replace or append to a newer search. The shared `SearchInput` cancels queued searches when cleared.
 
+Verified, non-suspended users can delete their own posts from the existing options/confirmation UI in feed and hashtag results. `posts/deletePost` checks the stored author on the server and filters the deletion by post ID and authenticated author ID. Other users' posts are rejected; existing admin moderation stays separate. Successful deletion removes the card and invalidates post caches. Apply `20261012000000_enable_owned_post_deletion` for cascading `PostLike`/`PostSave` cleanup before deploying; rollout and rollback are documented in `docs/security/owned-post-deletion-rollout.md`.
+
 Run feed search regression checks with `node --test scripts/feed-search.test.mjs scripts/user-authz.test.mjs scripts/chat-media-migration.test.mjs scripts/auth-session.test.mjs`.
 
 Feed results pass the active search to the optional `highlight` prop in `PostContentText`, which highlights all literal, case-insensitive matches while preserving original text and clickable URLs. Other callers keep their existing rendering.

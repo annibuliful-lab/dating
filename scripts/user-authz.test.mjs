@@ -9,8 +9,9 @@ const id = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
 const chatId = '33333333-3333-4333-8333-333333333333';
 const messageId = '44444444-4444-4444-8444-444444444444';
+const postId = '55555555-5555-4555-8555-555555555555';
 
-function harness({ sessionId = id, verified = true, suspended = false, member = true, senderId = id } = {}) {
+function harness({ sessionId = id, verified = true, suspended = false, member = true, senderId = id, authorId = id, postMissing = false } = {}) {
   const queries = [];
   const services = [];
   const actor = { id, role: 'USER', status: suspended ? 'SUSPENDED' : 'ACTIVE', isVerified: verified };
@@ -20,7 +21,7 @@ function harness({ sessionId = id, verified = true, suspended = false, member = 
     const builder = new Proxy({}, { get(_target, name) {
       if (name === 'then') return resolve => {
         const data = table === 'User' ? actor : table === 'ChatParticipant' ? (member ? { id, isAdmin: false } : null)
-          : table === 'Message' ? { id: messageId, senderId, chatId } : { id, visibility: 'PUBLIC' };
+          : table === 'Message' ? { id: messageId, senderId, chatId } : (postMissing ? null : { id: postId, authorId, visibility: 'PUBLIC' });
         resolve({ data, error: null });
       };
       return (...args) => { query.filters.push([name, ...args]); if (['update', 'insert', 'delete'].includes(name)) query.mutation = true; return builder; };
@@ -79,6 +80,46 @@ test('users cannot read another user’s saved posts or submit another author', 
   await assert.rejects(h.dispatch(h.actor, 'posts', 'getSavedPosts', [other]), { status: 403 });
   await assert.rejects(h.dispatch(h.actor, 'posts', 'createPost', [{ authorId: other }]), { status: 403 });
   assert.equal(h.services.length, 0);
+});
+
+test('post deletion binds the stored author to the authenticated actor', async () => {
+  const h = harness();
+  await h.dispatch(h.actor, 'posts', 'deletePost', [postId, other]);
+  assert.deepEqual(h.services, [['deletePost', postId, id]]);
+  assert.deepEqual(h.queries[0].filters, [['select', 'authorId'], ['eq', 'id', postId], ['maybeSingle']]);
+});
+
+test('other users cannot delete a post or supply a forged author', async () => {
+  const h = harness({ authorId: other });
+  await assert.rejects(h.dispatch(h.actor, 'posts', 'deletePost', [postId, id]), { status: 403 });
+  assert.equal(h.services.length, 0);
+  assert.equal(h.queries.some(query => query.mutation), false);
+});
+
+test('post deletion rejects missing posts, invalid IDs, unverified and suspended actors', async () => {
+  const missing = harness({ postMissing: true });
+  await assert.rejects(missing.dispatch(missing.actor, 'posts', 'deletePost', [postId]), { status: 404 });
+  const invalid = harness();
+  await assert.rejects(invalid.dispatch(invalid.actor, 'posts', 'deletePost', ['invalid']), { status: 400 });
+  assert.equal(invalid.queries.length, 0);
+  for (const options of [{ verified: false }, { suspended: true }]) {
+    const h = harness(options);
+    await assert.rejects(h.dispatch(h.actor, 'posts', 'deletePost', [postId]), { status: 403 });
+    assert.equal(h.queries.length, 0); assert.equal(h.services.length, 0);
+  }
+});
+
+test('the post-delete API returns success for owners and rejects unauthenticated or foreign owners', async () => {
+  for (const [options, status] of [[{}, 200], [{ sessionId: '' }, 401], [{ authorId: other }, 403], [{ postMissing: true }, 404]]) {
+    const h = harness(options);
+    const request = new Request('https://app.test/api/data/posts', {
+      method: 'POST', headers: { origin: 'https://app.test' }, body: JSON.stringify({ action: 'deletePost', args: [postId] }),
+    });
+    const response = await h.load('app/api/data/[domain]/route').POST(request, { params: Promise.resolve({ domain: 'posts' }) });
+    assert.equal(response.status, status);
+    if (status === 200) assert.deepEqual(await response.json(), { data: { success: true } });
+    else assert.equal(h.services.length, 0);
+  }
 });
 
 test('profile ownership and a strict field allowlist prevent privilege changes', async () => {

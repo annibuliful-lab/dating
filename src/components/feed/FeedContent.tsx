@@ -48,6 +48,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Post = {
   id: string;
+  authorId: string;
   content: {
     text?: string;
     [key: string]: unknown;
@@ -333,7 +334,13 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
 
     try {
       setDeleting(true);
-      await adminService.deletePost(postToDelete.id);
+      if (postToDelete.authorId === session?.user?.id) {
+        await postService.deletePost(postToDelete.id);
+      } else if (isAdmin) {
+        await adminService.deletePost(postToDelete.id);
+      } else {
+        throw new Error(t('requestDenied'));
+      }
 
       notifications.show({
         title: t('success'),
@@ -577,7 +584,7 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
                             {formatDate(post.createdAt)}
                           </Text>
                         </Group>
-                        {isAdmin && (
+                        {(isAdmin || (!isSuspended && session?.user?.status !== 'SUSPENDED' && post.authorId === session?.user?.id)) && (
                           <Menu position="bottom-end" shadow="md" width={190} withinPortal>
                             <Menu.Target>
                               <ActionIcon

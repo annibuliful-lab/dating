@@ -23,9 +23,10 @@ function harness(timers = {}) {
   const supabase = createClient('https://feed-search.example', 'test-key', {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
-      fetch: (url) => new Promise((resolve) => {
+      fetch: (url, options) => new Promise((resolve) => {
         requests.push({
           url: new URL(url),
+          method: options?.method,
           respond: (data, status = 200) => resolve(new Response(JSON.stringify(data), {
             status,
             headers: { 'Content-Type': 'application/json' },
@@ -38,6 +39,9 @@ function harness(timers = {}) {
   const run = new Function('require', 'exports', 'setTimeout', 'clearTimeout', outputText);
   run((name) => {
     if (name === 'server-only') return {};
+    if (name === '@/server/access') return { AccessError: class extends Error {
+      constructor(status, message) { super(message); this.status = status; }
+    } };
     if (name === '@/shared/hashtags') return hashtagExports;
     assert.equal(name, '@/server/supabase');
     return { supabase };
@@ -149,6 +153,31 @@ test('rejected and timed-out requests can be retried', async () => {
   assert.equal(requests.length, 3);
   requests[2].respond([]);
   assert.deepEqual(await retried, []);
+});
+
+test('post deletion filters by both post and author and clears cached and pending feed reads', async () => {
+  const { service, requests } = harness();
+  const cached = service.getPublicPosts(); await tick(); requests[0].respond([post('deleted')]); await cached;
+  const stale = service.getPublicPosts(20, 0, { search: 'query' }); await tick();
+  const deletion = service.deletePost('deleted', 'owner'); await tick();
+  const request = requests[2];
+  assert.equal(request.method, 'DELETE');
+  assert.equal(request.url.searchParams.get('id'), 'eq.deleted');
+  assert.equal(request.url.searchParams.get('authorId'), 'eq.owner');
+  assert.equal(request.url.searchParams.get('select'), 'id');
+  request.respond({ id: 'deleted' }); assert.deepEqual(await deletion, { success: true });
+  requests[1].respond([post('deleted')]); await stale;
+  const fresh = service.getPublicPosts(); const freshSearch = service.getPublicPosts(20, 0, { search: 'query' }); await tick();
+  assert.equal(requests.length, 5);
+  requests[3].respond([]); requests[4].respond([]); await Promise.all([fresh, freshSearch]);
+});
+
+test('post deletion reports no matching row and propagates database failures', async () => {
+  const { service, requests } = harness();
+  const missing = service.deletePost('missing', 'owner'); const rejected = assert.rejects(missing, { status: 404 });
+  await tick(); requests[0].respond(null); await rejected;
+  const failed = service.deletePost('post', 'owner'); const failure = assert.rejects(failed, { message: 'database unavailable' });
+  await tick(); requests[1].respond({ message: 'database unavailable' }, 500); await failure;
 });
 
 const componentSource = ts.transpileModule(

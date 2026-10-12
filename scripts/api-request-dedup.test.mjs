@@ -146,6 +146,18 @@ test('read receipts invalidate unread data while preserving a pending message po
   assert.deepEqual(await Promise.all([poll, samePoll, freshUnread]), [[], [], 0]);
 });
 
+test('post deletion invalidates feed reads and never merges independent delete requests', async () => {
+  const h = harness();
+  const stale = h.userApiRead('posts', 'getPublicPosts', [20, 0, {}], 30000);
+  const a = h.userApi('posts', 'deletePost', ['post']); const b = h.userApi('posts', 'deletePost', ['post']);
+  assert.equal(h.calls.length, 3);
+  h.calls[1].finish({ success: true }); h.calls[2].finish({ success: true }); await Promise.all([a, b]);
+  const fresh = h.userApiRead('posts', 'getPublicPosts', [20, 0, {}], 30000);
+  h.calls[0].finish(['deleted']); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.calls.length, 4); h.calls[3].finish([]);
+  assert.deepEqual(await stale, []); assert.deepEqual(await fresh, []);
+});
+
 test('typing writes refresh typing reads without restarting message polls', async () => {
   const h = harness();
   const poll = h.userApi('messages', 'getMessageUpdates', ['chat', {}]);

@@ -37,8 +37,18 @@ function chatMedia(actor: Actor, chatId: string, value: unknown) {
   if (value == null || value === '') return null;
   const raw = text(value, 2048);
   const url = new URL(raw, 'https://app.invalid');
-  if (!raw.startsWith(`/api/chat/${chatId}/media?`) || url.origin !== 'https://app.invalid' || url.hash) throw new AccessError(400, 'Invalid media');
-  scopedKey(url.searchParams.get('path'), `chats/${chatId}/users/${actor.id}/`);
+  if (raw.startsWith(`/api/chat/${chatId}/media?`)) {
+    if (url.origin !== 'https://app.invalid' || url.hash) throw new AccessError(400, 'Invalid media');
+    scopedKey(url.searchParams.get('path'), `chats/${chatId}/users/${actor.id}/`);
+    return raw;
+  }
+  const base = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
+  const prefix = '/storage/v1/object/public/dating/';
+  if (url.origin !== base.origin || !url.pathname.startsWith(prefix) || url.search || url.hash) throw new AccessError(400, 'Invalid media');
+  let key: string;
+  try { key = decodeURIComponent(url.pathname.slice(prefix.length)); }
+  catch { throw new AccessError(400, 'Invalid media'); }
+  scopedKey(key, `posts/users/${actor.id}/`);
   return raw;
 }
 

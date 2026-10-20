@@ -27,6 +27,7 @@ export function ChatMessage({
   onViewProfile,
 }: ChatMessageProps) {
   const { t } = useLocale();
+  const usesPrivateChatProxy = message.imageUrl?.startsWith('/api/chat/') ?? false;
   return (
     <Box>
       {showTimestamp && (
@@ -76,6 +77,7 @@ export function ChatMessage({
                     alt={t('messageAttachment')}
                     width={300}
                     height={200}
+                    unoptimized={usesPrivateChatProxy}
                     style={{
                       maxWidth: '100%',
                       borderRadius: 8,
@@ -207,6 +209,7 @@ export function ChatMessage({
                       alt={t('messageAttachment')}
                       width={300}
                       height={200}
+                      unoptimized={usesPrivateChatProxy}
                       style={{
                         maxWidth: '100%',
                         borderRadius: 8,

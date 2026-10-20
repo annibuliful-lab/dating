@@ -135,7 +135,7 @@ Profile edit behavior:
 - Chat detail: `src/app/inbox/[chatId]/page.tsx`
 - Service: `src/services/supabase/messages.ts`
 - Components: `src/components/chat/*`
-- Uses `Chat`, `ChatParticipant`, and `Message`; supports membership-checked message/typing polling every three seconds, unread state, media, group invites/removals, and group renaming. New chat media uses the private `chat-media` bucket and a membership-checked API that issues 60-second signed URLs. Existing public attachments remain supported until the separate legacy media migration is run.
+- Uses `Chat`, `ChatParticipant`, and `Message`; supports membership-checked message/typing polling every three seconds, unread state, media, group invites/removals, and group renaming. New chat attachments upload to public `dating/posts/users/{userId}/...` paths and store Supabase public URLs; uploads still require chat membership, but anyone with the URL can read them. Existing private `chat-media` attachments remain served through the membership-checked API with 60-second signed URLs.
 
 ### Admin
 

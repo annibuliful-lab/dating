@@ -194,8 +194,8 @@ test('uploads enforce actual file content and user-owned paths', async () => {
   assert.equal((await upload('profile', `users/${id}/image.png`, 'image/png', [137,80,78,71,13,10,26,10])).status, 200);
   assert.deepEqual(h.services[0].slice(0, 3), ['upload', 'dating', `users/${id}/image.png`]);
   assert.equal((await upload('chat', '', 'image/png', [137,80,78,71,13,10,26,10], chatId)).status, 200);
-  assert.equal(h.services[1][1], 'chat-media');
-  assert.ok(h.services[1][2].startsWith(`chats/${chatId}/users/${id}/`));
+  assert.equal(h.services[1][1], 'dating');
+  assert.ok(h.services[1][2].startsWith(`posts/users/${id}/`));
 });
 
 test('private media URLs cannot be signed for outsiders or another chat', async () => {

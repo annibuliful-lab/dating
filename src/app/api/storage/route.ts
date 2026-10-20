@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       : file.type === 'video/webm' ? bytes.slice(0, 4).join(',') === '26,69,223,163'
       : ascii.slice(4, 8) === 'ftyp';
     if (!valid) throw new AccessError(400, 'Invalid file content');
-    let bucket = 'dating'; let key: string; let publicUrl: string;
+    const bucket = 'dating'; let key: string; let publicUrl: string;
     if (kind === 'profile') {
       if (!file.type.startsWith('image/')) throw new AccessError(400, 'Invalid image');
       key = scopedKey(form.get('key'), `users/${actor.id}/`);
@@ -35,8 +35,8 @@ export async function POST(request: Request) {
       publicUrl = getPublicStorageUrl(key)!;
     } else if (kind === 'chat') {
       const chatId = uuid(form.get('chatId')); await requireChat(actor, chatId);
-      bucket = 'chat-media'; key = `chats/${chatId}/users/${actor.id}/${crypto.randomUUID()}.${extensions[file.type]}`;
-      publicUrl = `/api/chat/${chatId}/media?path=${encodeURIComponent(key)}`;
+      key = `posts/users/${actor.id}/${crypto.randomUUID()}.${extensions[file.type]}`;
+      publicUrl = getPublicStorageUrl(key)!;
     } else throw new AccessError(400, 'Invalid upload');
     const { error } = await supabase.storage.from(bucket).upload(key, bytes, { contentType: file.type, upsert: false, cacheControl: '3600' });
     if (error) throw error;

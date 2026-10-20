@@ -27,7 +27,7 @@ There is no test script. Production builds may need network access because `next
 - NextAuth v5 beta with Credentials, Google, and LINE.
 - Prisma 6 owns schema/migrations. New user services call authenticated Next.js APIs backed by `src/server/supabase.ts`; `src/server/access.ts` and the explicit operation dispatcher enforce authorization.
 - Keep `src/client/supabase.ts` and the anonymous key/policies available during the production transition. New APIs never fall back to anonymous requests. The optional lockdown SQL lives outside automatic Prisma migrations; follow `docs/security/supabase-user-api-rollout.md`.
-- Chat message/typing updates poll authorized APIs every three seconds. New attachments are private and served through membership checks/short signed URLs. Legacy public URLs remain supported pending a separate media migration.
+- Chat message/typing updates poll authorized APIs every three seconds. New attachments upload to public `dating/posts/users/{userId}/...` paths and store Supabase public URLs; uploads require chat membership, but anyone with the URL can read them. Existing private `chat-media` attachments remain served through membership checks/short signed URLs.
 - Use pnpm, not npm.
 
 When changing schema, update `prisma/schema.prisma`, run the appropriate Prisma command, regenerate Supabase types when needed, and update queries/casts/service payloads.

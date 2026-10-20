@@ -6,6 +6,8 @@ The existing anonymous key/client and database policies remain available for the
 
 The additive preparation SQL has been applied to the connected Supabase project and its server key was verified with a read-only query. **The lockdown SQL has not been applied. Existing chat files have not been moved.** Direct anonymous database access remains a known exposure during this transition. Password storage/comparison was deliberately kept unchanged at the owner's request. Admin behavior was not redesigned; its server imports and public URL helper were updated for connection compatibility.
 
+New chat uploads intentionally use public `dating/posts/users/{userId}/...` URLs. Uploads still pass the authenticated API's chat-membership check, but downloads do not; anyone with a URL can read the file. The private `chat-media` bucket and membership-checked route continue to serve older private attachments. The lockdown SQL does not make new public chat uploads private.
+
 SQL files:
 
 1. [`20261011000000_secure_user_api_support/migration.sql`](../../prisma/migrations/20261011000000_secure_user_api_support/migration.sql): server schema/table grants, atomic credentials registration, `ChatParticipant.typingUntil`, `Message.videoUrl`, private `chat-media` bucket. It does not revoke existing clients.
@@ -18,7 +20,7 @@ The final lockdown SQL is deliberately outside Prisma's automatic migration dire
 
 1. Keep `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SUPABASE_URL` configured. Add the server secret to the deployed environment; do not change `AUTH_SECRET`, which preserves existing NextAuth cookies.
 2. Apply only additive preparation, transactionally, if not already applied. Record a database backup/PITR restore point and the previous production release identifier. Retain an export/backup of Storage objects too: database backups do not restore object bytes.
-3. Deploy the new API-capable version. Old clients can continue their anonymous requests while new clients use the authenticated APIs. New chat files are private; existing public chat URLs are still rendered during this stage.
+3. Deploy the new API-capable version. Old clients can continue their anonymous requests while new clients use the authenticated APIs. New chat files are public in the `dating` bucket; existing private and legacy public chat URLs remain rendered during this stage.
 4. Smoke-test credentials and OAuth login, onboarding, profile edits/images, feed/search/Thai hashtags, new posts/images, direct/group chat, invitations/renaming/removal, unread state, typing, image/video attachments, and sign-out. Check logged-out requests return 401 and cross-user requests return 403. Existing admin routes should still work through their shared server connection.
 5. Monitor authentication errors, API 401/403/500 rates, and chat/upload failures. Chat updates use membership-checked polling every three seconds instead of public broadcasts. Keep this API-capable release as the rollback target for later releases.
 
@@ -43,7 +45,7 @@ The final lockdown SQL is deliberately outside Prisma's automatic migration dire
 
    The helper copies referenced objects to private chat paths, updates only the matching message URL, backs up every old `messages/` object privately under `chat-media/archive/`, then removes public originals. It writes URL/object metadata to a mode-0600 rollback file before mutation. It stops on unsupported URLs, references shared with public posts, upload failures, or concurrent message changes. Re-runs retain the original backup and resume safely. This is a file migration through Storage APIs; SQL alone cannot move stored object bytes. Account for bandwidth, duration, and Storage capacity before moving thousands of files.
 
-4. Confirm the anonymous and authenticated Supabase roles cannot SELECT User/OAuthAccount/Session/Message, edit account roles/status/verification, modify another user's posts, upload/list/delete storage files, or execute server registration RPCs. Repeat the app smoke tests with verified, unverified, suspended, and logged-out sessions. Check old public chat URLs fail. Copies already downloaded by a user or cached at a CDN cannot be recalled immediately; follow Storage cache-purge guidance where needed.
+4. Confirm the anonymous and authenticated Supabase roles cannot SELECT User/OAuthAccount/Session/Message, edit account roles/status/verification, modify another user's posts, upload/list/delete storage files, or execute server registration RPCs. Repeat the app smoke tests with verified, unverified, suspended, and logged-out sessions. Legacy public chat objects moved by the migration should no longer be publicly readable; new chat objects under `dating/posts/users/` remain public by design. Copies already downloaded by a user or cached at a CDN cannot be recalled immediately; follow Storage cache-purge guidance where needed.
 5. Reopen production after these checks pass. Do not remove backups or the compatible rollback release until production behavior has been verified.
 
 ## Rollback
@@ -52,7 +54,7 @@ The final lockdown SQL is deliberately outside Prisma's automatic migration dire
 
 Leave the additive fields, function, server grants, and private bucket in place: they are backward-compatible and removing them destroys rollback options. Anonymous permissions have not changed, so no access-control rollback SQL is needed.
 
-Prefer a rollback that retains the new media API and server handlers while reverting affected client/UI changes. Old client code can run against that backend. A complete redeploy of the pre-change application lacks `/api/chat/[chatId]/media`; it cannot render newly created private attachment URLs. Before such a full rollback, keep maintenance enabled and restore media compatibility as described below. Never switch the server client to the anonymous key to conceal an API authorization failure.
+Prefer a rollback that retains the new media API and server handlers while reverting affected client/UI changes. Old client code can run against that backend. A complete redeploy of the pre-change application lacks `/api/chat/[chatId]/media`; it cannot render existing private attachment URLs. New public chat URLs do not depend on that route. Before a full rollback, keep maintenance enabled and restore private media compatibility as described below. Never switch the server client to the anonymous key to conceal an API authorization failure.
 
 ### After file migration or final lockdown
 

@@ -579,7 +579,7 @@ export function useChatMessages({ chatId }: UseChatMessagesProps) {
 
       // Upload all media files first
       const uploadResults =
-        await mediaService.uploadMultipleMedia(selectedMedia, 'chat-media', `chats/${currentChatIdRef.current}`);
+        await mediaService.uploadMultipleMedia(selectedMedia, 'dating', `chats/${currentChatIdRef.current}`);
 
       // Create messages for each uploaded file
       const messagePromises = selectedMedia.map(

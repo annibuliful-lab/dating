@@ -57,7 +57,7 @@ export default function Home() {
         >
           <Image
             alt="logo"
-            src="https://wcjxna7kg9rqnf7r.public.blob.vercel-storage.com/S__10051603-removebg-preview.png"
+            src="https://wcjxna7kg9rqnf7r.public.blob.vercel-storage.com/Loki%20Gold%20Nightclub%20Emblem%20%281%29.png"
             fit="contain"
             w={rem(250)}
             style={{ display: 'block', margin: 'auto' }}

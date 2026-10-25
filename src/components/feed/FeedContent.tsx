@@ -126,99 +126,106 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
     }
   }, [adminData, userStatusData]);
 
-  const fetchPosts = useCallback(async (offset = 0, isRefresh = false) => {
-    if (offset > 0 && fetchingPostsRef.current) return;
-    const requestId = ++postsRequestRef.current;
-    fetchingPostsRef.current = true;
-    setError(null);
-    try {
-      if (isRefresh) {
-        setIsRefreshing(true);
-      } else if (offset === 0) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-
-      const limit = 20;
-      const data = await postService.getPublicPosts(limit, offset, {
-        force: isRefresh,
-        search: searchQueryRef.current,
-        hashtag,
-      });
-
-      if (requestId !== postsRequestRef.current) return;
-
-      // Check if we have more posts
-      if (data.length < limit) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
-
-      // Convert profileImageKey to URL for each post
-      const postsWithImageUrls = (data || []).map((post: unknown) => {
-        const postData = post as {
-          User?: {
-            profileImageKey?: string | null;
-            [key: string]: unknown;
-          };
-          imageUrl?: string | string[] | null;
-          content?: unknown;
-          [key: string]: unknown;
-        };
-        const profileImageUrl = getProfileImageUrl(
-          postData.User?.profileImageKey,
-        );
-
-        // Handle backward compatibility: convert string imageUrl to array
-        let imageUrlArray: string[] | null = null;
-        if (postData.imageUrl) {
-          if (typeof postData.imageUrl === 'string') {
-            imageUrlArray = JSON.parse(postData.imageUrl as string);
-          } else if (Array.isArray(postData.imageUrl)) {
-            imageUrlArray = postData.imageUrl;
-          }
+  const fetchPosts = useCallback(
+    async (offset = 0, isRefresh = false) => {
+      if (offset > 0 && fetchingPostsRef.current) return;
+      const requestId = ++postsRequestRef.current;
+      fetchingPostsRef.current = true;
+      setError(null);
+      try {
+        if (isRefresh) {
+          setIsRefreshing(true);
+        } else if (offset === 0) {
+          setLoading(true);
+        } else {
+          setLoadingMore(true);
         }
 
-        return {
-          ...postData,
-          content: postData.content as {
-            text?: string;
-            [key: string]: unknown;
-          } | null,
-          imageUrl: imageUrlArray,
-          User: {
-            ...postData.User,
-            profileImageUrl,
-          },
-        };
-      });
+        const limit = 20;
+        const data = await postService.getPublicPosts(limit, offset, {
+          force: isRefresh,
+          search: searchQueryRef.current,
+          hashtag,
+        });
 
-      if (offset === 0) {
-        setPosts(postsWithImageUrls as Post[]);
-      } else {
-        setPosts((prevPosts) => [
-          ...prevPosts,
-          ...(postsWithImageUrls as Post[]),
-        ]);
+        if (requestId !== postsRequestRef.current) return;
+
+        // Check if we have more posts
+        if (data.length < limit) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+
+        // Convert profileImageKey to URL for each post
+        const postsWithImageUrls = (data || []).map(
+          (post: unknown) => {
+            const postData = post as {
+              User?: {
+                profileImageKey?: string | null;
+                [key: string]: unknown;
+              };
+              imageUrl?: string | string[] | null;
+              content?: unknown;
+              [key: string]: unknown;
+            };
+            const profileImageUrl = getProfileImageUrl(
+              postData.User?.profileImageKey,
+            );
+
+            // Handle backward compatibility: convert string imageUrl to array
+            let imageUrlArray: string[] | null = null;
+            if (postData.imageUrl) {
+              if (typeof postData.imageUrl === 'string') {
+                imageUrlArray = JSON.parse(
+                  postData.imageUrl as string,
+                );
+              } else if (Array.isArray(postData.imageUrl)) {
+                imageUrlArray = postData.imageUrl;
+              }
+            }
+
+            return {
+              ...postData,
+              content: postData.content as {
+                text?: string;
+                [key: string]: unknown;
+              } | null,
+              imageUrl: imageUrlArray,
+              User: {
+                ...postData.User,
+                profileImageUrl,
+              },
+            };
+          },
+        );
+
+        if (offset === 0) {
+          setPosts(postsWithImageUrls as Post[]);
+        } else {
+          setPosts((prevPosts) => [
+            ...prevPosts,
+            ...(postsWithImageUrls as Post[]),
+          ]);
+        }
+      } catch (err) {
+        if (requestId !== postsRequestRef.current) return;
+        setError(
+          err instanceof Error
+            ? err
+            : new Error('Failed to fetch posts'),
+        );
+      } finally {
+        if (requestId === postsRequestRef.current) {
+          fetchingPostsRef.current = false;
+          setLoading(false);
+          setIsRefreshing(false);
+          setLoadingMore(false);
+        }
       }
-    } catch (err) {
-      if (requestId !== postsRequestRef.current) return;
-      setError(
-        err instanceof Error
-          ? err
-          : new Error('Failed to fetch posts'),
-      );
-    } finally {
-      if (requestId === postsRequestRef.current) {
-        fetchingPostsRef.current = false;
-        setLoading(false);
-        setIsRefreshing(false);
-        setLoadingMore(false);
-      }
-    }
-  }, [hashtag]);
+    },
+    [hashtag],
+  );
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -349,7 +356,9 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
       });
 
       // Remove post from local state
-      setPosts((currentPosts) => currentPosts.filter((p) => p.id !== postToDelete.id));
+      setPosts((currentPosts) =>
+        currentPosts.filter((p) => p.id !== postToDelete.id),
+      );
       setDeleteModalOpened(false);
       setPostToDelete(null);
     } catch (error: unknown) {
@@ -442,17 +451,26 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
             <Stack gap="lg">
               {hashtag ? (
                 <Stack align="flex-start" gap="xs">
-                  <Button component={Link} href="/feed" variant="subtle" color="yellow">
+                  <Button
+                    component={Link}
+                    href="/feed"
+                    variant="subtle"
+                    color="yellow"
+                  >
                     {t('backToFeed')}
                   </Button>
-                  <Text size="sm" c="dimmed">{t('searchPostsScope')}</Text>
+                  <Text size="sm" c="dimmed">
+                    {t('searchPostsScope')}
+                  </Text>
                 </Stack>
-              ) : <SearchInput
-                placeholder={t('searchPosts')}
-                aria-label={t('searchPosts')}
-                description={t('searchPostsScope')}
-                onSearch={handleSearch}
-              />}
+              ) : (
+                <SearchInput
+                  placeholder={t('searchPosts')}
+                  aria-label={t('searchPosts')}
+                  description={t('searchPostsScope')}
+                  onSearch={handleSearch}
+                />
+              )}
               {/* Banner Carousel */}
               {bannerImages.length > 0 && (
                 <Box
@@ -528,7 +546,11 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
               )}
 
               {loading || (isRefreshing && posts.length === 0) ? (
-                <Center py="md" role="status" aria-label={t('loadingPosts')}>
+                <Center
+                  py="md"
+                  role="status"
+                  aria-label={t('loadingPosts')}
+                >
                   <Loader color="#D4AF37" />
                 </Center>
               ) : error ? (
@@ -536,7 +558,11 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
                   <Text c="red" role="alert">
                     {t('failedToLoadPosts')}
                   </Text>
-                  <Button variant="light" color="yellow" onClick={() => fetchPosts(0, true)}>
+                  <Button
+                    variant="light"
+                    color="yellow"
+                    onClick={() => fetchPosts(0, true)}
+                  >
                     {t('retry')}
                   </Button>
                 </Stack>
@@ -584,8 +610,16 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
                             {formatDate(post.createdAt)}
                           </Text>
                         </Group>
-                        {(isAdmin || (!isSuspended && session?.user?.status !== 'SUSPENDED' && post.authorId === session?.user?.id)) && (
-                          <Menu position="bottom-end" shadow="md" width={190} withinPortal>
+                        {(isAdmin ||
+                          (!isSuspended &&
+                            session?.user?.status !== 'SUSPENDED' &&
+                            post.authorId === session?.user?.id)) && (
+                          <Menu
+                            position="bottom-end"
+                            shadow="md"
+                            width={190}
+                            withinPortal
+                          >
                             <Menu.Target>
                               <ActionIcon
                                 size={44}
@@ -595,7 +629,9 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
                                 aria-label={t('postOptions')}
                                 style={{ flexShrink: 0 }}
                               >
-                                <span aria-hidden="true"><MoreOptionsIcon /></span>
+                                <span aria-hidden="true">
+                                  <MoreOptionsIcon />
+                                </span>
                               </ActionIcon>
                             </Menu.Target>
                             <Menu.Dropdown>
@@ -675,11 +711,21 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
                 ))
               ) : (
                 <Text c="dimmed" ta="center" mt="xl" role="status">
-                  {t(hashtag ? 'noHashtagPosts' : searchQuery ? 'noMatchingPosts' : 'noFeedPosts')}
+                  {t(
+                    hashtag
+                      ? 'noHashtagPosts'
+                      : searchQuery
+                        ? 'noMatchingPosts'
+                        : 'noFeedPosts',
+                  )}
                 </Text>
               )}
               {loadingMore && (
-                <Center py="md" role="status" aria-label={t('loadingPosts')}>
+                <Center
+                  py="md"
+                  role="status"
+                  aria-label={t('loadingPosts')}
+                >
                   <Loader color="#D4AF37" size="sm" />
                 </Center>
               )}
@@ -713,13 +759,56 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
           },
         }}
       >
-        <Box>
+        <Box
+          style={{
+            maxHeight: 'calc(100dvh - 12rem)',
+            position: 'relative',
+          }}
+        >
           <Image
-            src="/infographic/LINE_20251114_235452.jpg"
+            src="/infographic/S__10068094.jpg"
             alt={t('infographic')}
             fit="contain"
             radius="md"
+            w="100%"
+            mah="calc(100dvh - 12rem)"
           />
+          <Box
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'grid',
+              placeItems: 'end center',
+              padding: '1rem',
+              pointerEvents: 'none',
+            }}
+          >
+            <Text
+              style={{
+                width: 'min(100%, 25rem)',
+                padding: 'clamp(1rem, 4vw, 1.5rem)',
+                textAlign: 'center',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 'clamp(0.9rem, 3vw, 1.15rem)',
+                lineHeight: 1.65,
+                whiteSpace: 'pre-line',
+                textShadow:
+                  '0 0 8px rgba(255, 255, 255, 0.4), 0 2px 5px rgba(0, 0, 0, 0.85)',
+              }}
+            >
+              Posting the following is prohibited:
+              {'\n'}Nudity, prostitution, drugs, content involving
+              minors, or advertisements for selling goods.
+              {'\n'}Any other content that harms others is also
+              prohibited. Violations may result in immediate post
+              removal or account suspension.
+              {/* ไม่อนุญาตให้โพสต์
+              {'\n'}รูปโป๊เปลือย ค้าประเวณี ยาเสพติด เด็กและเยาวชน
+              โฆษณาขายของ หรือการกระทำอื่นใดที่ทำให้ผู้อื่นเสียหาย
+              {'\n'}หากตรวจพบ ทางเว็บจะทำการลบโพสต์ หรือแบนทันที */}
+            </Text>
+          </Box>
         </Box>
       </Modal>
 
@@ -746,19 +835,47 @@ function FeedContent({ hashtag }: { hashtag?: string }) {
       >
         <Stack gap="md">
           {postToDelete && (
-            <Box bg="dark.8" p="md" style={{ borderRadius: rem(8), border: '1px solid var(--mantine-color-dark-4)' }}>
-              <Text fw={600} size="sm" mb="xs" style={{ overflowWrap: 'anywhere' }}>
+            <Box
+              bg="dark.8"
+              p="md"
+              style={{
+                borderRadius: rem(8),
+                border: '1px solid var(--mantine-color-dark-4)',
+              }}
+            >
+              <Text
+                fw={600}
+                size="sm"
+                mb="xs"
+                style={{ overflowWrap: 'anywhere' }}
+              >
                 {postToDelete.User.username}
               </Text>
-              <Text size="sm" lineClamp={3} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              <Text
+                size="sm"
+                lineClamp={3}
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  overflowWrap: 'anywhere',
+                }}
+              >
                 {postToDelete.content?.text || t('postWithoutText')}
               </Text>
               {postToDelete.imageUrl?.[0] && (
-                <Image src={postToDelete.imageUrl[0]} alt={t('postImagePreview')} w={72} h={72} radius="sm" mt="sm" />
+                <Image
+                  src={postToDelete.imageUrl[0]}
+                  alt={t('postImagePreview')}
+                  w={72}
+                  h={72}
+                  radius="sm"
+                  mt="sm"
+                />
               )}
             </Box>
           )}
-          <Text size="sm" c="dimmed">{t('deletePostWarning')}</Text>
+          <Text size="sm" c="dimmed">
+            {t('deletePostWarning')}
+          </Text>
           <Group justify="flex-end">
             <Button
               variant="subtle"
